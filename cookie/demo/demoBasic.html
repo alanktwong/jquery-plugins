@@ -1,0 +1,53 @@
+<!DOCTYPE HTML>
+<html lang="en-US">
+<head>
+<meta charset="UTF-8">
+<title>jQuery Cookie: Demo Page for Basic Usage</title>
+
+<script type="text/javascript"  src="http://www.google.com/jsapi"></script>
+<script type="text/javascript">
+  google.load("jquery", "1.4.4", {uncompressed: true});
+</script>
+
+<script type="text/javascript" src="../jquery.cookie.js"></script>
+<script>
+$(document).ready(function() {
+	var append = function(key,value) {
+		var text = "{ " + key + ": " + value + " }";
+		$('#console-log').append("<p>" + text + "</p>")
+	};
+	
+	var logCookies = function(msg) {
+		var allCookies = $.cookie();
+		if (JSON && JSON.stringify && console && console.log) {
+			console.log(msg + ": all cookies: \n" + JSON.stringify(allCookies));
+		}
+	};
+	
+	var storedValue = "cookieMonster";
+	$.cookie('the_cookie', storedValue);
+
+	var retrieved = $.cookie('the_cookie');
+	append("the_cookie", retrieved);
+	
+	var doesNotExist = $.cookie('not_existing');
+	append("not_existing", doesNotExist);
+	
+	$.cookie("cartCount", 4, { expires: 7, path: "/" });
+	append("cartCount", $.cookie("cartCount") );
+	logCookies("adding cartCount under /");
+	$.removeCookie('cartCount');
+	logCookies("removing cartCount without a path");
+	$.removeCookie('cartCount', { path: "/" });
+	logCookies("removing cartCount under path /");
+});
+</script>
+</head>
+<body>
+	<h3>jQuery Cookie: Basic Usage</h3>
+	<p id="receiver">Results should appear below</p>
+	<div id="console-log" style="font-size: 14px;">
+	</div>
+</body>
+
+</html>
