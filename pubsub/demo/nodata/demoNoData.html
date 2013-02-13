@@ -1,0 +1,37 @@
+<!DOCTYPE HTML>
+<html lang="en-US">
+<head>
+<meta charset="UTF-8">
+<title>jQuery Publish/Subscribe: No Data Demo Page</title>
+
+<script type="text/javascript"  src="http://www.google.com/jsapi"></script>
+<script type="text/javascript">
+  google.load("jquery", "1.4.4", {uncompressed: true});
+</script>
+
+<script type="text/javascript" src="../../jquery.pubsub.js"></script>
+<script>
+$(document).ready(function() {
+	$.subscribe( "nodataexample", function() {
+		$( "p#receiver").append( "<p>first subscription called</p>" );
+	});
+
+	// there can be more than one subscriber for a topic
+	$.subscribe( "nodataexample", function() {
+		$( "p#receiver").append( "<p>second subscription called</p>" );
+	});
+
+	// the subscriptions are triggered through a publish
+	// call on the topic
+	$.publish( "nodataexample" );
+});
+</script>
+</head>
+<body>
+	<h3>jQuery PubSub: NoData Usage</h3>
+	<div id="console-log" style="font-size: 14px;">
+		<p id="receiver"></p>
+	</div>
+</body>
+
+</html>

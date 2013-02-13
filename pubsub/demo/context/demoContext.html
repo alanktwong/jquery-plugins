@@ -1,0 +1,36 @@
+<!DOCTYPE HTML>
+<html lang="en-US">
+<head>
+<meta charset="UTF-8">
+<title>jQuery Publish/Subscribe: Context Demo Page</title>
+
+<script type="text/javascript"  src="http://www.google.com/jsapi"></script>
+<script type="text/javascript">
+  google.load("jquery", "1.4.4", {uncompressed: true});
+</script>
+
+<script type="text/javascript" src="../../jquery.pubsub.js"></script>
+<script>
+$(document).ready(function() {
+	// set up subscription with context specified
+	// for the callback function
+	$.subscribe( "datacontextexample",
+		$( "p#receiver" ),
+		function( data ) {
+			this.text( data.exampleText );
+		}
+	);
+
+	$.publish( "datacontextexample", { exampleText: "if you see: foo bar baz, then it works" } );
+});
+</script>
+</head>
+<body>
+	<h3>jQuery PubSub: Context Usage</h3>
+	<div id="console-log" style="font-size: 14px;">
+		<p id="receiver"></p>
+		<p id="receiver2"></p>
+	</div>
+</body>
+
+</html>
