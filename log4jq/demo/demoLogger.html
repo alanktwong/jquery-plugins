@@ -1,0 +1,70 @@
+<!DOCTYPE HTML>
+<html lang="en-US">
+<head>
+<meta charset="UTF-8">
+<title>jQuery Logger: Demo Page for Standard Log Targets</title>
+
+<script type="text/javascript"  src="http://www.google.com/jsapi"></script>
+<script type="text/javascript">
+  google.load("jquery", "1.7.1", {uncompressed: true});
+</script>
+
+<script type="text/javascript" src="../../cookie/jquery.cookie.js"></script>
+<script type="text/javascript" src="../../pubsub/jquery.pubsub.js"></script>
+
+
+<script type="text/javascript" src="../jquery.log4jq.js"></script>
+<script>
+$(document).ready(function() {
+	var logger = $.configureLogger({
+		enabled: true,
+		level : $.loggerLevels.debug,
+		isEnableCookies : true,
+		target : {
+			alert : false,
+			console: {
+				priority: 42
+			},
+			domInsert: {
+				$dom : $("div#console-log")
+			}
+		}
+	});
+
+	
+	if (logger.subscribers.length != 2) {
+		var msg = "2 log targets must be subscribed";
+		throw(msg);
+	}
+	$.debug("debug msg");
+	$.info("info msg")
+	$.warn("warning msg");
+	$.error("error msg");
+	
+	$.debug({foo: "debug"});
+	$.info({foo: "info"})
+	$.warn({foo: "warn"});
+	$.error({foo: "error"});
+	
+	$.debug("Debug", {foo: "debug", bar: function() {},baz:1 });
+	$.info("Info", {foo: "info", bar: function() {},baz:1 })
+	$.warn("Warning", {foo: "warn", bar: function() {},baz:1 });
+	$.error("Error", {foo: "error", bar: function() {}, baz:1 });
+	
+	var logOptions = { level: $.loggerLevels.debug };
+	$.debug("Debug", {foo: "debug"}, logOptions);
+	$.info("Info", {foo: "info"}, logOptions)
+	$.warn("Warning", {foo: "warn"}, logOptions);
+	$.error("Error", {foo: "error"}, logOptions);
+});
+</script>
+</head>
+<body>
+	<h3>jQuery Logger: Standard Log Targets</h3>
+	<p id="receiver">Logs should appear here</p>
+	<div id="console-log" style="font-size: 14px;">
+		<p id="last"></p>
+	</div>
+</body>
+
+</html>
