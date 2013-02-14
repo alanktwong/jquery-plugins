@@ -6,8 +6,8 @@ A repo for jquery plugins I have written
 Plugins so far:
 
  * [log4jq][1]
- * [PubSub][2]
- * [Store][3]
+ * [pubsub][2]
+ * [store][3]
  
  
 ###Licenses
