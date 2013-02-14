@@ -14,6 +14,7 @@
 		// Private enabled flag.
 		_enabled: false,
 		version : "0.0.1",
+		key: "log4jq",
 		/*
 		 * Use the following topic to publish log entries to 
 		 * the log targets using jquery.pubsub.
@@ -257,16 +258,19 @@
 	var _cookie = {
 		enabled: function(enable) {
 			var enabled = enable;
-			if (enabled !== undefined) {
-				// Save the new value in the cookie.
-				$.cookie("log4jqEnabled", enabled, { expires: 50 });
-				this._enabled = enabled;
-			} else {
-				enabled = this._enabled;
-				if (enabled === undefined) {
-					// Get the value from the cookie.
-					enabled = Boolean($.cookie("log4jqEnabled"));
+			
+			if ($.cookie) {
+				if (enabled !== undefined) {
+					// Save the new value in the cookie.
+					$.cookie(log4jq.key, enabled, { expires: 50 });
 					this._enabled = enabled;
+				} else {
+					enabled = this._enabled;
+					if (enabled === undefined) {
+						// Get the value from the cookie.
+						enabled = Boolean($.cookie(log4jq.key));
+						this._enabled = enabled;
+					}
 				}
 			}
 			return enabled;
@@ -356,7 +360,7 @@
 	log4jq.targets.custom = [];
 	log4jq.configure = function(cfg) {
 		if (cfg) {
-			if (cfg.isEnableCookies) {
+			if (cfg.isEnableCookies && $.cookie) {
 				// Copy cookie plugin onto log4jq
 				$.extend(log4jq, _cookie);
 				// Reset the enabled flag so we can tell if it has been set or not.

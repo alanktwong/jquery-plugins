@@ -1,4 +1,4 @@
-module( "jquery.logger testing w/o cookies" );
+module( "jquery.logger testing with cookies" );
 
 var testTarget = {
 		name: "testTarget",
@@ -31,7 +31,7 @@ var configure = function() {
 	return $.configureLog4jq({
 		enabled: true,
 		level : $.log4jqLevels.debug,
-		isEnableCookies : false,
+		isEnableCookies : true,
 		target : {
 			alert : false,
 			console: {
@@ -50,7 +50,7 @@ var configure = function() {
 var logger = configure();
 
 test( "configuring the logger", function() {
-	expect( 4 );
+	expect( 5 );
 
 	equal( true, logger.enabled(), "logger should be enabled" );
 	var targets = logger.targets;
@@ -58,7 +58,8 @@ test( "configuring the logger", function() {
 	
 	equal( 42, targets.console.priority, "priority of console target should be low");
 	equal( 10, targets.domInsert.priority, "priority of domInsert target should be standard");
-
+	var isCookieEnabled =  $.cookie(logger.key);
+	equal("true", isCookieEnabled, "expect enable flag on log4jq to be in a cookie")
 });
 
 test( "logging debug messages", function() {
