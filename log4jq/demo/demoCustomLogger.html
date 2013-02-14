@@ -9,7 +9,6 @@
   google.load("jquery", "1.7.1", {uncompressed: true});
 </script>
 
-<script type="text/javascript" src="../../cookie/jquery.cookie.js"></script>
 <script type="text/javascript" src="../../pubsub/jquery.pubsub.js"></script>
 
 
@@ -35,10 +34,10 @@ $(document).ready(function() {
 			$rollingLog.after("<p> CUSTOM: " + msg + "</p>");
 		}
 	};
-	var logger = $.configureLogger({
+	var logger = $.configureLog4jq({
 		enabled: true,
-		level : $.loggerLevels.debug,
-		isEnableCookies : true,
+		level : $.log4jqLevels.debug,
+		isEnableCookies : false,
 		target : {
 			alert : false,
 			console: true,

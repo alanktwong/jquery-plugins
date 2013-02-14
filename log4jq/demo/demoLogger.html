@@ -9,17 +9,16 @@
   google.load("jquery", "1.7.1", {uncompressed: true});
 </script>
 
-<script type="text/javascript" src="../../cookie/jquery.cookie.js"></script>
 <script type="text/javascript" src="../../pubsub/jquery.pubsub.js"></script>
 
 
 <script type="text/javascript" src="../jquery.log4jq.js"></script>
 <script>
 $(document).ready(function() {
-	var logger = $.configureLogger({
+	var logger = $.configureLog4jq({
 		enabled: true,
-		level : $.loggerLevels.debug,
-		isEnableCookies : true,
+		level : $.log4jqLevels.debug,
+		isEnableCookies : false,
 		target : {
 			alert : false,
 			console: {
@@ -51,7 +50,7 @@ $(document).ready(function() {
 	$.warn("Warning", {foo: "warn", bar: function() {},baz:1 });
 	$.error("Error", {foo: "error", bar: function() {}, baz:1 });
 	
-	var logOptions = { level: $.loggerLevels.debug };
+	var logOptions = { level: $.log4jqLevels.debug };
 	$.debug("Debug", {foo: "debug"}, logOptions);
 	$.info("Info", {foo: "info"}, logOptions)
 	$.warn("Warning", {foo: "warn"}, logOptions);
