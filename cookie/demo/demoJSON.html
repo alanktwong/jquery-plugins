@@ -1,0 +1,55 @@
+<!DOCTYPE HTML>
+<html lang="en-US">
+<head>
+<meta charset="UTF-8">
+<title>jQuery Cookie: Demo Page for Storing JSON</title>
+
+<script type="text/javascript"  src="http://www.google.com/jsapi"></script>
+<script type="text/javascript">
+  google.load("jquery", "1.4.4", {uncompressed: true});
+</script>
+
+<script type="text/javascript" src="../jquery.cookie.js"></script>
+<script>
+$(document).ready(function() {
+	var append = function(key,value) {
+		if (JSON && JSON.stringify) {
+			var text = "{ " + key + ": " + JSON.stringify(value) + " }";
+			$('#console-log').append("<p>" + text + "</p>")
+		}
+	};
+	
+	var logCookies = function(msg) {
+		var allCookies = $.cookie();
+		if (JSON && JSON.stringify && console && console.log) {
+			console.log(msg + ": all cookies: \n" + JSON.stringify(allCookies));
+		}
+	};
+	$.cookie.json = true;
+	
+	var storedValue = {
+		"id" : 1,
+		"name" : "cookieMonster",
+		"created": new Date(),
+		"enabled": true
+	};
+	
+	$.cookie("the_cookie", storedValue, { expires: 7, path: "/" });
+	append("the_cookie", $.cookie("the_cookie"));
+	
+	$.removeCookie('the_cookie');
+	logCookies("removing the_cookie without a path");
+	
+	$.removeCookie('the_cookie', { path: "/" });
+	logCookies("removing the_cookie under path /");
+});
+</script>
+</head>
+<body>
+	<h3>jQuery Cookie: JSON Usage</h3>
+	<p id="receiver">Results should appear below</p>
+	<div id="console-log" style="font-size: 14px;">
+	</div>
+</body>
+
+</html>
