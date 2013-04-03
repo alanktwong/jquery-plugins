@@ -60,6 +60,7 @@ test( "configuring the logger", function() {
 	equal( 10, targets.domInsert.priority, "priority of domInsert target should be standard");
 	var isCookieEnabled =  $.cookie(logger.key);
 	equal("true", isCookieEnabled, "expect enable flag on log4jq to be in a cookie")
+	// ticket 1
 });
 
 test( "logging debug messages", function() {
