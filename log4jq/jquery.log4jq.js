@@ -355,6 +355,7 @@
 				var msg = entry.format();
 				$rollingLog.after("<p>" + msg + "</p>");
 			}
+			// ticket 2
 	};
 	log4jq.targets.domInsert = $.extend({}, log4jq.targetDefaults, _domInsert);
 	log4jq.targets.custom = [];
