@@ -42,15 +42,14 @@
 	 * Publish a message.
 	 * 
 	 * <ul>
-	 * <li>topic: Name of the message to subscribe to.</li>
+	 * <li>topic: Name of the message to publish to.</li>
 	 * <li>Any additional parameters will be passed to the subscriptions.</li>
 	 * </ul>
 	 * 
 	 * Example:
-	 *    $.subscribe( topic, callback )
-	 *    $.subscribe( topic, context, callback )
-	 *    $.subscribe( topic, callback, priority )
-	 *    $.subscribe( topic, context, callback, priority )
+	 *    $.publish( string topic )
+	 *    $.publish( string topic, object data )
+	 *    $.publish( string topic, array *data )
 	 * 
 	 * $.publish returns a boolean indicating whether any subscriptions returned false.
 	 * The return value is true if none of the subscriptions returned false, and false otherwise.
@@ -99,10 +98,10 @@
 	 * </ul>
 	 * 
 	 * Example:
-	 *    $.subscribe( topic, callback )
-	 *    $.subscribe( topic, context, callback )
-	 *    $.subscribe( topic, callback, priority )
-	 *    $.subscribe( topic, context, callback, priority )
+	 *    $.subscribe( string topic, function callback )
+	 *    $.subscribe( string topic, object context, function callback )
+	 *    $.subscribe( string topic, function callback, integer priority )
+	 *    $.subscribe( string topic, object context, function callback, integer priority )
 	 * 
 	 * Returning false from a subscription's callback will prevent any additional subscriptions
 	 * from being invoked and will cause amplify.publish to return false.

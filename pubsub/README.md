@@ -26,12 +26,14 @@ For examples of each of the following use cases, see the demo folder
 
 Example:
 
-    $.subscribe( topic, callback )
-    $.subscribe( topic, context, callback )
-    $.subscribe( topic, callback, priority )
-    $.subscribe( topic, context, callback, priority )
+    $.publish( string topic )
+    $.publish( string topic, object data )
+    $.publish( string topic, array *data )
 
-`$.publish` returns a boolean indicating whether any subscriptions returned false.
+`$.publish` notifies subscriptions to a `topic`. The subscribers can receive
+no data, an object or an array.
+
+It returns a boolean indicating whether any subscriptions returned false.
 The return value is true if none of the subscriptions returned false, and false otherwise.
 Note that only one subscription can return false because doing so will prevent additional
 subscriptions from being invoked.
@@ -41,15 +43,15 @@ subscriptions from being invoked.
 
 * `topic`: Name of the topic to subscribe to.
 * `[context]`: What `this` will be when the callback is invoked.
-* `callback`: Function to invoke when the message is published.
-* `[priority]`: Priority relative to other subscriptions for the same message. Lower values have higher priority. Default is 10.
+* `callback`: Function to invoke when a message is published to the topic.
+* `[priority]`: Priority relative to other subscriptions for the same topic. Lower values have higher priority. Default is 10.
 
 Example:
 
-    $.subscribe( topic, callback )
-    $.subscribe( topic, context, callback )
-    $.subscribe( topic, callback, priority )
-    $.subscribe( topic, context, callback, priority )
+    $.subscribe( string topic, function callback )
+    $.subscribe( string topic, object context, function callback )
+    $.subscribe( string topic, function callback, integer priority )
+    $.subscribe( string topic, object context, function callback, integer priority )
  
 Returning false from a subscription's callback will prevent any additional subscriptions
 from being invoked and will cause `$.publish` to return false.
