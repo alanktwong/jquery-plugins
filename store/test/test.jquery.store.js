@@ -82,13 +82,20 @@ if ( "localStorage" in $.store.types ) {
 	test( "localStorage multi-page", function() {
 		expect( 1 );
 		var iframe = $( "#other-page" )[0];
+		
 		var otherJqueryStore = (iframe.contentWindow || iframe.contentDocument.defaultView).$;
-		$.store.localStorage( "foo", "bar" );
-		otherJqueryStore.store.localStorage( "baz", "qux" );
-		deepEqual( $.store.localStorage(), {
-			foo: "bar",
-			baz: "qux"
-		}, "both exist in current page" );
+		
+		// Chrome not permitting access to the iFrame
+		if (otherJqueryStore !== undefined && otherJqueryStore !== null) {
+			$.store.localStorage( "foo", "bar" );
+			otherJqueryStore.store.localStorage( "baz", "qux" );
+			deepEqual( $.store.localStorage(), {
+				foo: "bar",
+				baz: "qux"
+			}, "both exist in current page" );
+		} else {
+			equal(1,0,"iframe cannot be accessed");
+		}
 	});
 }
 
@@ -155,13 +162,20 @@ if ( "sessionStorage" in $.store.types ) {
 	test( "sessionStorage multi-page", function() {
 		expect( 1 );
 		var iframe = $( "#other-page" )[0];
+
 		var otherJqueryStore = (iframe.contentWindow || iframe.contentDocument.defaultView).$;
-		$.store.sessionStorage( "foo", "bar" );
-		otherJqueryStore.store.sessionStorage( "baz", "qux" );
-		deepEqual( $.store.sessionStorage(), {
-			foo: "bar",
-			baz: "qux"
-		}, "both exist in current page" );
+
+		// Chrome not permitting access to the iFrame
+		if (otherJqueryStore !== undefined && otherJqueryStore !== null) {
+			$.store.sessionStorage( "foo", "bar" );
+			otherJqueryStore.store.sessionStorage( "baz", "qux" );
+			deepEqual( $.store.sessionStorage(), {
+				foo: "bar",
+				baz: "qux"
+			}, "both exist in current page" );
+		} else {
+			equal(1,0,"iframe cannot be accessed");
+		}
 	});
 }
 
