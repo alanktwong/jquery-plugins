@@ -22,6 +22,35 @@
 		 */
 		topic : "/log4jq/logging",
 		/*
+		Generate date in Timestamp (YYYY-MM-DD HH:MM:SS.mmm) format
+		*/
+		formatTimestamp: function(timestamp) {
+			var date    = timestamp.getDate();
+			var month   = timestamp.getMonth()+1;
+			var year    = timestamp.getFullYear();
+			var hours   = timestamp.getHours();
+			var minutes = timestamp.getMinutes();
+			var seconds = timestamp.getSeconds();
+			var msecs   = timestamp.getMilliseconds();
+
+			if (date < 10){
+				date = "0"+date;
+			}
+			if (month < 10){
+				month = "0"+month;
+			}
+			if (hours<10){
+				hours = "0"+hours;
+			}
+			if (minutes < 10){
+				minutes = "0"+minutes;
+			}
+			if (seconds < 10){
+				seconds = "0"+seconds;
+			}
+			return year+"-"+month+"-"+date+" "+hours+":"+minutes+":"+seconds+"."+msecs;
+		},
+		/*
 		Default log entry structure.
 		*/
 		entryDefaults: {
@@ -36,10 +65,9 @@
 				var _levels = this.levels;
 				
 				var _timestamp = this.timestamp;
-				var _date = _timestamp.getFullYear() + "-" + (_timestamp.getMonth() + 1) + "-" + _timestamp.getDate();
-				var _time = _timestamp.getHours() + ":" + _timestamp.getMinutes() + ":" + _timestamp.getSeconds() + "." + _timestamp.getMilliseconds();
+				var _timestampStr = log4jq.formatTimestamp(_timestamp);
 				
-				var msg = "[" + _date  + " " + _time + "]";
+				var msg = "[" + _timestampStr + "]";
 				
 				if ($.type(_message) === 'string' && $.trim(_message).length > 0) {
 					msg = msg + "[" + $.trim(_message) + "]";
