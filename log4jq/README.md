@@ -44,27 +44,12 @@ The `configuration` options are:
 # Logging Messages
 
 `$.debug(string message, [object obj])`: Logs a debug message with all registered log targets.
-
-Parameters:
-* `message`: The debug message to log
-* `object`: The optional object to be stringified and appended to the message.
-
 `$.info(string message, [object obj])`: Logs an info message with all registered log targets.
-
-Parameters:
-* `message`: The debug message to log
-* `object`: The optional object to be stringified and appended to the message.
-
 `$.warn(string message, [object obj])`: Logs a warning message with all registered log targets.
-
-Parameters:
-* `message`: The warning message to log
-* `object`: The optional object to be stringified and appended to the message.
-
 `$.error(string message, [object obj])`: Logs an error message with all registered log targets.
 
 Parameters:
-* `message`: The error message to log
+* `message`: The logging message to send to the registered log targets.
 * `object`: The optional object to be stringified and appended to the message.
 
 
