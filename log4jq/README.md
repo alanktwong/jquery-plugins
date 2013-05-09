@@ -26,7 +26,8 @@ For further details, see the demo folder
 
 # Targets
 
-By default `log4jq` logs to the browser console. However it is possible to customize this behavior using custom log targets. For a list of the log targets provided with `log4jq` and information about how to create your own see Configuration.
+By default `log4jq` does not log to any target. In a document ready function, it is recommended that you configure one of the out of box targets.
+You can also customize this behavior using custom log targets. For a list of the log targets provided with `log4jq` and information about how to create your own see Configuration.
 
 
 # Configuration
