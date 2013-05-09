@@ -14,9 +14,9 @@ Note: Because of the JSON dependency, you need to add `json2.js` for support in 
 `$.store( string key, mixed value [, hash options ] )`
 Stores a value for a given key using the default storage type.
 
-`key`: Identifier for the value being stored.
-`value`: The value to store. The value can be anything that can be serialized as JSON.
-`[options]`: A set of key/value pairs that relate to settings for storing the value.
+* `key`: Identifier for the value being stored.
+* `value`: The value to store. The value can be anything that can be serialized as JSON.
+* `[options]`: A set of key/value pairs that relate to settings for storing the value.
 
 `$.store( string key )`
 Gets a stored value based on the key.
