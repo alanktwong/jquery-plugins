@@ -441,40 +441,6 @@
 		return log4jq;
 	}
 
-	/* ===== Compatibility Functions =====
-	 * Fallback for older browsers (such as IE) that don't implement JSON.stringify
-	 *
-	 * @param obj The JSON object to turn into a string.
-	 * @return A string representation of the JSON object.
-	 */
-	var JSON;
-	if (!JSON) {
-		JSON = {};
-	}
-	JSON.stringify = JSON.stringify || function(obj) {
-		var t = $.type(obj);
-		if (t != "object" || obj === null) {
-			// simple data type
-			if (t == "string") {
-				obj = '"'+obj+'"';
-			}
-			return String(obj);
-		} else {
-			// recurse array or object
-			var n, v, json = [], arr = (obj && obj.constructor == Array);
-			for (n in obj) {
-				v = obj[n];
-				t = $.type(v);
-				if (t == "string") {
-					v = '"'+v+'"';
-				} else if (t == "object" && v !== null) {
-					v = JSON.stringify(v);
-				}
-				json.push((arr ? "" : '"' + n + '":') + String(v));
-			}
-			return (arr ? "[" : "{") + String(json) + (arr ? "]" : "}");
-		}
-	};
 	/*
 	 * Public API of log4jq
 	 */
