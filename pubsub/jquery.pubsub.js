@@ -15,7 +15,7 @@
  * <p>For examples of each of the following use cases, see the demo folder</p>
  * 
  * @author awong
- * @see https://github.com/appendto/amplify/tree/master/core
+ * @see https://github.com/alanktwong/jquery-plugins/tree/master/pubsub
  * 
  */
 ;(function( $, undefined ) {

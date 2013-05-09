@@ -42,7 +42,7 @@
  *     Gets a hash of all stored values which were stored through $.store.
  * </div>
  * 
- * <h3>Options</options>
+ * <h3>Options</h3>
  * 
  * expires: Duration in milliseconds that the value should be cached.
  * storageTypes :
@@ -52,7 +52,7 @@
  *    memory: An in-memory store is provided as a fallback if none of the other storage types are available.
  * 
  * @author awong
- * @see https://github.com/appendto/amplify/tree/master/store
+ * @see https://github.com/alanktwong/jquery-plugins/tree/master/store/
  * 
  */
 ;(function( $, undefined ) {

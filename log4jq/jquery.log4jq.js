@@ -8,6 +8,7 @@
  * It also depends on jquery.pubsub & jquery.cookie.
  * 
  * @author awong
+ * @see https://github.com/alanktwong/jquery-plugins/tree/master/log4jq
  */ 
 ;(function( $, undefined ) {
 	var log4jq = {
