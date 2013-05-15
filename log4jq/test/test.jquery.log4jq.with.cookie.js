@@ -3,7 +3,6 @@ module( "jquery.logger testing with cookies" );
 var testTarget = {
 		name: "testTarget",
 		version: "0.0.1",
-		priority: 1,
 		/*
 		 * Publishes an entry as formatted string onto a topic
 		 * 

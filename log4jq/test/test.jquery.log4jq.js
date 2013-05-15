@@ -3,7 +3,7 @@ module( "jquery.logger testing w/o cookies" );
 var testTarget = {
 		name: "testTarget",
 		version: "0.0.1",
-		priority: 1,
+		subscribed: true,
 		/*
 		 * Publishes an entry as formatted string onto a topic
 		 * 
@@ -15,56 +15,76 @@ var testTarget = {
 			testTarget.set(entry);
 		},
 		set: function(entry) {
-			$("div#console-log").data("logger-test",entry);
-			var _bar = $("body");
+			var $div = $("div#console-log")
+			$div.data("logger-test",entry);
 		},
 		get: function() {
-			var _r = $("div#console-log").data("logger-test");
-			
+			var $div = $("div#console-log");
+			var _r = $div.data("logger-test");
 			return _r;
 		}
 	};
 
 
 
-var configure = function() {
+var configure = function(level) {
 	return $.configureLog4jq({
 		enabled: true,
-		level : $.log4jqLevels.debug,
+		level : level,
 		isEnableCookies : false,
-		target : {
-			alert : false,
-			console: {
-				priority: 42
+		targets : [
+			{
+				name: "alert",
+				subscribed: false
 			},
-			domInsert: {
-				$dom : $("div#console-log"),
-				priority : 10
+			{
+				name: "console",
+				subscribed: true
 			},
-			custom : [ testTarget ]
-		}
+			{
+				name: "divInsert",
+				subscribed: true,
+				$dom : $("div#console-log")
+			},
+			testTarget
+		]
 	});
 }
 
-
-var logger = configure();
-
 test( "configuring the logger", function() {
-	expect( 4 );
+	expect( 10 );
+	var logger = configure("debug");
 
 	equal( true, logger.enabled(), "logger should be enabled" );
-	var targets = logger.targets;
-	equal( 3, logger.subscribers.length, "only 3 log targets should be set up" );
+	var activeTargets = logger.subscribers();
+	equal( 3, activeTargets.length, "only 3 log targets should be set up" );
 	
-	equal( 42, targets.console.priority, "priority of console target should be low");
-	equal( 10, targets.domInsert.priority, "priority of domInsert target should be standard");
+	equal( "debug", logger.level(), "logging level set to debug" );
+	
+	var alertTarget   = logger.help.findTarget("alert");
+	var consoleTarget = logger.help.findTarget("console");
+	var divTarget     = logger.help.findTarget("divInsert");
+	var customTarget  = logger.help.findTarget("testTarget");
+	
+	equal( false, alertTarget.subscribed, "alert target should be disabled");
+	equal( true, consoleTarget.subscribed, "alert target should be enabled");
+	equal( true, divTarget.subscribed, "div target should be enabled");
+	equal( true, customTarget.subscribed, "custom target should be enabled");
+	
+	equal( true, consoleTarget.priority < divTarget.priority, "priority of console target should be 1st");
+	equal( true, divTarget.priority < customTarget.priority, "priority of div target should be 2nd");
+	equal( true, consoleTarget.priority < customTarget.priority, "priority of custom target should be last");
 
 });
 
 test( "logging debug messages", function() {
-	expect( 8 );
+	expect( 10 );
+	var logger = configure("debug");
 
 	equal( true, logger.enabled(), "logger should be enabled" );
+	equal( "debug", logger.level(), "logger should be at debug level" );
+	equal( 3, logger.subscribers().length, "only 3 log targets should be set up" );
+	var testTarget  = logger.help.findTarget("testTarget");
 	
 	//var $dom = $("div#console-log");
 	$.debug("hello");
@@ -72,7 +92,7 @@ test( "logging debug messages", function() {
 	// msg : [DEBUG] {date time} hello
 	equal( "hello", logEntry.message, "echo log message" );
 	equal( true, logEntry.timestamp instanceof Date, "timestamp should be current" );
-	equal( $.log4jqLevels.debug , logEntry.level, "log entry level should be at debug");
+	equal( "debug" , logEntry.getLevel(), "log entry level should be at debug");
 
 	var plan = { planId : "alan", foo : function() { var bar }, baz : "quus" }; 
 	$.debug(plan);
@@ -88,16 +108,21 @@ test( "logging debug messages", function() {
 
 
 test( "logging information messages", function() {
-	expect( 8 );
+	expect( 10 );
+	var logger = configure("info");
 
 	equal( true, logger.enabled(), "logger should be enabled" );
+	equal( "info", logger.level(), "logger should be at info level" );
+	equal( 3, logger.subscribers().length, "only 3 log targets should be set up" );
+	var testTarget  = logger.help.findTarget("testTarget");
 	
 	$.info("hello");
+	var testTarget  = logger.help.findTarget("testTarget");
 	var logEntry = testTarget.get();
 	// msg : [DEBUG] {date time} hello
 	equal( "hello", logEntry.message, "echo log message" );
 	equal( true, logEntry.timestamp instanceof Date, "timestamp should be current" );
-	equal( $.log4jqLevels.info , logEntry.level, "log entry level should be at debug");
+	equal( "info" , logEntry.getLevel(), "log entry level should be at info");
 
 	var plan = { planId : "alan", foo : function() { var bar }, baz : "quus" }; 
 	$.info(plan);
@@ -113,17 +138,22 @@ test( "logging information messages", function() {
 
 
 test( "logging warning messages", function() {
-	expect( 8 );
+	expect( 10 );
+	var logger = configure("warn");
 
 	equal( true, logger.enabled(), "logger should be enabled" );
+	equal( "warn", logger.level(), "logger should be at warning level" );
+	equal( 3, logger.subscribers().length, "only 3 log targets should be set up" );
+	var testTarget  = logger.help.findTarget("testTarget");
 
 	var $dom = $("div#console-log");
 	$.warn("hello");
-	var logEntry =testTarget.get();
+
+	var logEntry = testTarget.get();
 	// msg : [DEBUG] {date time} hello
 	equal( "hello", logEntry.message, "echo log message" );
 	equal( true, logEntry.timestamp instanceof Date, "timestamp should be current" );
-	equal( $.log4jqLevels.warn , logEntry.level, "log entry level should be at debug");
+	equal( "warn" , logEntry.getLevel(), "log entry level should be at warn");
 
 	var plan = { planId : "alan", foo : function() { var bar }, baz : "quus" }; 
 	$.warn(plan);
@@ -138,16 +168,21 @@ test( "logging warning messages", function() {
 });
 
 test( "logging error messages", function() {
-	expect( 8 );
+	expect( 10 );
+	var logger = configure("error");
 
 	equal( true, logger.enabled(), "logger should be enabled" );
+	equal( "error", logger.level(), "logger should be at error level" );
+	equal( 3, logger.subscribers().length, "only 3 log targets should be set up" );
+	var testTarget  = logger.help.findTarget("testTarget");
 
 	$.error("hello");
+
 	var logEntry = testTarget.get();
 	// msg : [DEBUG] {date time} hello
 	equal( "hello", logEntry.message, "echo log message" );
 	equal( true, logEntry.timestamp instanceof Date, "timestamp should be current" );
-	equal( $.log4jqLevels.error , logEntry.level, "log entry level should be at debug");
+	equal( "error" , logEntry.getLevel(), "log entry level should be at error");
 
 	var plan = { planId : "alan", foo : function() { var bar }, baz : "quus" }; 
 	$.error(plan);
