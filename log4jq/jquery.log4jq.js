@@ -133,8 +133,8 @@
 		   log4jq.log("Message");
 		*/
 		log: function(message, object, options) {
-			var _self = this;
-			if (_self.enabled()) {
+			var _log4jq = this;
+			if (_log4jq.enabled()) {
 				var t, target, _msg, _json;
 				
 				if (message && $.type(message) === "string") {
@@ -145,16 +145,20 @@
 				if (object && $.type(object) === "object") {
 					_json = object
 				} 
-				
+				var _context = null;
+				if  (options.context) {
+					_context = options.context;
+				}
+				 
 				var entry = $.extend({}, this.entryDefaults, {
 					timestamp: new Date(),
 					message: _msg,
 					json: _json
 				}, options);
-				if (!_self.isExcluded(entry)) {
+				if (!_log4jq.isExcluded(entry)) {
 					// Log the entry with each of the registered targets.
 					try {
-						$.publish(_self.topic, entry);
+						$.publish(_log4jq.topic, entry, {  context : _context } );
 					} catch (err) {
 						// Ignore any errors and carry on logging!
 					}
@@ -206,75 +210,73 @@
 	Logs a debug object with all registered log targets.
 
 	Parameters:
+		message  -  The message string to be logged.
 		object  -   The debug object to be logged.
-		options -   Logging options passed to log targets
-	Options:
-		level   -   Logging level.  Default value is 1 (debug).
+		context -   The context for the log statement
 	Usage: 
 		$.debug("Debug");
 	*/
-	log4jq.debug = function(message /*string*/, object, options) { 
+	log4jq.debug = function(message /*string*/, object, context) { 
 		var settings = $.extend({
 			level: log4jq.levels.debug,
-			levels: log4jq.levels
-		}, options);
+			levels: log4jq.levels,
+			context : context
+		}, {} );
 		log4jq.log(message, object, settings);
 	};
 	/*
 	Logs an information object with all registered log targets.
 
 	Parameters:
-		object  -   The information object to be logged.
-		options -   Logging options passed to log targets
-	Options:
-		level   -   Logging level.  Default value is 2 (info).
+		message  -  The message string to be logged.
+		object  -   The debug object to be logged.
+		context -   The context for the log statement
 	Usage: 
 		$.info("Information");
 	*/
-	log4jq.info = function(message /*string*/, object, options) { 
+	log4jq.info = function(message /*string*/, object, context) { 
 		var settings = $.extend({
 			level: log4jq.levels.info,
-			levels: log4jq.levels
-		}, options);
+			levels: log4jq.levels,
+			context : context
+		}, {} );
 		log4jq.log(message, object, settings);
 	};
 	/*
 	Logs a warning object with all registered log targets.
 	
 	Parameters:
-		object  -   The warning object to be logged.
-		options -   Logging options passed to log targets
-	Options:
-		level   -   Logging level.  Default value is 3 (warning).
+		message  -  The message string to be logged.
+		object  -   The debug object to be logged.
 
 	Usage: 
 		$.warn("Warning");
 	*/
-	log4jq.warn = function(message /*string*/, object, options) {
+	log4jq.warn = function(message /*string*/, object, context) {
 		var settings = $.extend({
 			level: log4jq.levels.warn,
-			levels: log4jq.levels
-		}, options);
+			levels: log4jq.levels,
+			context : context
+		}, {} );
 		log4jq.log(message, object, settings);
 	};
 	/*
 	Logs an error object with all registered log targets.
 
 	Parameters:
-		object  -   The error object to be logged.
-		options -   Logging options passed to log targets
-
-	Options:
-		level   -   Logging level.  Default value is 4 (error).
+		message  -  The message string to be logged.
+		object  -   The debug object to be logged.
+		context -   The context for the log statement
 
 	Usage: 
 		$.error("Error");
 	*/
-	log4jq.error = function(message /*string*/, object, options) {
+	log4jq.error = function(message /*string*/, object, context) {
 		var settings = $.extend({
 			level: log4jq.levels.error,
-			levels: log4jq.levels
-		}, options);
+			levels: log4jq.levels,
+			context : context
+		}, {} );
 		log4jq.log(message, object, settings);
 	};
 	

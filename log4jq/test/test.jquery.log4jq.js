@@ -31,7 +31,6 @@ var configure = function(level) {
 	return $.configureLog4jq({
 		enabled: true,
 		level : level,
-		isEnableCookies : false,
 		targets : [
 			{
 				name: "alert",
