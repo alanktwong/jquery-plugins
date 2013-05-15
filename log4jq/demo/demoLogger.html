@@ -15,23 +15,27 @@
 <script type="text/javascript" src="../jquery.log4jq.js"></script>
 <script>
 $(document).ready(function() {
-	var logger = $.configureLog4jq({
+	 var logger = $.configureLog4jq({
 		enabled: true,
-		level : $.log4jqLevels.debug,
-		isEnableCookies : false,
-		target : {
-			alert : false,
-			console: {
-				priority: 42
+		level : "debug",
+		targets : [
+			{
+				name: "alert",
+				subscribed: false
 			},
-			domInsert: {
+			{
+				name: "console",
+				subscribed: true
+			},
+			{
+				name: "divInsert",
+				subscribed: true,
 				$dom : $("div#console-log")
 			}
-		}
+		]
 	});
-
 	
-	if (logger.subscribers.length != 2) {
+	if (logger.subscribers().length != 2) {
 		var msg = "2 log targets must be subscribed";
 		throw(msg);
 	}
@@ -49,12 +53,6 @@ $(document).ready(function() {
 	$.info("Info", {foo: "info", bar: function() {},baz:1 })
 	$.warn("Warning", {foo: "warn", bar: function() {},baz:1 });
 	$.error("Error", {foo: "error", bar: function() {}, baz:1 });
-	
-	var logOptions = { level: $.log4jqLevels.debug };
-	$.debug("Debug", {foo: "debug"}, logOptions);
-	$.info("Info", {foo: "info"}, logOptions)
-	$.warn("Warning", {foo: "warn"}, logOptions);
-	$.error("Error", {foo: "error"}, logOptions);
 });
 </script>
 </head>
