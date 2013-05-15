@@ -47,10 +47,7 @@
 	 * </ul>
 	 * 
 	 * Example:
-	 *    $.subscribe( topic, callback )
-	 *    $.subscribe( topic, context, callback )
-	 *    $.subscribe( topic, callback, priority )
-	 *    $.subscribe( topic, context, callback, priority )
+	 *    $.publish( topic, data )
 	 * 
 	 * $.publish returns a boolean indicating whether any subscriptions returned false.
 	 * The return value is true if none of the subscriptions returned false, and false otherwise.
@@ -64,7 +61,7 @@
 		}
 
 		var _self = pubsub;
-		var args = _self.slice.call( arguments, 1 ),
+		var data = _self.slice.call( arguments, 1 ),
 			topicSubscriptions,
 			subscription,
 			length,
@@ -76,12 +73,20 @@
 		if ( !registrations ) {
 			return true;
 		}
+		var pubContext = null;
+		$.each(data, function(key,value) {
+			if (value && value.context !== undefined && value !== null) {
+				pubContext = value.context;
+				return false;
+			}
+		});
 
 		topicSubscriptions = registrations.slice();
 		for ( length = topicSubscriptions.length; i < length; i++ ) {
 			subscription = topicSubscriptions[ i ];
 			var _cb = subscription.callback;
-			ret = _cb.apply( subscription.context, args );
+			var _ctx = pubContext !== null ? pubContext : subscription.context;
+			ret = _cb.apply( _ctx, data );
 			if ( ret === false ) {
 				break;
 			}
