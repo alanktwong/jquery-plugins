@@ -138,7 +138,7 @@ test( "data", function() {
 });
 
 test( "unsubscribe", function() {
-	expect( 4 );
+	expect( 7 );
 	var order = 0;
 
 	$.subscribe( "unsubscribe", function() {
@@ -158,16 +158,21 @@ test( "unsubscribe", function() {
 		ok( false, "removed by returned reference" );
 		order++;
 	});
-	$.unsubscribe( "unsubscribe", fn );
-	$.unsubscribe( "unsubscribe", fn2 );
+	
+	var subscribers = [];
+	subscribers = $.unsubscribe( "unsubscribe", fn );
+	subscribers = $.unsubscribe( "unsubscribe", fn2 );
+	strictEqual(2, subscribers.length, "2 subscribers left");
 	try {
-		$.unsubscribe( "unsubscribe", function() {});
+		subscribers = $.unsubscribe( "unsubscribe", function() {});
+		strictEqual(true, subscribers === undefined, "subscribers undefined b/c of invalid handler");
 		ok( true, "no error with invalid handler" );
 	} catch ( e ) {
 		ok( false, "error with invalid handler" );
 	}
 	try {
-		$.unsubscribe( "unsubscribe2", function() {});
+		subscribers = $.unsubscribe( "unsubscribe2", function() {});
+		strictEqual(true, subscribers === undefined, "subscribers undefined b/c of invalid topic");
 		ok( true, "no error with invalid topic" );
 	} catch ( e ) {
 		ok( false, "error with invalid topic" );
@@ -175,20 +180,46 @@ test( "unsubscribe", function() {
 	$.publish( "unsubscribe" );
 });
 
+test( "unsubscribe all", function() {
+	expect( 4 );
+	var order = 0;
+
+	var _sub1 = function() {
+		strictEqual( order, 0, "first subscriber called" );
+		order++;
+	};
+	$.subscribe( "unsubscribeAll", _sub1);
+	
+	var _sub2 = function() {
+		strictEqual( order, 1, "2nd subscriber called" );
+		order++;
+	};
+	$.subscribe( "unsubscribeAll", _sub2 );
+
+	var result1 = $.publish( "unsubscribeAll" );
+	
+	var subscribers = $.unsubscribe( "unsubscribeAll" );
+	strictEqual(0, subscribers.length, "no subscribers left on the topic");
+	
+	var result2 = $.publish( "unsubscribeAll" );
+	ok(result2, "no subscriibers notified");
+});
+
 test( "unsubscribe during publish", function() {
-	expect( 3 );
+	expect( 4 );
 
 	function racer() {
-		ok( true, "second" );
-		$.unsubscribe( "racy", racer );
+		ok( true, "second subscriber" );
+		var subscribers = $.unsubscribe( "racy", racer );
+		strictEqual(2, subscribers.length, "unsubscribed myself");
 	}
 
 	$.subscribe( "racy", function() {
-		ok( true, "first" );
+		ok( true, "first subscriber" );
 	});
 	$.subscribe( "racy", racer );
 	$.subscribe( "racy", function() {
-		ok( true, "third" );
+		ok( true, "third subscriber" );
 	});
 	$.publish( "racy" );
 });

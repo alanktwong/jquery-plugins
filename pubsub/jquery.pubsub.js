@@ -63,14 +63,15 @@
 			throw new Error( "You must provide a valid topic to publish." );
 		}
 
-		var args = pubsub.slice.call( arguments, 1 ),
+		var _self = pubsub;
+		var args = _self.slice.call( arguments, 1 ),
 			topicSubscriptions,
 			subscription,
 			length,
 			i = 0,
 			ret;
 		
-		var registrations = pubsub.subscriptions[ topic ];
+		var registrations = _self.subscriptions[ topic ];
 
 		if ( !registrations ) {
 			return true;
@@ -113,6 +114,8 @@
 			throw new Error( "You must provide a valid topic to create a subscription." );
 		}
 		// pubsub.subscribe( topic, callback, priority )
+		var _self = pubsub;
+		
 		if ( arguments.length === 3 && $.type(callback) === "number" ) {
 			priority = callback;
 			callback = context;
@@ -136,11 +139,11 @@
 			topic = topics[ topicIndex ];
 			added = false;
 
-			if ( !pubsub.subscriptions[ topic ] ) {
-				pubsub.subscriptions[ topic ] = [];
+			if ( !_self.subscriptions[ topic ] ) {
+				_self.subscriptions[ topic ] = [];
 			}
 
-			var i = pubsub.subscriptions[ topic ].length - 1,
+			var i = _self.subscriptions[ topic ].length - 1,
 				subscriptionInfo = {
 					callback: callback,
 					context: context,
@@ -148,15 +151,15 @@
 				};
 
 			for ( ; i >= 0; i-- ) {
-				if ( pubsub.subscriptions[ topic ][ i ].priority <= priority ) {
-					pubsub.subscriptions[ topic ].splice( i + 1, 0, subscriptionInfo );
+				if ( _self.subscriptions[ topic ][ i ].priority <= priority ) {
+					_self.subscriptions[ topic ].splice( i + 1, 0, subscriptionInfo );
 					added = true;
 					break;
 				}
 			}
 
 			if ( !added ) {
-				pubsub.subscriptions[ topic ].unshift( subscriptionInfo );
+				_self.subscriptions[ topic ].unshift( subscriptionInfo );
 			}
 		}
 
@@ -169,19 +172,23 @@
 	 * <li>topic: The topic being unsubscribed from.</li>
 	 * <li>callback: The callback that was originally subscribed.</li>
 	 * </ul>
+	
+	 * Returns registrations that still subscribe to the topic.
 	 */
 	pubsub.unsubscribe =  function( topic /* string */, callback /* function */ ) {
 		if ( $.type(topic) !== "string" ) {
 			throw new Error( "You must provide a valid topic to remove a subscription." );
 		}
 		
-		var registrations = pubsub.subscriptions[ topic ];
+		var _self = pubsub;
+		var registrations = _self.subscriptions[ topic ];
 
 		if ( !registrations ) {
 			return;
 		}
 		
 		if ( !callback ) {
+			_self.subscriptions[topic] = registrations = [];
 			return registrations;
 		}
 		
