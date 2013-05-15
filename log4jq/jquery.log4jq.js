@@ -11,6 +11,8 @@
  * @see https://github.com/alanktwong/jquery-plugins/tree/master/log4jq
  */ 
 ;(function( $, undefined ) {
+	'use strict';
+	
 	var log4jq = {
 		// Private enabled flag.
 		_enabled: false,

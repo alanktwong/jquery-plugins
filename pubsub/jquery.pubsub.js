@@ -19,6 +19,7 @@
  * 
  */
 ;(function( $, undefined ) {
+	'use strict';
 	/*
 	 * Encapusulate state of pubsub event bus in following object.
 	 * The structure of the {@code subscriptions} cache will look like:

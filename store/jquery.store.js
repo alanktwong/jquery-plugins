@@ -56,7 +56,8 @@
  * 
  */
 ;(function( $, undefined ) {
-
+	'use strict';
+	
 	var store = function( key /* string */, value /* mixed */, options /* hash */) {
 		var type = store.type;
 		if ( options && options.type && options.type in store.types ) {
