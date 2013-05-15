@@ -214,3 +214,43 @@ test( "multiple subscriptions", function() {
 	$.publish( "/sub/b/2" );
 	$.publish( "/sub/b/3" );
 });
+
+test("jquery deferred", function() {
+	expect(1);
+	var isTest = false;
+	if (isTest) {
+		// below has nothing to do with pubsub plugin
+		function asyncEvent(){
+			var dfd = new $.Deferred();
+			// Resolve after a random interval
+			setTimeout(function(){
+				dfd.resolve("done");
+			}, Math.floor(400+Math.random()*2000));
+			// Reject after a random interval
+			setTimeout(function(){
+				dfd.reject("fail");
+			}, Math.floor(400+Math.random()*2000));
+			// Show a "working..." message every half-second
+			setTimeout(function working(){
+				if ( dfd.state() === "pending" ) {
+					dfd.notify("progress");
+				}
+			}, 1);
+			// Return the Promise so caller can't change the Deferred
+			return dfd.promise();
+		};
+		$.when( asyncEvent() ).then(
+			function(status){
+				strictEqual( "done", status, "asyncEvent is done" );
+			},
+			function(status){
+				strictEqual( "fail", status, "asyncEvent has failed" );
+			},
+			function(status){
+				strictEqual( "progress", status, "asyncEvent is in progress" );
+			}
+		);
+	} else {
+		ok(true);
+	}
+});
