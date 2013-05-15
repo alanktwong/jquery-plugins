@@ -280,35 +280,7 @@
 	
 	// Extend the log entry defaults object to include a default log level.
 	log4jq.entryDefaults.level = log4jq.levels.debug;
-	/*
-	 * Overrides the default log4jq.enabled behavior and persists the 
-	 * enabled flag to a cookie.  This means that logging can be left disabled on 
-	 * document ready to minimize the performance impact for users, and then turned 
-	 * on when required.  Using a cookie means that the flag can be set before 
-	 * viewing a page so that page load events can be logged.
-	 *
-	 */ 
-	var _cookie = {
-		enabled: function(enable) {
-			var enabled = enable;
-			
-			if ($.cookie) {
-				if (enabled !== undefined) {
-					// Save the new value in the cookie.
-					$.cookie(log4jq.key, enabled, { expires: 50 });
-					this._enabled = enabled;
-				} else {
-					enabled = this._enabled;
-					if (enabled === undefined) {
-						// Get the value from the cookie.
-						enabled = Boolean($.cookie(log4jq.key));
-						this._enabled = enabled;
-					}
-				}
-			}
-			return enabled;
-		}
-	};
+
 	
 	log4jq.outOfBoxTargets = {};
 	var _alertTarget = {
@@ -438,7 +410,6 @@
 	
 	var _defaultConfiguration = {
 		enabled : true,
-		isEnableCookies : false,
 		level : "debug",
 		targets : [
 			{
@@ -533,12 +504,6 @@
 		 */
 		self.help.reset();
 		
-		if ($.cookie && cfg.isEnableCookies) {
-			// Copy cookie plugin onto log4jq
-			$.extend(log4jq, _cookie);
-			// Reset the enabled flag so we can tell if it has been set or not.
-			self._enabled = undefined;
-		}
 		if (cfg.enabled && $.type(cfg.enabled) === 'boolean') {
 			self.enabled(cfg.enabled);
 		} else {
