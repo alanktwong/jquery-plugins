@@ -103,6 +103,15 @@ test( "logging debug messages", function() {
 	logEntry = testTarget.get();
 	equal( "plan", logEntry.message, "logEntry.message should not be empty" );
 	equal( plan, logEntry.json, "logEntry.json should not be empty" );
+	
+	var moduleSvc = {
+		name : "moduleSvc",
+		execute : function() {
+			$.debug("moduleSvc", { msg : "debug in moduleSvc" }, moduleSvc );
+		}
+	}
+	moduleSvc.execute();
+	logEntry = testTarget.get();
 });
 
 
@@ -133,6 +142,15 @@ test( "logging information messages", function() {
 	logEntry = testTarget.get();
 	equal( "plan", logEntry.message, "logEntry.message should not be empty" );
 	equal( plan, logEntry.json, "logEntry.json should not be empty" );
+	
+	var moduleSvc = {
+		name : "moduleSvc",
+		execute : function() {
+			$.info("moduleSvc", { msg : "info in moduleSvc" }, moduleSvc );
+		}
+	}
+	moduleSvc.execute();
+	logEntry = testTarget.get();
 });
 
 
@@ -164,10 +182,20 @@ test( "logging warning messages", function() {
 	logEntry = testTarget.get();
 	equal( "plan", logEntry.message, "logEntry.message should not be empty" );
 	equal( plan, logEntry.json, "logEntry.json should not be empty" );
+	
+	var moduleSvc = {
+		name : "moduleSvc",
+		execute : function() {
+			$.warn("moduleSvc", { msg : "warning in moduleSvc" }, moduleSvc );
+		}
+	}
+	moduleSvc.execute();
+	logEntry = testTarget.get();
+	
 });
 
 test( "logging error messages", function() {
-	expect( 10 );
+	expect( 11 );
 	var logger = configure("error");
 
 	equal( true, logger.enabled(), "logger should be enabled" );
@@ -193,4 +221,15 @@ test( "logging error messages", function() {
 	logEntry = testTarget.get();
 	equal( "plan", logEntry.message, "logEntry.message should not be empty" );
 	equal( plan, logEntry.json, "logEntry.json should not be empty" );
+	
+	var moduleSvc = {
+		name : "moduleSvc",
+		execute : function() {
+			$.error("moduleSvc", { msg : "error in moduleSvc" }, moduleSvc );
+		}
+	}
+	moduleSvc.execute();
+	logEntry = testTarget.get();
+	equal("", logEntry.format(), "should contain moduleSvc");
+	
 });

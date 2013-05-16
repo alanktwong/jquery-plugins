@@ -55,15 +55,20 @@
 		entryDefaults: {
 			timestamp: null,
 			message: "",
-			format: function() {
+			format: function(args) {
+				var _ctx = args && $.type(args) === "object" && !$.isWindow(args) ? args : null;
 				var _json = this.json;
 				var _message = this.message;
-				var msg = _message;
+				var msg = "";
 				
 				var _level = this.level;
 				var _levels = this.levels;
 				
-				var msg = "[" + log4jq.formatTimestamp(this.timestamp) + "]";
+				if (_ctx !== null && _ctx.name && $.type(_ctx.name) === "string") {
+					msg = "[" + ctx.name + "]";
+				}
+				
+				var msg = msg + "[" + log4jq.formatTimestamp(this.timestamp) + "]";
 				
 				if ($.type(_message) === 'string' && $.trim(_message).length > 0) {
 					msg = msg + "[" + $.trim(_message) + "]";
@@ -295,7 +300,7 @@
 			   entry -   The entry to log.
 			*/
 			log: function(entry) {
-				alert(entry.format());
+				alert(entry.format(this));
 			},
 			configure : function(cfg, self) {
 				var  _priority = cfg.priority;
@@ -323,7 +328,7 @@
 			 *		entry -   The entry to log.
 			 */
 			log: function(entry) {
-				var msg = entry.format();
+				var msg = entry.format(this);
 				// Check for the browser console object...
 				if (window.console) {
 					switch(entry.level) {
@@ -385,7 +390,7 @@
 			 */
 			log: function(entry) {
 				var $rollingLog = $('p:last',_domInsert.$dom);
-				var msg = entry.format();
+				var msg = entry.format(this);
 				$rollingLog.after("<p>" + msg + "</p>");
 			},
 			configure : function(cfg, self) {
