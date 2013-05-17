@@ -26,7 +26,8 @@
 	 */
 	var PubSub = {
 		slice : Array.slice,
-		version : "0.0.2.SNAPSHOT",
+		version : "1.0.0.SNAPSHOT",
+		key : "PubSub",
 		subscriptions : {},
 		TOPIC_SEPARATOR : "/",
 		immediateExceptions : false,
