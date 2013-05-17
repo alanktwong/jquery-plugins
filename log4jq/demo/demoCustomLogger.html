@@ -21,7 +21,7 @@ $(document).ready(function() {
 	var customTarget = {
 		name: "custom",
 		version: "0.0.1",
-		subscribed: true,
+		priority: 1,
 		$dom: $("div#console-log"),
 		/*
 		 * Appends an entry as formatted string into DOM
@@ -35,28 +35,18 @@ $(document).ready(function() {
 			$rollingLog.after("<p> CUSTOM: " + msg + "</p>");
 		}
 	};
-	
-	 var logger = $.configureLog4jq({
+	var logger = $.configureLog4jq({
 		enabled: true,
-		level : "debug",
-		targets : [
-			{
-				name: "alert",
-				subscribed: false
-			},
-			{
-				name: "console",
-				subscribed: true
-			},
-			{
-				name: "divInsert",
-				subscribed: false
-			},
-			customTarget
-		]
+		level : $.log4jqLevels.debug,
+		isEnableCookies : false,
+		target : {
+			alert : false,
+			console: true,
+			domInsert: false,
+			custom : [ customTarget ]
+		}
 	});
-	
-	if (logger.subscribers().length != 2) {
+	if (logger.subscribers.length != 2) {
 		var msg = "2 log targets must be subscribed";
 		throw(msg);
 	}
@@ -75,6 +65,12 @@ $(document).ready(function() {
 	$.info("Info", {foo: "info"})
 	$.warn("Warning", {foo: "warn"});
 	$.error("Error", {foo: "error"});
+	
+	var logOptions = { level: $.loggerLevels.debug };
+	$.debug("Debug", {foo: "debug"}, logOptions);
+	$.info("Info", {foo: "info"}, logOptions)
+	$.warn("Warning", {foo: "warn"}, logOptions);
+	$.error("Error", {foo: "error"}, logOptions);
 });
 </script>
 </head>
