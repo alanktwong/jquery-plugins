@@ -3,6 +3,13 @@
 <head>
 	<meta charset="utf-8">
 	<title>jQuery PubSub Test Suite</title>
+	<script type="text/javascript">
+	function loadInDocument(doesNotExist, jsSrc) {
+		if (doesNotExist) {
+			document.write(unescape('%3Cscript type="text/javascript" src="' + jsSrc + '"%3E%3C/script%3E'));
+		}
+	}
+	</script>
 	<script type="text/javascript"  src="http://www.google.com/jsapi"></script>
 	<script type="text/javascript">
 		google.load("jquery", "1.4.4", {uncompressed: true});
@@ -10,6 +17,13 @@
 	
 	<link rel="stylesheet" href="http://code.jquery.com/qunit/git/qunit.css" type="text/css" media="screen" />
 	<script type="text/javascript" src="http://code.jquery.com/qunit/git/qunit.js"></script>
+	<script type="text/javascript">
+		loadInDocument(!window.JSON, "//cdnjs.cloudflare.com/ajax/libs/json2/20110223/json2.min.js");
+		loadInDocument(!window.JSON, "//cdn.jsdelivr.net/json2/0.1/json2.min.js");
+		loadInDocument(!window.JSON, "/us/theme1/common/js/json2.js");
+	</script>
+	<script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.4.3/underscore-min.js"></script>
+	
 	
 	<script src="../jquery.pubsub.js"></script>
 	<script src="test.jquery.pubsub.js"></script>

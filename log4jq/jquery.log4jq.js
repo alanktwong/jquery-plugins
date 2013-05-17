@@ -13,7 +13,7 @@
 	var log4jq = {
 		// Private enabled flag.
 		_enabled: false,
-		version : "0.0.1",
+		version : "0.0.2.SNAPSHOT",
 		key: "log4jq",
 		/*
 		 * Use the following topic to publish log entries to 
@@ -21,24 +21,54 @@
 		 */
 		topic : "/log4jq/logging",
 		/*
+		Generate date in Timestamp (YYYY-MM-DD HH:MM:SS.mmm) format
+		*/
+		formatTimestamp: function(timestamp) {
+			var date    = timestamp.getDate();
+			var month   = timestamp.getMonth()+1;
+			var year    = timestamp.getFullYear();
+			var hours   = timestamp.getHours();
+			var minutes = timestamp.getMinutes();
+			var seconds = timestamp.getSeconds();
+			var msecs   = timestamp.getMilliseconds();
+
+			if (date < 10){
+				date = "0"+date;
+			}
+			if (month < 10){
+				month = "0"+month;
+			}
+			if (hours<10){
+				hours = "0"+hours;
+			}
+			if (minutes < 10){
+				minutes = "0"+minutes;
+			}
+			if (seconds < 10){
+				seconds = "0"+seconds;
+			}
+			return year+"-"+month+"-"+date+" "+hours+":"+minutes+":"+seconds+"."+msecs;
+		},
+		/*
 		Default log entry structure.
 		*/
 		entryDefaults: {
 			timestamp: null,
 			message: "",
-			format: function() {
+			format: function(args) {
+				var _ctx = args && $.type(args) === "object" && !$.isWindow(args) ? args : null;
 				var _json = this.json;
 				var _message = this.message;
-				var msg = _message;
+				var msg = "";
 				
 				var _level = this.level;
 				var _levels = this.levels;
 				
-				var _timestamp = this.timestamp;
-				var _date = _timestamp.getFullYear() + "-" + (_timestamp.getMonth() + 1) + "-" + _timestamp.getDate();
-				var _time = _timestamp.getHours() + ":" + _timestamp.getMinutes() + ":" + _timestamp.getSeconds() + "." + _timestamp.getMilliseconds();
+				if (_ctx !== null && _ctx.name && $.type(_ctx.name) === "string") {
+					msg = "[" + ctx.name + "]";
+				}
 				
-				var msg = "[" + _date  + " " + _time + "]";
+				var msg = msg + "[" + log4jq.formatTimestamp(this.timestamp) + "]";
 				
 				if ($.type(_message) === 'string' && $.trim(_message).length > 0) {
 					msg = msg + "[" + $.trim(_message) + "]";
@@ -58,6 +88,18 @@
 					}
 				}
 				return msg;
+			},
+			getLevel : function() {
+				var levelStr = null;
+				var levels = this.levels;
+				var levelInt = this.level;
+				$.each(levels, function(key,value) {
+					if (levelInt === value) {
+						levelStr = key;
+						return false;
+					}
+				});
+				return levelStr;
 			}
 		},
 		/*
@@ -65,9 +107,13 @@
 		*/
 		targetDefaults: {
 			name: "",
-			priority: 10,
 			subscribed: false,
-			log: function(entry) {}
+			log: function(entry) {
+				$.noop();
+			},
+			configure : function(cfg, self) {
+				$.noop();
+			}
 		},
 		/*
 		Indicates whether or not logging is enabled.  Default is false.
@@ -92,7 +138,8 @@
 		   log4jq.log("Message");
 		*/
 		log: function(message, object, options) {
-			if (this.enabled()) {
+			var _log4jq = this;
+			if (_log4jq.enabled()) {
 				var t, target, _msg, _json;
 				
 				if (message && $.type(message) === "string") {
@@ -103,16 +150,20 @@
 				if (object && $.type(object) === "object") {
 					_json = object
 				} 
-				
+				var _context = null;
+				if  (options.context) {
+					_context = options.context;
+				}
+				 
 				var entry = $.extend({}, this.entryDefaults, {
 					timestamp: new Date(),
 					message: _msg,
 					json: _json
 				}, options);
-				if (!log4jq.isExcluded(entry)) {
+				if (!_log4jq.isExcluded(entry)) {
 					// Log the entry with each of the registered targets.
 					try {
-						$.publish(log4jq.topic, entry);
+						$.publish(_log4jq.topic, entry, {  context : _context } );
 					} catch (err) {
 						// Ignore any errors and carry on logging!
 					}
@@ -138,21 +189,12 @@
 		*/
 		levels: {
 			debug: 1,
-			info: 2,
-			warn: 3,
+			info:  2,
+			warn:  3,
 			error: 4
 		}
 	};
 	
-	/*
-	Gets or sets the level exclusion value.  Default is null (no exclusion is applied).
-	*/
-	log4jq.level = function(level) {
-		if (level !== undefined) {
-			log4jq._level = level;
-		}
-		return log4jq._level;
-	};
 	/*
 	Determines if a log entry will be excluded from being logged.
 
@@ -173,115 +215,84 @@
 	Logs a debug object with all registered log targets.
 
 	Parameters:
+		message  -  The message string to be logged.
 		object  -   The debug object to be logged.
-		options -   Logging options passed to log targets
-	Options:
-		level   -   Logging level.  Default value is 1 (debug).
+		context -   The context for the log statement
 	Usage: 
 		$.debug("Debug");
 	*/
-	log4jq.debug = function(message /*string*/, object, options) { 
+	log4jq.debug = function(message /*string*/, object, context) { 
 		var settings = $.extend({
 			level: log4jq.levels.debug,
-			levels: log4jq.levels
-		}, options);
+			levels: log4jq.levels,
+			context : context
+		}, {} );
 		log4jq.log(message, object, settings);
 	};
 	/*
 	Logs an information object with all registered log targets.
 
 	Parameters:
-		object  -   The information object to be logged.
-		options -   Logging options passed to log targets
-	Options:
-		level   -   Logging level.  Default value is 2 (info).
+		message  -  The message string to be logged.
+		object  -   The debug object to be logged.
+		context -   The context for the log statement
 	Usage: 
 		$.info("Information");
 	*/
-	log4jq.info = function(message /*string*/, object, options) { 
+	log4jq.info = function(message /*string*/, object, context) { 
 		var settings = $.extend({
 			level: log4jq.levels.info,
-			levels: log4jq.levels
-		}, options);
+			levels: log4jq.levels,
+			context : context
+		}, {} );
 		log4jq.log(message, object, settings);
 	};
 	/*
 	Logs a warning object with all registered log targets.
 	
 	Parameters:
-		object  -   The warning object to be logged.
-		options -   Logging options passed to log targets
-	Options:
-		level   -   Logging level.  Default value is 3 (warning).
+		message  -  The message string to be logged.
+		object  -   The debug object to be logged.
 
 	Usage: 
 		$.warn("Warning");
 	*/
-	log4jq.warn = function(message /*string*/, object, options) {
+	log4jq.warn = function(message /*string*/, object, context) {
 		var settings = $.extend({
 			level: log4jq.levels.warn,
-			levels: log4jq.levels
-		}, options);
+			levels: log4jq.levels,
+			context : context
+		}, {} );
 		log4jq.log(message, object, settings);
 	};
 	/*
 	Logs an error object with all registered log targets.
 
 	Parameters:
-		object  -   The error object to be logged.
-		options -   Logging options passed to log targets
-
-	Options:
-		level   -   Logging level.  Default value is 4 (error).
+		message  -  The message string to be logged.
+		object  -   The debug object to be logged.
+		context -   The context for the log statement
 
 	Usage: 
 		$.error("Error");
 	*/
-	log4jq.error = function(message /*string*/, object, options) {
+	log4jq.error = function(message /*string*/, object, context) {
 		var settings = $.extend({
 			level: log4jq.levels.error,
-			levels: log4jq.levels
-		}, options);
+			levels: log4jq.levels,
+			context : context
+		}, {} );
 		log4jq.log(message, object, settings);
 	};
 	
 	// Extend the log entry defaults object to include a default log level.
 	log4jq.entryDefaults.level = log4jq.levels.debug;
-	/*
-	 * Overrides the default log4jq.enabled behavior and persists the 
-	 * enabled flag to a cookie.  This means that logging can be left disabled on 
-	 * document ready to minimize the performance impact for users, and then turned 
-	 * on when required.  Using a cookie means that the flag can be set before 
-	 * viewing a page so that page load events can be logged.
-	 *
-	 */ 
-	var _cookie = {
-		enabled: function(enable) {
-			var enabled = enable;
-			
-			if ($.cookie) {
-				if (enabled !== undefined) {
-					// Save the new value in the cookie.
-					$.cookie(log4jq.key, enabled, { expires: 50 });
-					this._enabled = enabled;
-				} else {
-					enabled = this._enabled;
-					if (enabled === undefined) {
-						// Get the value from the cookie.
-						enabled = Boolean($.cookie(log4jq.key));
-						this._enabled = enabled;
-					}
-				}
-			}
-			return enabled;
-		}
-	};
+
 	
-	log4jq.targets = {};
+	log4jq.outOfBoxTargets = {};
 	var _alertTarget = {
 			name: "alert",
 			version: "0.0.1",
-			priority: 20,
 			/*
 			Logs a entry using the browser alert window.
 			
@@ -289,14 +300,27 @@
 			   entry -   The entry to log.
 			*/
 			log: function(entry) {
-				alert(entry.format());
+				alert(entry.format(this));
+			},
+			configure : function(cfg, self) {
+				var  _priority = cfg.priority;
+				self.priority = _priority;
+				if (cfg.subscribed !== 'undefined' && $.type(cfg.subscribed) === 'boolean') {
+					self.subscribed = cfg.subscribed;
+				} else {
+					self.subscribed = false;
+				}
+				var _log4jq = log4jq;
+				_log4jq.targets.alert = self;
+				if (self.subscribed) {
+					$.subscribe(_log4jq.topic, self.log, _priority);
+				}
 			}
 	};
-	log4jq.targets.alert = $.extend({}, log4jq.targetDefaults, _alertTarget);
+	log4jq.outOfBoxTargets.alert = $.extend({}, log4jq.targetDefaults, _alertTarget);
 	var _consoleTarget = {
 			name: "console",
 			version: "0.0.1",
-			priority: 10,
 			/*
 			 * Logs a entry to the console if available.
 			 * 
@@ -304,7 +328,7 @@
 			 *		entry -   The entry to log.
 			 */
 			log: function(entry) {
-				var msg = entry.format();
+				var msg = entry.format(this);
 				// Check for the browser console object...
 				if (window.console) {
 					switch(entry.level) {
@@ -336,13 +360,27 @@
 							firebug.d.console.log(msg);
 					}
 				}
+			},
+			configure : function(cfg, self) {
+				var  _priority = cfg.priority;
+				self.priority = _priority;
+				if (cfg.subscribed !== 'undefined' && $.type(cfg.subscribed) === 'boolean') {
+					self.subscribed = cfg.subscribed;
+				} else {
+					self.subscribed = false;
+				}
+				var _log4jq = log4jq;
+				_log4jq.targets.console = self;
+				
+				if (self.subscribed) {
+					$.subscribe(_log4jq.topic, self.log, _priority);
+				}
 			}
 	};
-	log4jq.targets.console = $.extend({}, log4jq.targetDefaults, _consoleTarget);
+	log4jq.outOfBoxTargets.console = $.extend({}, log4jq.targetDefaults, _consoleTarget);
 	var _domInsert = {
 			name: "divInsert",
 			version: "0.0.1",
-			priority: 1,
 			$dom: $("div#console"),
 			/*
 			 * Appends an entry as formatted string into DOM
@@ -352,99 +390,180 @@
 			 */
 			log: function(entry) {
 				var $rollingLog = $('p:last',_domInsert.$dom);
-				var msg = entry.format();
+				var msg = entry.format(this);
 				$rollingLog.after("<p>" + msg + "</p>");
-			}
-			// ticket 2
-	};
-	log4jq.targets.domInsert = $.extend({}, log4jq.targetDefaults, _domInsert);
-	log4jq.targets.custom = [];
-	log4jq.configure = function(cfg) {
-		if (cfg) {
-			if (cfg.isEnableCookies && $.cookie) {
-				// Copy cookie plugin onto log4jq
-				$.extend(log4jq, _cookie);
-				// Reset the enabled flag so we can tell if it has been set or not.
-				log4jq._enabled = undefined;
-			}
-			if (cfg.enabled) {
-				log4jq.enabled(true);
-			}
-			if (cfg.level) {
-				log4jq.entryDefaults.level = cfg.level;
-			}
-			
-			var isConfigured = function(obj) {
-				return ( obj && ( $.type(obj) === 'boolean' || $.type(obj) === 'object' ) );
-			};
-			/*
-			 * TBD: If log4jq.configure() called twice, it is possible to register
-			 * the same target twice!  
-			 */
-			var _cfgTarget = cfg.target;
-			if (_cfgTarget) {
-				var _target;
-				var _priority;
+			},
+			configure : function(cfg, self) {
+				var  _priority = cfg.priority;
+				self.priority = _priority;
+				if (cfg.subscribed !== 'undefined' && $.type(cfg.subscribed) === 'boolean') {
+					self.subscribed = cfg.subscribed;
+				} else {
+					self.subscribed = false;
+				}
+				var _log4jq = log4jq;
 				
-				if (isConfigured(_cfgTarget.alert)) {
-					_priority = _cfgTarget.alert.priority ? _cfgTarget.alert.priority : _alertTarget.priority;
-					_alertTarget.priority = _priority;
-					
-					_alertTarget.subscribed = true;
-					log4jq.targets.alert = $.extend({}, log4jq.targetDefaults, _alertTarget);
-					$.subscribe(log4jq.topic, _alertTarget.log, _priority);
+				if (cfg.$dom !== 'undefined' && cfg.$dom instanceof jQuery) {
+					self.$dom = cfg.$dom;
 				}
-				if (isConfigured(_cfgTarget.console)) {
-					_priority = _cfgTarget.console.priority ? _cfgTarget.console.priority : _consoleTarget.priority;
-					_consoleTarget.priority = _priority;
-					
-					_consoleTarget.subscribed = true;
-					log4jq.targets.console = $.extend({}, log4jq.targetDefaults, _consoleTarget);
-					$.subscribe(log4jq.topic, _consoleTarget.log, _priority);
-				}
-				if (isConfigured(_cfgTarget.domInsert)) {
-					_priority = _cfgTarget.domInsert.priority ? _cfgTarget.domInsert.priority : _domInsert.priority;
-					
-					_domInsert.priority = _priority;
-					if (_cfgTarget.domInsert.$dom && _cfgTarget.domInsert.$dom instanceof jQuery) {
-						_domInsert.$dom = _cfgTarget.domInsert.$dom;
-					}
-					
-					_domInsert.subscribed = true;
-					log4jq.targets.domInsert = $.extend({}, log4jq.targetDefaults, _domInsert);
-					$.subscribe(log4jq.topic, _domInsert.log, _priority);
-				}
-				var _customTarget = _cfgTarget.custom;
-				if (_customTarget && $.isArray(_customTarget)) {
-					for (var i = 0; i < _customTarget.length; i++ ){
-						var _eachCustomTarget = _customTarget[i];
-						if ($.type(_eachCustomTarget) === 'object'
-							&& _eachCustomTarget.log
-							&& $.type(_eachCustomTarget.log) === 'function')
-						{
-							_eachCustomTarget.subscribed = true;
-							_eachCustomTarget = $.extend({}, log4jq.targetDefaults, _eachCustomTarget);
-							log4jq.targets.custom.push(_eachCustomTarget);
-							
-							if (_eachCustomTarget.priority) {
-								$.subscribe(log4jq.topic, _eachCustomTarget.log, _eachCustomTarget.priority);
-							} else {
-								$.subscribe(log4jq.topic, _eachCustomTarget.log);
-							}
-						}
-					}
+				
+				_log4jq.targets.domInsert = self;
+				if (self.subscribed) {
+					$.subscribe(_log4jq.topic, self.log, _priority);
 				}
 			}
+	};
+	log4jq.outOfBoxTargets.domInsert = $.extend({}, log4jq.targetDefaults, _domInsert);
+	
+	var _defaultConfiguration = {
+		enabled : true,
+		level : "debug",
+		targets : [
+			{
+				name : "console",
+				subscribed: true
+			},
+			{
+				name : "alert",
+				subscribed: false
+			},
+			{
+				name : "divInsert",
+				subscribed: false
+			}
+		]
+	}
+	
+	log4jq.help = {
+		/*
+		Gets or sets the level exclusion value..
+		*/
+		findLevel : function(string) {
+			var _log4jq = log4jq;
+			if (string !== undefined && string !== null) {
+				// sets level as a string
+				var levels = _log4jq.levels;
+				var levelInt = _log4jq.levels.debug;
+				$.each(levels, function(key,value) {
+					if (key === string) {
+						levelInt = value;
+						return false;
+					}
+				});
+				_log4jq._level = levelInt;
+				_log4jq.entryDefaults.level = levelInt;
+				return levelInt;
+			} else {
+				// gets level as a string
+				var levelStr = null;
+				var levels = _log4jq.levels;
+				var levelInt = _log4jq._level;
+				$.each(levels, function(key,value) {
+					if (levelInt === value) {
+						levelStr = key;
+						return false;
+					}
+				});
+				return levelStr;
+			}
+		},
+		findTarget : function(name) {
+			var target = null;
+			var _log4jq = log4jq;
+			$.each(_log4jq.targets, function(key,value) {
+				if (key === name || name === value.name) {
+					target = value;
+					return false;
+				}
+			});
+			return target;
+		},
+		findActiveTargets : function() {
+			var active = [];
+			var _log4jq = log4jq;
+			$.each(_log4jq.targets, function(key,target) {
+				if (target.subscribed) {
+					active.push(target);
+				}
+			});
+			return active;
+		},
+		reset : function() {
+			var _log4jq = log4jq;
+			log4jq.targets = log4jq.outOfBoxTargets;
+			$.unsubscribe(_log4jq.topic);
+			_log4jq._enabled = false;
+			_log4jq._level = null;
 		}
-		log4jq.subscribers = $.unsubscribe(log4jq.topic);
-		return log4jq;
+	};
+	
+	log4jq.level = log4jq.help.findLevel;
+	
+	log4jq.subscribers = log4jq.help.findActiveTargets;
+	
+	log4jq.configure = function(cfg) {
+		var self = log4jq;
+		cfg = $.extend({}, _defaultConfiguration, cfg);
+		/*
+		 * in order to make this idempotent
+		 * (i.e. configure can be called twice s.t. 2nd configure call overrides 1st)
+		 * we ought to clear out all the subscriptions to the logging topic.
+		 */
+		self.help.reset();
+		
+		if (cfg.enabled && $.type(cfg.enabled) === 'boolean') {
+			self.enabled(cfg.enabled);
+		} else {
+			self.enabled(_defaultConfiguration.enabled);
+		}
+		
+		if (cfg.level && $.type(cfg.level) === 'string' ) {
+			self.help.findLevel(cfg.level);
+		} else {
+			self.help.findLevel(_defaultConfiguration.level);
+		}
+		
+		
+		$.each(cfg.targets, function(key,cfgTarget) {
+			var target = self.help.findTarget(cfgTarget.name);
+			cfgTarget.priority = 10 + key;
+			if (target !== null) {
+				// we're dealing with an out-of-box target;
+				target.configure(cfgTarget, target);
+			} else {
+				// we're dealing with a custom target;
+				target = $.extend({}, log4jq.targetDefaults, cfgTarget);
+				
+				if ($.type(target) === 'object' && target.log && $.type(target.log) === 'function') {
+					target.configure = function(cfg, self) {
+						var  _priority = cfg.priority;
+						self.priority = _priority;
+						if (cfg.subscribed !== 'undefined' && $.type(cfg.subscribed) === 'boolean') {
+							self.subscribed = cfg.subscribed;
+						} else {
+							self.subscribed = false;
+						}
+						var _log4jq = log4jq;
+
+						_log4jq.targets[self.name] = self;
+
+						if (self.subscribed) {
+							$.subscribe(_log4jq.topic, self.log, _priority);
+						}
+					};
+					target.configure(cfgTarget, target);
+				}
+			}
+		});
+
+		// log4jq.subscribers = $.unsubscribe(log4jq.topic);
+		return self;
 	}
 
 	/*
 	 * Public API of log4jq
 	 */
 	$.configureLog4jq = log4jq.configure;
-	$.log4jqLevels = log4jq.levels;
 	$.debug = log4jq.debug;
 	$.info  = log4jq.info;
 	$.warn  = log4jq.warn;
