@@ -11,6 +11,235 @@
  * 
  */
 ;(function( $, undefined ) {
+	
+	var Util = (function ($) {
+		/**
+		 * clones parts of underscore.js
+		 */
+		var ArrayProto  = Array.prototype,
+			ObjProto    = Object.prototype,
+			FuncProto   = Function.prototype;
+		
+		// Create quick reference variables for speed access to core prototypes.
+		var push             = ArrayProto.push,
+			slice            = ArrayProto.slice,
+			concat           = ArrayProto.concat,
+			toString         = ObjProto.toString,
+			hasOwnProperty   = ObjProto.hasOwnProperty;
+		
+		// All ECMAScript 5 native function implementations that we hope to use are declared here.
+		var nativeForEach      = ArrayProto.forEach,
+			nativeMap          = ArrayProto.map,
+			nativeReduce       = ArrayProto.reduce,
+			nativeReduceRight  = ArrayProto.reduceRight,
+			nativeFilter       = ArrayProto.filter,
+			nativeEvery        = ArrayProto.every,
+			nativeSome         = ArrayProto.some,
+			nativeIndexOf      = ArrayProto.indexOf,
+			nativeLastIndexOf  = ArrayProto.lastIndexOf,
+			nativeIsArray      = Array.isArray,
+			nativeKeys         = Object.keys,
+			nativeBind         = FuncProto.bind;
+
+		var _delay = function(func, wait) {
+			var context = null;
+			var args = slice.call(arguments, 2);
+			return setTimeout(function(){ return func.apply(context, args); }, wait);
+		}
+		
+		var _identity = function(value) {
+			return value;
+		};
+		
+		var _has = function(obj, key) {
+			return hasOwnProperty.call(obj, key);
+		};
+		
+		var _memoize = function(func, hasher) {
+			var memo = {};
+			hasher || (hasher = _identity);
+			return function() {
+				var key = hasher.apply(this, arguments);
+				return _has(memo, key) ? memo[key] : (memo[key] = func.apply(this, arguments));
+			};
+		};
+		
+		var _bind = function(func, context) {
+			if (func.bind === nativeBind && nativeBind) {
+				return nativeBind.apply(func, slice.call(arguments, 1));
+			}
+			var args = slice.call(arguments, 2);
+			return function() {
+				return func.apply(context, args.concat(slice.call(arguments)));
+			};
+		};
+		
+		var breaker = {};
+		
+		// The cornerstone, an each implementation, aka forEach.
+		// Handles objects with the built-in forEach, arrays, and raw objects.
+		// Delegates to ECMAScript 5's native forEach if available.
+		var _each = function(obj, iterator, context) {
+			if (obj == null) {
+				return;
+			}
+			if (nativeForEach && obj.forEach === nativeForEach) {
+				obj.forEach(iterator, context);
+			} else if (obj.length === +obj.length) {
+				for (var i = 0, l = obj.length; i < l; i++) {
+					if (iterator.call(context, obj[i], i, obj) === breaker) {
+						return;
+					}
+				}
+			} else {
+				for (var key in obj) {
+					if (_has(obj, key)) {
+						if (iterator.call(context, obj[key], key, obj) === breaker) {
+							return;
+						}
+					}
+				}
+			}
+		};
+		// Return the results of applying the iterator to each element.
+		// Delegates to ECMAScript 5's native map if available.
+		var _map  = function(obj, iterator, context) {
+			var results = [];
+			if (obj == null) {
+				return results;
+			}
+			if (nativeMap && obj.map === nativeMap) {
+				return obj.map(iterator, context);
+			}
+			_each(obj, function(value, index, list) {
+				results[results.length] = iterator.call(context, value, index, list);
+			})
+			return results;
+		};
+
+		// Reduce builds up a single result from a list of values, aka inject, or foldl.
+		// Delegates to ECMAScript 5's native reduce if available.
+		var reduceError = 'Reduce of empty array with no initial value';
+		var _reduce = function(obj, iterator, memo, context) {
+			var initial = arguments.length > 2;
+			if (obj == null) {
+				obj = [];
+			}
+			if (nativeReduce && obj.reduce === nativeReduce) {
+				if (context) iterator = _.bind(iterator, context);
+				return initial ? obj.reduce(iterator, memo) : obj.reduce(iterator);
+			}
+			each(obj, function(value, index, list) {
+				if (!initial) {
+					memo = value;
+					initial = true;
+				} else {
+					memo = iterator.call(context, memo, value, index, list);
+				}
+			});
+			if (!initial) {
+				throw new TypeError(reduceError);
+			}
+			return memo;
+		};
+		
+		// Return the first value which passes a truth test.
+		var _find = function(obj, iterator, context) {
+			var result;
+			_any(obj, function(value, index, list) {
+				if (iterator.call(context, value, index, list)) {
+					result = value;
+					return true;
+				}
+			});
+			return result;
+		};
+		
+		// Return all the elements that pass a truth test.
+		// Delegates to ECMAScript 5's native filter if available. 
+		var _filter = function(obj, iterator, context) {
+			var results = [];
+			if (obj == null) {
+				return results;
+			}
+			if (nativeFilter && obj.filter === nativeFilter) {
+				return obj.filter(iterator, context);
+			}
+			_each(obj, function(value, index, list) {
+				if (iterator.call(context, value, index, list)) results[results.length] = value;
+			});
+			return results;
+		};
+		
+		// Determine if at least one element in the object matches a truth test.
+		// Delegates to ECMAScript 5's native some if available.
+		var _any = function(obj, iterator, context) {
+			iterator || (iterator = _identity);
+			var result = false;
+			if (obj == null) {
+				return result;
+			}
+			if (nativeSome && obj.some === nativeSome) {
+				return obj.some(iterator, context);
+			}
+			_each(obj, function(value, index, list) {
+				if (result || (result = iterator.call(context, value, index, list))) {
+					return breaker;
+				}
+			});
+			return !!result;
+		};
+		
+		var _generateGUID = function(){
+			var guid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+				var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
+				return v.toString(16);
+			});
+			return guid
+		};
+		
+		var _isUndefined = function(obj) {
+			return obj === undefined;
+		};
+		
+		var _isNotNull = function(obj) {
+			return (!_isUndefined(obj) && obj !== null);
+		};
+		var _isObject = function(obj) {
+			return (_isNotNull(obj) && $.type(obj) === "object");
+		};
+		var _isFunction = function(obj) {
+			return (_isNotNull(obj) && $.type(obj) === "function");
+		};
+		var _isString = function(obj) {
+			return (_isNotNull(obj) && $.type(obj) === "string");
+		};
+		var _isNumber = function(obj) {
+			return (_isNotNull(obj) && $.type(obj) === "number");
+		};
+		
+		return {
+			generateGUID : _generateGUID,
+			isUndefined : _isUndefined,
+			isNotNull : _isNotNull,
+			isObject : _isObject,
+			isFunction : _isFunction,
+			isString : _isString,
+			isNumber : _isNumber,
+			delay : _delay,
+			identity : _identity,
+			has : _has,
+			memoize : _memoize,
+			bind : _bind,
+			each : _each,
+			map : _map,
+			reduce : _reduce,
+			find : _find,
+			filter : _filter,
+			any : _any
+		};
+	}(jQuery));
+	
 	/*
 	 * Encapsulate state of pubsub event bus in following object.
 	 * The structure of the {@code subscriptions} cache will look like:
@@ -53,12 +282,12 @@
 		 * 
 		 */
 		subscribe : function subscribe( topic /*string */, context /* object */, callback /* function */, priority /* integer */ ) {
-			var _self = PubSub;
+			//var _self = PubSub;
 			
 			if (!_self.validateTopicName(topic)) {
 				throw new Error( "You must provide a valid topic name to create a Subscription." );
 			}
-			if ( arguments.length === 3 && $.type(callback) === "number" ) {
+			if ( arguments.length === 3 && Util.isNumber(callback) ) {
 				// $.subscribe(topic, callback, priority) otherwise $.subscribe(topic, priority, callback)
 				priority = callback;
 				callback = context;
@@ -69,8 +298,8 @@
 				callback = context;
 				context = null;
 			}
-			priority =  $.type(priority) === "number" ? priority : null;
-			if ( $.type(callback) !== "function" ) {
+			priority =  Util.isNumber(priority) ? priority : null;
+			if ( !Util.isFunction(callback) ) {
 				throw new Error( "You must provide a valid handle to the callback to add its subscription." );
 			}
 			var subscription = _self.addSubscription(topic, callback, priority, context);
@@ -81,46 +310,34 @@
 		 * 
 		 * <ul>
 		 * <li>topic: Name of the message to subscribe to.</li>
-		 * <li>Any additional parameters will be passed to the subscriptions.</li>
+		 * <li>Options: Any additional parameters will be passed to the subscriptions.</li>
 		 * </ul>
 		 * 
 		 * Example:
 		 *    $.publish( topic )
-		 *    $.publish( topic, data )
-		 *    $.publish( topic, data, context )
+		 *    $.publish( topic, {data : data, context: context});
 		 * 
-		 * $.publish returns a boolean indicating whether any subscriptions returned false.
-		 * The return value is true if none of the subscriptions returned false, and false otherwise.
-		 * Note that only one subscription can return false because doing so will prevent additional
-		 * subscriptions from being invoked.
+		 * $.publish returns the notification which was sent to all the subscriptions.
+		 * If publication is unsuccessful due to a lack of subscribers a null will be returned.
+		 * 
+		 * Publication to all the subscribers in the notification chain can be interrupted if
+		 * at least one of the subscribers returns false. This will prevent subscribers
+		 * further down the chain from receiving the notification.
 		 * 
 		 */
-		publish : function publish( topic /* string */, data /* object */, context /* object */ ) {
-			var ret = _publishImpl( topic, data, context, false );
-			return ret !== false;
+		publish : function publish( topic /* string */, options /* object */ ) {
+			return _self.publishImpl( topic, options, false );
 		},
 		/**
 		 * Publish a message synchronously.
 		 * 
-		 * <ul>
-		 * <li>topic: Name of the message to subscribe to.</li>
-		 * <li>Any additional parameters will be passed to the subscriptions.</li>
-		 * </ul>
+		 * $.publishSync returns the notification which was sent to all the subscriptions.
+		 * If publication is unsuccessful due to a lack of subscribers a null will be returned.
 		 * 
-		 * Example:
-		 *    $.publishSync( topic )
-		 *    $.publishSync( topic, data )
-		 *    $.publishSync( topic, data, context )
-		 * 
-		 * $.publishSync returns a boolean indicating whether any subscriptions returned false.
-		 * The return value is true if none of the subscriptions returned false, and false otherwise.
-		 * Note that only one subscription can return false because doing so will prevent additional
-		 * subscriptions from being invoked.
 		 * 
 		 */
-		publishSync : function(topic /* string */, data /* object */, context /* object */) {
-			var ret = _publishImpl( topic, data, context, true );
-			return ret !== false;
+		publishSync : function(topic /* string */, options /* object */ ) {
+			return _self.publishImpl( topic, options, true );
 		},
 		/**
 		 * Remove a subscription.
@@ -137,7 +354,7 @@
 		 * Returns subsciptions that still subscribe to the topic.
 		 */
 		unsubscribe : function unsubscribe( topic /* string */, subscription /* object */ ) {
-			var _self = PubSub;
+			//var _self = PubSub;
 			
 			if (!_self.validateTopicName(topic)) {
 				throw new Error( "You must provide a valid topic to remove a subscription." );
@@ -154,37 +371,51 @@
 				return registrations;
 			}
 			
-			if ( $.type(subscription) !== "object" && !(subscription instanceof Subscription)) {
+			if (subscription instanceof Subscription) {
+				for (var i = 0 ; i < registrations.length; i++ ) {
+					var each = registrations[i];
+					if ( each.id === subscription.id ) {
+						registrations.splice( i, 1 );
+						return registrations;
+					}
+				}
+			} else {
 				throw new Error( "You must provide the subscription generated for the callback to remove it." );
 			}
 
-			for (var i = 0 ; i < registrations.length; i++ ) {
-				var each = registrations[i];
-				if ( each.id === subscription.id ) {
-					registrations.splice( i, 1 );
-					return registrations;
-				}
-			}
-		},
-		generateGUID : function(){
-			var guid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-				var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
-				return v.toString(16);
-			});
-			return guid
 		},
 		reset : function() {
-			var _self = PubSub;
+			//var _self = PubSub;
 			_self.subscriptions = {};
 			_self.immediateExceptions = false;
 		},
-		isDefined : function(obj) {
-			return (obj !== undefined && obj !== null);
+		publishImpl : function( topic /* string */, options /* object */, sync /* boolean */ ){
+			// var _self = PubSub;
+			var publication = null;
+			if (!_self.validateTopicName(topic)) {
+				throw new Error( "You must provide a valid topic name to publish." );
+			}
+			var hasSubscribers = _self.hasSubscriptions(topic);
+			if ( !hasSubscribers ){
+				return publication;
+			}
+			options = options || {};
+			
+			publication = _self.createPublication( topic, options );
+			
+			var deliver = _createDeliveryFunction( publication );
+			if ( sync === true ){
+				deliver();
+			} else {
+				Util.delay(deliver,0);
+			}
+			return publication;
 		},
+		Util : Util,
 		validateTopicName : function(name /*string */) {
-			var _self = PubSub;
+			//var _self = PubSub;
 			var result = false;
-			if (_self.isDefined(name) && $.type(name) === "string" && name[0] === _self.TOPIC_SEPARATOR) {
+			if (Util.isString(name) && name[0] === _self.TOPIC_SEPARATOR) {
 				result = new RegExp("\\S").test(name);
 				if (result) {
 					var temp = name.replace(new RegExp(_self.TOPIC_SEPARATOR, "g"),"");
@@ -194,7 +425,7 @@
 			return result;
 		},
 		createNodes : function (topic /* string */) {
-			var _self = PubSub;
+			//var _self = PubSub;
 			var nodes = topic.split(_self.TOPIC_SEPARATOR);
 			nodes = $.grep(nodes, function(node) {
 				return (node !== null && node !== "");
@@ -202,7 +433,7 @@
 			return nodes;
 		},
 		createTopics : function(topic /*string */) {
-			var _self = PubSub;
+			//var _self = PubSub;
 			if (!_self.validateTopicName(topic)) {
 				throw new Error( "You must provide a valid topic name to create a set of topics." );
 			}
@@ -216,20 +447,43 @@
 			topics.reverse();
 			return topics;
 		},
-		createNotification : function(topic /* string */, data /* object */, context /* object */ ) {
-			var _self = PubSub;
+		defaultPublicationOptions : {
+			topic : "",
+			data : null,
+			context : null,
+			progress : function(notification) {},
+			done : function(notification) {},
+			fail : function(notification) {},
+			always : function(notification) {}
+		},
+		createPublication : function(topic /* string */, options /* object */ ) {
+			//var _self = PubSub;
 			if (!_self.validateTopicName(topic)) {
 				throw new Error( "You must provide a valid topic name to create a Notification." );
 			}
-			var notification = new Notification(topic, data, context);
-			return notification;
+			if (!Util.isObject(options)) {
+				throw new Error( "You must provide options to create a Notification." );
+			}
+			options.topic = topic;
+
+			options.data     = Util.isObject(options.data)       ? options.data : null;
+			options.context  = Util.isObject(options.context)    ? options.context : null;
+			options.progress = Util.isFunction(options.progress) ? options.progress : _self.defaultPublicationOptions.progress;
+			options.done     = Util.isFunction(options.done)     ? options.done : _self.defaultPublicationOptions.done;
+			options.fail     = Util.isFunction(options.fail)     ? options.fail : _self.defaultPublicationOptions.fail;
+			options.always   = Util.isFunction(options.always)   ? options.always : _self.defaultPublicationOptions.always;
+			
+			var publication = options;
+			publication.notification = new Notification(topic, publication.data, publication.context);
+			publication.state = publication.notification.state;
+			return publication;
 		},
 		/**
 		 * Returns whether a topic has an explicit subscription in its ancestory
 		 */
 		hasSubscriptions : function( topic /* string */) {
-			var _self = PubSub,
-				_topics = _self.createTopics(topic),
+			//var _self = PubSub;
+			var _topics = _self.createTopics(topic),
 				subscriptions = _self.subscriptions;
 		
 			var found = subscriptions.hasOwnProperty( topic );
@@ -242,14 +496,14 @@
 			return found;
 		},
 		getSubscriptions : function(topic /* string */) {
-			var _self = PubSub;
+			// var _self = PubSub;
 			if (!_self.validateTopicName(topic)) {
 				throw new Error( "You must provide a valid topic name to get Subscriptions." );
 			}
 			return _self.subscriptions[topic];
 		},
 		addSubscription : function( topic /*string */, callback /* function */, priority /* integer */, context /* object */ ) {
-			var _self = PubSub;
+			//var _self = PubSub;
 			if ( !_self.subscriptions.hasOwnProperty( topic ) ){
 				_self.subscriptions[topic] = [];
 			}
@@ -269,7 +523,7 @@
 			return subscription;
 		},
 		createSubscription : function( topic /*string */, callback /* function */, priority /* integer */, context /* object */ ) {
-			var _self = PubSub;
+			//var _self = PubSub;
 			if (!_self.validateTopicName(topic)) {
 				throw new Error( "You must provide a valid topic name to create a Subscription." );
 			}
@@ -278,22 +532,43 @@
 		}
 	};
 	
+	var _self = PubSub;
+	
 	function Notification(topic /* string */, data /* object */, context /* object */ ) {
-		var _self = PubSub;
-		this.id = _self.generateGUID();
+		this.id = Util.generateGUID();
 		this.publishTopic = topic;
 		this.currentTopic = topic;
-		this.data    = _self.isDefined(data)    ? data : null;
-		this.context = _self.isDefined(context) ? context : null;
+		this.data    = Util.isObject(data)    ? data : null;
+		this.context = Util.isObject(context) ? context : null;
+		
+		_publishPropagated = true;
+		
+		_state = "pending";
+		
+		this.reject = function() {
+			_publishPropgation = false;
+			_state = "rejected";
+		};
+		
+		this.resolve = function() {
+			_state = "resolved"
+		}
+		
+		this.state = function() {
+			return _state;
+		};
+		
+		this.isPropagation = function() {
+			return _publishPropagated === true;
+		}
 		_addTimeStamp(this);
 	}
 	
 	function Subscription( topic /*string */, callback /* function */, priority /* integer */, context /* object */ ) {
-		var _self = PubSub;
-		this.id = _self.generateGUID();
+		this.id = Util.generateGUID();
 		this.callback = callback;
-		this.priority = _self.isDefined(priority) ? priority : 10;
-		this.context  = _self.isDefined(context)  ? context : null;
+		this.priority = Util.isNumber(priority) ? priority : 10;
+		this.context  = Util.isObject(context)  ? context : null;
 		this.topics = _self.createTopics(topic);
 		_addTimeStamp(this);
 	}
@@ -313,37 +588,6 @@
 		return obj;
 	}
 	
-	var ArrayProto = Array.prototype,
-		ObjProto = Object.prototype,
-		FuncProto = Function.prototype;
-	
-	// Create quick reference variables for speed access to core prototypes.
-	var push             = ArrayProto.push,
-		slice            = ArrayProto.slice,
-		concat           = ArrayProto.concat,
-		toString         = ObjProto.toString,
-		hasOwnProperty   = ObjProto.hasOwnProperty;
-	
-	// All ECMAScript 5 native function implementations that we hope to use are declared here.
-	var nativeForEach      = ArrayProto.forEach,
-		nativeMap          = ArrayProto.map,
-		nativeReduce       = ArrayProto.reduce,
-		nativeReduceRight  = ArrayProto.reduceRight,
-		nativeFilter       = ArrayProto.filter,
-		nativeEvery        = ArrayProto.every,
-		nativeSome         = ArrayProto.some,
-		nativeIndexOf      = ArrayProto.indexOf,
-		nativeLastIndexOf  = ArrayProto.lastIndexOf,
-		nativeIsArray      = Array.isArray,
-		nativeKeys         = Object.keys,
-		nativeBind         = FuncProto.bind;
-
-	var _delay = function(func, wait) {
-		var context = null;
-		var args = slice.call(arguments, 2);
-		return setTimeout(function(){ return func.apply(context, args); }, wait);
-	}
-	
 	/**
 	 * Below is from PubSubJS
 	 */
@@ -353,50 +597,6 @@
 		};
 	}
 
-	function _deliverMessage( notification ){
-		var _self = PubSub;
-		var originalTopic = notification.publishTopic;
-		var matchedTopic  = notification.currentTopic;
-		
-		var callSubscriber = function() {
-			if (_self.immediateExceptions) {
-				var _callSubscriberWithImmediateExceptions = function(subscriber, notification) {
-					var ret = subscriber.apply(notification.context, [notification]);
-					return ret;
-				}
-				return _callSubscriberWithImmediateExceptions;
-			} else {
-				var _callSubscriberWithDelayedExceptions = function(subscriber, notification) {
-					var ret = true;
-					try {
-						ret = subscriber.apply(notification.context, [notification]);
-					} catch( ex ){
-						ret = false;
-						_delay( _throwException( ex ), 0 );
-					}
-					return ret;
-				}
-				return _callSubscriberWithDelayedExceptions;
-			}
-		}();
-
-		if ( !_self.subscriptions.hasOwnProperty( matchedTopic ) ) {
-			return;
-		}
-		var subscribers = _self.getSubscriptions(matchedTopic);
-		var ret = true;
-		for (var i = 0; i < subscribers.length; i++ ) {
-			var subscription = subscribers[i];
-			notification.context = _createContext(subscription,notification);
-			ret = callSubscriber(subscription.callback, notification);
-			if (ret === false) {
-				break;
-			}
-		}
-		return ret;
-	}
-	
-	
 	function _createContext(subscription, notification) {
 		var context = null;
 		if (subscription.context !== null && notification.context !== null) {
@@ -408,61 +608,85 @@
 		}
 		return context;
 	}
+	
+	function _deliverMessage( publication ){
+		// var _self = PubSub;
+		var notification  = publication.notification;
+		var originalTopic = notification.publishTopic;
+		var matchedTopic  = notification.currentTopic;
+		
+		var callSubscriber = function() {
+			if (_self.immediateExceptions) {
+				var _callSubscriberWithImmediateExceptions = function(subscriber, notification) {
+					return subscriber.apply(notification.context, [notification]);
+				}
+				return _callSubscriberWithImmediateExceptions;
+			} else {
+				var _callSubscriberWithDelayedExceptions = function(subscriber, notification) {
+					var ret = true;
+					try {
+						ret = subscriber.apply(notification.context, [notification]);
+					} catch( ex ){
+						ret = false;
+						Util.delay( _throwException( ex ), 0 );
+					}
+					return ret;
+				}
+				return _callSubscriberWithDelayedExceptions;
+			}
+		}();
 
-	function _createDeliveryFunction( notification ){
-		var _self = PubSub;
+		var continuePropagating = publication.state() === "pending";
+		if ( !_self.subscriptions.hasOwnProperty( matchedTopic ) ) {
+			return continuePropagating;
+		}
+		var subscribers = _self.getSubscriptions(matchedTopic);
+		if (continuePropagating) {
+			for (var i = 0; i < subscribers.length; i++) {
+				var subscription = subscribers[i];
+				notification.context = _createContext(subscription,notification);
+				var continuePropagating  = callSubscriber(subscription.callback, notification);
+				if (continuePropagating === false || !notification.isPropagation()) {
+					notification.reject();
+					publication.fail();
+					break;
+				}
+			}
+		}
+		return continuePropagating;
+	}
+
+	function _createDeliveryFunction( publication ){
+		// var _self = PubSub;
+		publication.progress();
+		var notification = publication.notification;
 		var topics = _self.createTopics(notification.publishTopic);
 
 		var deliverNamespaced = function() {
 			// deliver notification to each level by using topic bubbling.
 			// i.e. deliver by going up the hierarchy through each topic
-			var ret = true;
-			for (var i = 0; i < topics.length; i++) {
-				var currentNotification = notification;
-				currentNotification.currentTopic = topics[i];
-				ret = _deliverMessage( currentNotification );
-				if (ret === false) {
-					break;
+			var currentPublication = publication;
+			if (currentPublication.state() === "pending") {
+				for (var i = 0; i < topics.length; i++) {
+					var topic = topics[i];
+					currentPublication.notification.currentTopic = topic;
+					var continuePropagating = _deliverMessage( currentPublication );
+					if (continuePropagating === false || !currentPublication.notification.isPropagation() ) {
+						currentPublication.notification.reject();
+						currentPublication.fail();
+						break;
+					}
 				}
 			}
-			return ret;
+			if (currentPublication.state() !== "rejected") {
+				currentPublication.notification.resolve();
+			}
+			if (currentPublication.state() === "resolved") {
+				currentPublication.done();
+			}
+			currentPublication.always();
 		};
 		return deliverNamespaced;
-	}
-
-	
-	function _publishImpl( topic /* string */, data /* object */, context /* object */, sync /* boolean */ ){
-		var _self = PubSub;
-		
-		if (!_self.validateTopicName(topic)) {
-			throw new Error( "You must provide a valid topic name to publish." );
-		}
-
-		var ret = false;
-		
-		var registrations = _self.subscriptions[ topic ];
-		if ( !registrations ) {
-			return ret;
-		}
-
-		var hasSubscribers = _self.hasSubscriptions(topic);
-		if ( !hasSubscribers ){
-			return ret;
-		}
-
-		var _data    = _self.isDefined(data) ? data : null;
-		var _context = _self.isDefined(context) ? context : null;
-		
-		var notification = _self.createNotification(topic, _data, _context );
-		
-		var deliver = _createDeliveryFunction( notification );
-		if ( sync === true ){
-			ret = deliver();
-		} else {
-			_delay(deliver,0);
-			return ret;
-		}
-		return ret;
 	}
 	
 	// now publicize the API on the pubsub object onto the jQuery object
