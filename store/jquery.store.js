@@ -68,6 +68,9 @@
 
 	store.types = {};
 	store.type = null;
+	store.version = "1.0.0.SNAPSHOT";
+	store.key = "PubSub";
+
 	store.addType = function( type, storage ) {
 		if ( !store.type ) {
 			store.type = type;

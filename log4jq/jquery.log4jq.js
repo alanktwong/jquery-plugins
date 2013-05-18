@@ -16,7 +16,7 @@
 	var log4jq = {
 		// Private enabled flag.
 		_enabled: false,
-		version : "0.0.2.SNAPSHOT",
+		version : "1.0.0.SNAPSHOT",
 		key: "log4jq",
 		/*
 		 * Use the following topic to publish log entries to 
@@ -302,7 +302,7 @@
 	log4jq.outOfBoxTargets = {};
 	var _alertTarget = {
 			name: "alert",
-			version: "0.0.1",
+			version: log4jq.version,
 			/*
 			Logs a entry using the browser alert window.
 			
@@ -330,7 +330,7 @@
 	log4jq.outOfBoxTargets.alert = $.extend({}, log4jq.targetDefaults, _alertTarget);
 	var _consoleTarget = {
 			name: "console",
-			version: "0.0.1",
+			version: log4jq.version,
 			/*
 			 * Logs a entry to the console if available.
 			 * 
@@ -390,7 +390,7 @@
 	log4jq.outOfBoxTargets.console = $.extend({}, log4jq.targetDefaults, _consoleTarget);
 	var _domInsert = {
 			name: "divInsert",
-			version: "0.0.1",
+			version: log4jq.version,
 			$dom: $("div#console"),
 			/*
 			 * Appends an entry as formatted string into DOM
@@ -428,6 +428,7 @@
 	var _defaultConfiguration = {
 		enabled : true,
 		level : "debug",
+		version : log4jq.version,
 		targets : [
 			{
 				name : "console",
