@@ -1,33 +1,5 @@
 module( "jquery.pubsub testing" );
 
-
-test( "priority", function() {
-	expect( 5 );
-	var order = 0;
-
-	$.subscribe( "priority", function() {
-		strictEqual( order, 1, "priority default; #1" );
-		order++;
-	});
-	$.subscribe( "priority", function() {
-		strictEqual( order, 3, "priority 15; #1" );
-		order++;
-	}, 15 );
-	$.subscribe( "priority", function() {
-		strictEqual( order, 2, "priority default; #2" );
-		order++;
-	});
-	$.subscribe( "priority", function() {
-		strictEqual( order, 0, "priority 1; #1" );
-		order++;
-	}, 1 );
-	$.subscribe( "priority", {}, function() {
-		strictEqual( order, 4, "priority 15; #2" );
-		order++;
-	}, 15 );
-	$.publish( "priority" );
-});
-
 test( "subscriber context", function() {
 	expect( 3 );
 	var obj = {},

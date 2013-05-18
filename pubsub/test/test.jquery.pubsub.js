@@ -299,215 +299,230 @@ test("unsubscribe all", function() {
 	ok(result2, "no subscribers notified");
 });
 
-test("continuation for sync publication w/o subscribers", function() {
-	expect( 1 );
-	
+test( "priority for synchronous publication", function() {
 	var PubSub = TestUtil.resetPubSub();
-	var topic = "/continuation/sync";
-	var publication = $.publishSync( topic );
-	strictEqual( publication, null, "return null when topic has no subscribers for sync pub" );
+	expect( 5 );
+	
+	var order = 0;
+	var topic = "/priority/sync";
+
+	$.subscribe( topic, function() {
+		strictEqual( order, 1, "priority default; #1" );
+		order++;
+	});
+	$.subscribe( topic, function() {
+		strictEqual( order, 3, "priority 15; #1" );
+		order++;
+	}, 15 );
+	$.subscribe( topic, function() {
+		strictEqual( order, 2, "priority default; #2" );
+		order++;
+	});
+	$.subscribe( topic, function() {
+		strictEqual( order, 0, "priority 1; #1" );
+		order++;
+	}, 1 );
+	$.subscribe( topic, {}, function() {
+		strictEqual( order, 4, "priority 15; #2" );
+		order++;
+	}, 15 );
+	$.publishSync( topic );
 });
 
-test("continuation for sync publication w/subscribers", function() {
-	expect( 7 );
-	
-	var topic = "/continuation/sync";
-	
-	$.subscribe( topic, function(notification) {
-		ok( true, "1st subscriber called for sync pub" );
-	});
-	$.subscribe( topic, function(notification) {
-		ok( true, "continued after no return value for sync pub" );
-		return true;
-	});
-	var publication = $.publishSync( topic, {
-		progress : function() {
-			ok(true, "begin sync notifications");
-		},
-		done: function() {
-			ok(true, "successful sync notifications");
-		},
-		fail: function() {
-			ok(false, "failed sync notifications");
-		},
-		always : function() {
-			ok(true, "completed sync notification");
-		}
-	});
-	strictEqual( publication !== null , true, "return publication for sync pub when subscriptions are not stopped" );
-	strictEqual( publication.state() , "resolved", "sync publication should have resolved" );
-	
-});
-
-test("discontinuation for sync publication w/1 subscriber returning false", function() {
-	expect( 7 );
-	
+asyncTest( "priority for asynchronous publication", function() {
 	var PubSub = TestUtil.resetPubSub();
-	var topic = "/discontinuation/sync";
-	$.subscribe( topic, function(notification) {
-		ok( true, "continued after returning true for sync pub" );
-		return false;
-	});
-	$.subscribe( topic, function(notification) {
-		ok( false, "continued after returning false for sync pub" );
-	});
-	var publication = $.publishSync( topic, {
-		progress : function() {
-			ok(true, "begin sync notifications");
-		},
-		done: function() {
-			ok(false, "successful sync notifications");
-		},
-		fail: function() {
-			ok(true, "failed sync notifications");
-		},
-		always : function() {
-			ok(true, "completed sync notification");
-		}
-	});
-	strictEqual( publication !== null, true, "return publication when subscriptions are stopped during sync pub" );
-	strictEqual( publication.state() , "rejected", "sync publication should have rejected" );
-});
+	expect( 5 );
 
-
-asyncTest( "continuation for async publication w/o subscribers", function() {
-	expect( 1 );
-	
-	var PubSub = TestUtil.resetPubSub();
-	var topic = "/continuation/async";
-	
 	_.delay(function() {
+		var order = 0;
+		var topic = "/priority/async";
+		
+		$.subscribe( topic, function() {
+			strictEqual( order, 1, "priority default; #1" );
+			order++;
+		});
+		$.subscribe( topic, function() {
+			strictEqual( order, 3, "priority 15; #1" );
+			order++;
+		}, 15 );
+		$.subscribe( topic, function() {
+			strictEqual( order, 2, "priority default; #2" );
+			order++;
+		});
+		$.subscribe( topic, function() {
+			strictEqual( order, 0, "priority 1; #1" );
+			order++;
+		}, 1 );
+		$.subscribe( topic, {}, function() {
+			strictEqual( order, 4, "priority 15; #2" );
+			order++;
+		}, 15 );
+		
 		var publication = $.publish(topic);
 		start();
-		strictEqual( publication, null, "return null when topic has no subscribers for async pub" );
-	}, 1000); 
+	}, 100); 
 });
 
-asyncTest( "continuation for async publication w/subscribers", function() {
-	var PubSub = TestUtil.resetPubSub();
-	expect( 7 );
-	
-	_.delay(function() {
-		var topic = "/continuation/async";
+
+var testContinuations = false;
+if (testContinuations) {
+	test("continuation for sync publication w/o subscribers", function() {
+		expect( 1 );
+		
+		var PubSub = TestUtil.resetPubSub();
+		var topic = "/continuation/sync";
+		var publication = $.publishSync( topic );
+		strictEqual( publication, null, "return null when topic has no subscribers for sync pub" );
+	});
+
+	test("continuation for sync publication w/subscribers", function() {
+		expect( 7 );
+		
+		var topic = "/continuation/sync";
+		
 		$.subscribe( topic, function(notification) {
-			ok( true, "1st subscriber called for async pub" );
+			ok( true, "1st subscriber called for sync pub" );
 		});
 		$.subscribe( topic, function(notification) {
-			ok( true, "continued after no return value for async pub" );
+			ok( true, "continued after no return value for sync pub" );
 			return true;
 		});
-		
-		var publication = $.publish(topic, {
+		var publication = $.publishSync( topic, {
 			progress : function() {
-				ok(true, "begin async notifications");
+				ok(true, "begin sync notifications");
 			},
 			done: function() {
-				ok(true, "successful async notifications");
+				ok(true, "successful sync notifications");
 			},
 			fail: function() {
-				ok(false, "failed async notifications");
+				ok(false, "failed sync notifications");
 			},
 			always : function() {
-				ok(true, "completed async notification");
-				strictEqual( publication.state(), "resolved", "resolved when subscriptions are not stopped during async pub" );
+				ok(true, "completed sync notification");
 			}
 		});
-		start();
-		strictEqual( publication.state(), "pending", "pending immediately when subscriptions are not stopped during async pub" );
-	}, 100);
-});
+		strictEqual( publication !== null , true, "return publication for sync pub when subscriptions are not stopped" );
+		strictEqual( publication.state() , "resolved", "sync publication should have resolved" );
+	});
 
-
-asyncTest("discontinuation for async publication w/1 subscriber returning false", function() {
-	var PubSub = TestUtil.resetPubSub();
-	expect( 7 );
-
-	_.delay(function() {
-		var topic = "/discontinuation/async"
+	test("discontinuation for sync publication w/1 subscriber returning false", function() {
+		expect( 7 );
+		
+		var PubSub = TestUtil.resetPubSub();
+		var topic = "/discontinuation/sync";
 		$.subscribe( topic, function(notification) {
-			ok( true, "continued after returning true for async pub" );
+			ok( true, "continued after returning true for sync pub" );
 			return false;
 		});
 		$.subscribe( topic, function(notification) {
-			ok( false, "continued after returning false for async pub" );
+			ok( false, "continued after returning false for sync pub" );
 		});
-		
-		var publication = $.publish(topic, {
+		var publication = $.publishSync( topic, {
 			progress : function() {
-				ok(true, "begin async notifications");
+				ok(true, "begin sync notifications");
 			},
 			done: function() {
-				ok(false, "successful async notifications");
+				ok(false, "successful sync notifications");
 			},
 			fail: function() {
-				ok(true, "failed async notifications");
+				ok(true, "failed sync notifications");
 			},
 			always : function() {
-				ok(true, "completed async notification");
-				strictEqual( publication.state(), "rejected", "rejected when subscriptions are stopped during async pub" );
+				ok(true, "completed sync notification");
 			}
 		});
-		start();
-		strictEqual( publication.state(), "pending", "return pending immediately when subscriptions are stopped during async pub" );
-	}, 100);
-});
+		strictEqual( publication !== null, true, "return publication when subscriptions are stopped during sync pub" );
+		strictEqual( publication.state() , "rejected", "sync publication should have rejected" );
+	});
 
 
-test("publish synchronously on topic to see notifications bubbling up", function() {
-	var PubSub = TestUtil.resetPubSub();
-	expect( 14 );
-	
-	var topic = "/app/module/class";
-	var topics = PubSub.createTopics(topic);
-	var count = 0;
-	
-	var classSubscription = $.subscribe(topic, function(notification) {
-		equal(true, !!notification, "notification should be defined");
-		equal(0, count, "class subscriber called 1st");
-		count++;
+	asyncTest( "continuation for async publication w/o subscribers", function() {
+		expect( 1 );
+		
+		var PubSub = TestUtil.resetPubSub();
+		var topic = "/continuation/async";
+		
+		_.delay(function() {
+			var publication = $.publish(topic);
+			start();
+			strictEqual( publication, null, "return null when topic has no subscribers for async pub" );
+		}, 100); 
 	});
-	
-	var moduleSubscription = $.subscribe("/app/module", function(notification) {
-		equal(true, !!notification, "notification should be defined");
-		equal(1, count, "module subscriber called 2nd");
-		count++;
+
+	asyncTest( "continuation for async publication w/subscribers", function() {
+		var PubSub = TestUtil.resetPubSub();
+		expect( 7 );
+		
+		_.delay(function() {
+			var topic = "/continuation/async";
+			$.subscribe( topic, function(notification) {
+				ok( true, "1st subscriber called for async pub" );
+			});
+			$.subscribe( topic, function(notification) {
+				ok( true, "continued after no return value for async pub" );
+				return true;
+			});
+			
+			var publication = $.publish(topic, {
+				progress : function() {
+					ok(true, "begin async notifications");
+				},
+				done: function() {
+					ok(true, "successful async notifications");
+				},
+				fail: function() {
+					ok(false, "failed async notifications");
+				},
+				always : function() {
+					ok(true, "completed async notification");
+					strictEqual( publication.state(), "resolved", "resolved when subscriptions are not stopped during async pub" );
+				}
+			});
+			start();
+			strictEqual( publication.state(), "pending", "pending immediately when subscriptions are not stopped during async pub" );
+		}, 100);
 	});
-	
-	var appSubscription = $.subscribe("/app", function(notification) {
-		equal(true, !!notification, "notification should be defined");
-		equal(2, count, "app subscriber called 3rd");
-		count++;
-	});
-	
-	equal(1, PubSub.getSubscriptions("/app").length, "1 subscription should exist at app level");
-	equal(1, PubSub.getSubscriptions("/app/module").length, "1 subscription should exist at module level");
-	equal(1, PubSub.getSubscriptions(topic).length, "1 subscription should exist at class level");
-	
-	equal(3, _.keys(PubSub.subscriptions).length, "there should be 3 subscriptions total");
-	
-	var publication = $.publishSync(topic, {
-		progress : function() {
-			ok(true, "begin sync notifications");
-		},
-		done: function() {
-			ok(true, "successful sync notifications");
-		},
-		fail: function() {
-			ok(false, "failed sync notifications");
-		},
-		always : function() {
-			ok(true, "completed sync notification");
-		}
-	});
-	equal(3, count, "synchronous publication blocks and mutates the count");
-});
 
 
-asyncTest("publish asynchronously on topic to see notifications bubbling up", function() {
-	var PubSub = TestUtil.resetPubSub();
-	expect( 15 );
-	
-	_.delay(function() {
+	asyncTest("discontinuation for async publication w/1 subscriber returning false", function() {
+		var PubSub = TestUtil.resetPubSub();
+		expect( 7 );
+
+		_.delay(function() {
+			var topic = "/discontinuation/async"
+			$.subscribe( topic, function(notification) {
+				ok( true, "continued after returning true for async pub" );
+				return false;
+			});
+			$.subscribe( topic, function(notification) {
+				ok( false, "continued after returning false for async pub" );
+			});
+			
+			var publication = $.publish(topic, {
+				progress : function() {
+					ok(true, "begin async notifications");
+				},
+				done: function() {
+					ok(false, "successful async notifications");
+				},
+				fail: function() {
+					ok(true, "failed async notifications");
+				},
+				always : function() {
+					ok(true, "completed async notification");
+					strictEqual( publication.state(), "rejected", "rejected when subscriptions are stopped during async pub" );
+				}
+			});
+			start();
+			strictEqual( publication.state(), "pending", "return pending immediately when subscriptions are stopped during async pub" );
+		}, 100);
+	});
+
+
+	test("publish synchronously on topic to see notifications bubbling up", function() {
+		var PubSub = TestUtil.resetPubSub();
+		expect( 14 );
+		
 		var topic = "/app/module/class";
 		var topics = PubSub.createTopics(topic);
 		var count = 0;
@@ -533,26 +548,78 @@ asyncTest("publish asynchronously on topic to see notifications bubbling up", fu
 		equal(1, PubSub.getSubscriptions("/app").length, "1 subscription should exist at app level");
 		equal(1, PubSub.getSubscriptions("/app/module").length, "1 subscription should exist at module level");
 		equal(1, PubSub.getSubscriptions(topic).length, "1 subscription should exist at class level");
+		
 		equal(3, _.keys(PubSub.subscriptions).length, "there should be 3 subscriptions total");
 		
-		var publication = $.publish(topic, {
+		var publication = $.publishSync(topic, {
 			progress : function() {
-				ok(true, "begin async notifications");
+				ok(true, "begin sync notifications");
 			},
 			done: function() {
-				ok(true, "successful async notifications");
-				equal(3, count, "now count is succesfully mutated");
+				ok(true, "successful sync notifications");
 			},
 			fail: function() {
-				ok(false, "failed async notifications");
+				ok(false, "failed sync notifications");
 			},
 			always : function() {
-				ok(true, "completed async notification");
+				ok(true, "completed sync notification");
 			}
 		});
-		// publish results and then see if it effected the change
-		start();
-		ok( true, "publish asynchronously requires a delay" );
+		equal(3, count, "synchronous publication blocks and mutates the count");
+	});
+
+
+	asyncTest("publish asynchronously on topic to see notifications bubbling up", function() {
+		var PubSub = TestUtil.resetPubSub();
+		expect( 15 );
 		
-	}, 150);
-});
+		_.delay(function() {
+			var topic = "/app/module/class";
+			var topics = PubSub.createTopics(topic);
+			var count = 0;
+			
+			var classSubscription = $.subscribe(topic, function(notification) {
+				equal(true, !!notification, "notification should be defined");
+				equal(0, count, "class subscriber called 1st");
+				count++;
+			});
+			
+			var moduleSubscription = $.subscribe("/app/module", function(notification) {
+				equal(true, !!notification, "notification should be defined");
+				equal(1, count, "module subscriber called 2nd");
+				count++;
+			});
+			
+			var appSubscription = $.subscribe("/app", function(notification) {
+				equal(true, !!notification, "notification should be defined");
+				equal(2, count, "app subscriber called 3rd");
+				count++;
+			});
+			
+			equal(1, PubSub.getSubscriptions("/app").length, "1 subscription should exist at app level");
+			equal(1, PubSub.getSubscriptions("/app/module").length, "1 subscription should exist at module level");
+			equal(1, PubSub.getSubscriptions(topic).length, "1 subscription should exist at class level");
+			equal(3, _.keys(PubSub.subscriptions).length, "there should be 3 subscriptions total");
+			
+			var publication = $.publish(topic, {
+				progress : function() {
+					ok(true, "begin async notifications");
+				},
+				done: function() {
+					ok(true, "successful async notifications");
+					equal(3, count, "now count is succesfully mutated");
+				},
+				fail: function() {
+					ok(false, "failed async notifications");
+				},
+				always : function() {
+					ok(true, "completed async notification");
+				}
+			});
+			// publish results and then see if it effected the change
+			start();
+			ok( true, "publish asynchronously requires a delay" );
+		}, 100);
+	});
+}
+
