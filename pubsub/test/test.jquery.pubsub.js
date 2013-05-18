@@ -363,7 +363,7 @@ asyncTest( "priority for asynchronous publication", function() {
 		
 		var publication = $.publish(topic);
 		start();
-	}, 100); 
+	}, 10); 
 });
 
 test( "subscriber context for sync", function() {
@@ -406,7 +406,113 @@ test( "publisher context", function() {
 	$.publishSync(topic, { context : obj });
 });
 
-var testContinuations = false;
+test( "push data during synchronous publication", function() {
+	var PubSub = TestUtil.resetPubSub();
+	expect( 10 );
+	var topic = "/data/sync";
+	var subscription, publication;
+	
+	subscription = $.subscribe( topic, function( notification ) {
+		strictEqual( notification.data.string, "hello", "string passed during sync notification" );
+		strictEqual( notification.data.number, 5, "number passed during sync notification" );
+		deepEqual( notification.data.object, {
+			foo: "bar",
+			baz: "qux"
+		}, "object passed" );
+		notification.data.string = "goodbye";
+		notification.data.object.baz = "quux";
+	});
+	subscription = $.subscribe( topic, function( notification ) {
+		strictEqual( notification.data.string, "goodbye", "string changed during sync notification" );
+		strictEqual( notification.data.number, 5, "number unchanged during sync notification" );
+		deepEqual( notification.data.object, {
+			foo: "bar",
+			baz: "quux"
+		}, "object changed during sync notification" );
+	});
+
+	var obj = {
+		foo: "bar",
+		baz: "qux"
+	};
+	publication = $.publishSync( topic, {
+		progress : function() {
+			ok(true, "begin sync notifications w/data");
+		},
+		done: function() {
+			ok(true, "successful sync notifications w/data");
+		},
+		fail: function() {
+			ok(false, "failed sync notifications w/data");
+		},
+		always : function() {
+			ok(true, "completed sync notification w/data");
+			deepEqual( obj, {
+				foo: "bar",
+				baz: "quux"
+			}, "object updated after sync notification" );
+		},
+		data: { string: "hello", number: 5, object: obj }
+	});
+});
+
+
+asyncTest( "push data during asynchronous publication", function() {
+	var PubSub = TestUtil.resetPubSub();
+	expect( 10 );
+	
+	_.delay(function() {
+		var topic = "/data/async";
+		var subscription, publication;
+		subscription = $.subscribe( topic, function( notification ) {
+			strictEqual( notification.data.string, "hello", "string passed during async notification" );
+			strictEqual( notification.data.number, 5, "number passed during async notification" );
+			deepEqual( notification.data.object, {
+				foo: "bar",
+				baz: "qux"
+			}, "object passed" );
+			notification.data.string = "goodbye";
+			notification.data.object.baz = "quux";
+		});
+		subscription = $.subscribe( topic, function( notification ) {
+			strictEqual( notification.data.string, "goodbye", "string changed during async notification" );
+			strictEqual( notification.data.number, 5, "number unchanged during async notification" );
+			deepEqual( notification.data.object, {
+				foo: "bar",
+				baz: "quux"
+			}, "object changed during async notification" );
+		});
+
+
+		var obj = {
+			foo: "bar",
+			baz: "qux"
+		};
+		publication = $.publishSync( topic, {
+			progress : function() {
+				ok(true, "begin async notifications w/data");
+			},
+			done: function() {
+				ok(true, "successful async notifications w/data");
+			},
+			fail: function() {
+				ok(false, "failed async notifications w/data");
+			},
+			always : function() {
+				ok(true, "completed async notification w/data");
+				deepEqual( obj, {
+					foo: "bar",
+					baz: "quux"
+				}, "object updated after async notification" );
+			},
+			data: { string: "hello", number: 5, object: obj }
+		});
+		start();
+	},10);
+});
+
+
+var testContinuations = true;
 if (testContinuations) {
 	test("continuation for sync publication w/o subscribers", function() {
 		expect( 1 );
@@ -488,7 +594,7 @@ if (testContinuations) {
 			var publication = $.publish(topic);
 			start();
 			strictEqual( publication, null, "return null when topic has no subscribers for async pub" );
-		}, 100); 
+		}, 10); 
 	});
 
 	asyncTest( "continuation for async publication w/subscribers", function() {
@@ -522,7 +628,7 @@ if (testContinuations) {
 			});
 			start();
 			strictEqual( publication.state(), "pending", "pending immediately when subscriptions are not stopped during async pub" );
-		}, 100);
+		}, 10);
 	});
 
 
@@ -557,7 +663,7 @@ if (testContinuations) {
 			});
 			start();
 			strictEqual( publication.state(), "pending", "return pending immediately when subscriptions are stopped during async pub" );
-		}, 100);
+		}, 10);
 	});
 
 
@@ -661,7 +767,7 @@ if (testContinuations) {
 			// publish results and then see if it effected the change
 			start();
 			ok( true, "publish asynchronously requires a delay" );
-		}, 100);
+		}, 10);
 	});
 }
 

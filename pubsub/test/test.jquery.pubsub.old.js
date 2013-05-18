@@ -1,36 +1,5 @@
 module( "jquery.pubsub testing" );
 
-test( "data", function() {
-	$.subscribe( "data", function( string, number, object ) {
-		strictEqual( string, "hello", "string passed" );
-		strictEqual( number, 5, "number passed" );
-		deepEqual( object, {
-			foo: "bar",
-			baz: "qux"
-		}, "object passed" );
-		string = "goodbye";
-		object.baz = "quux";
-	});
-	$.subscribe( "data", function( string, number, object ) {
-		strictEqual( string, "hello", "string unchanged" );
-		strictEqual( number, 5, "number unchanged" );
-		deepEqual( object, {
-			foo: "bar",
-			baz: "quux"
-		}, "object changed" );
-	});
-
-	var obj = {
-		foo: "bar",
-		baz: "qux"
-	};
-	$.publish( "data", "hello", 5, obj );
-	deepEqual( obj, {
-		foo: "bar",
-		baz: "quux"
-	}, "object updated" );
-});
-
 test( "unsubscribe during publish", function() {
 	expect( 4 );
 
