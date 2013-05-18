@@ -302,6 +302,11 @@
 			if ( !Util.isFunction(callback) ) {
 				throw new Error( "You must provide a valid handle to the callback to add its subscription." );
 			}
+			
+			if (Util.isNotNull(context)  && !Util.isObject(context)) {
+				throw new Error( "You must provide an object for a context." );
+			}
+			
 			var subscription = _self.addSubscription(topic, callback, priority, context);
 			return subscription;
 		},

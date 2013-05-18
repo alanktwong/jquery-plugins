@@ -303,30 +303,32 @@ test( "priority for synchronous publication", function() {
 	var PubSub = TestUtil.resetPubSub();
 	expect( 5 );
 	
-	var order = 0;
-	var topic = "/priority/sync";
+	var order = 0,
+		subscription,
+		topic = "/priority/sync";
 
-	$.subscribe( topic, function() {
+	subscription = $.subscribe( topic, function() {
 		strictEqual( order, 1, "priority default; #1" );
 		order++;
 	});
-	$.subscribe( topic, function() {
+	subscription = $.subscribe( topic, function() {
 		strictEqual( order, 3, "priority 15; #1" );
 		order++;
 	}, 15 );
-	$.subscribe( topic, function() {
+	subscription = $.subscribe( topic, function() {
 		strictEqual( order, 2, "priority default; #2" );
 		order++;
 	});
-	$.subscribe( topic, function() {
+	subscription = $.subscribe( topic, function() {
 		strictEqual( order, 0, "priority 1; #1" );
 		order++;
 	}, 1 );
-	$.subscribe( topic, {}, function() {
+	subscription = $.subscribe( topic, {}, function() {
 		strictEqual( order, 4, "priority 15; #2" );
 		order++;
 	}, 15 );
-	$.publishSync( topic );
+	
+	var publication = $.publishSync( topic );
 });
 
 asyncTest( "priority for asynchronous publication", function() {
@@ -334,26 +336,27 @@ asyncTest( "priority for asynchronous publication", function() {
 	expect( 5 );
 
 	_.delay(function() {
-		var order = 0;
-		var topic = "/priority/async";
+		var order = 0,
+			subscription,
+			topic = "/priority/async";
 		
-		$.subscribe( topic, function() {
+		subscription = $.subscribe( topic, function() {
 			strictEqual( order, 1, "priority default; #1" );
 			order++;
 		});
-		$.subscribe( topic, function() {
+		subscription = $.subscribe( topic, function() {
 			strictEqual( order, 3, "priority 15; #1" );
 			order++;
 		}, 15 );
-		$.subscribe( topic, function() {
+		subscription = $.subscribe( topic, function() {
 			strictEqual( order, 2, "priority default; #2" );
 			order++;
 		});
-		$.subscribe( topic, function() {
+		subscription = $.subscribe( topic, function() {
 			strictEqual( order, 0, "priority 1; #1" );
 			order++;
 		}, 1 );
-		$.subscribe( topic, {}, function() {
+		subscription = $.subscribe( topic, {}, function() {
 			strictEqual( order, 4, "priority 15; #2" );
 			order++;
 		}, 15 );
@@ -363,6 +366,45 @@ asyncTest( "priority for asynchronous publication", function() {
 	}, 100); 
 });
 
+test( "subscriber context for sync", function() {
+	var PubSub = TestUtil.resetPubSub();
+	expect( 3 );
+	var subscription,
+		obj = {},
+		topic = "/context/subscriber",
+		fn = function() {};
+
+	subscription = $.subscribe( topic, function() {
+		strictEqual( this, window, "default context" );
+	});
+	subscription = $.subscribe( topic, obj, function() {
+		strictEqual( this, obj, "object bound during subscription" );
+	});
+	try {
+		subscription  = $.subscribe( topic, fn, function() {
+			ok( false, "function cannot be bound during subscription" );
+		});
+	} catch( err ) {
+		strictEqual( err.message, "You must provide an object for a context.", "function cannot be bound during subscription" );
+	}
+	$.publishSync( topic );
+});
+
+test( "publisher context", function() {
+	var PubSub = TestUtil.resetPubSub();
+	expect( 1 );
+	var topic = "/context/publisher",
+		subscription,
+		obj = {
+			name : "from publisher"
+		};
+
+	subscription = $.subscribe( topic, function() {
+		strictEqual( this, obj, "context from publisher" );
+	});
+
+	$.publishSync(topic, { context : obj });
+});
 
 var testContinuations = false;
 if (testContinuations) {

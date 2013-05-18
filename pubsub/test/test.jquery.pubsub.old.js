@@ -1,38 +1,5 @@
 module( "jquery.pubsub testing" );
 
-test( "subscriber context", function() {
-	expect( 3 );
-	var obj = {},
-		fn = function() {};
-
-	$.subscribe( "/context/subscriber", function() {
-		strictEqual( this, window, "default context" );
-	});
-	$.subscribe( "/context/subscriber", obj, function() {
-		strictEqual( this, obj, "object bound during subscription" );
-	});
-	$.subscribe( "/context/subscriber", fn, function() {
-		strictEqual( this, fn, "function bound during subscription" );
-	});
-	$.publish( "/context/subscriber" );
-});
-
-test( "publisher context", function() {
-	expect( 1 );
-	var obj = {
-		name : "from publisher"
-	};
-
-	$.subscribe( "/context/publisher", function() {
-		strictEqual( this, obj, "context from publisher" );
-	});
-	
-	$.publish("/context/publisher", 
-	{ 
-		context : obj
-	});
-});
-
 test( "data", function() {
 	$.subscribe( "data", function( string, number, object ) {
 		strictEqual( string, "hello", "string passed" );
