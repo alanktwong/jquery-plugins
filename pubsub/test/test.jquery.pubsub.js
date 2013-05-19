@@ -22,7 +22,7 @@ var TestUtil = {
 
 
 test("internal functionality", function() {
-	expect( 7 );
+	expect( 38 );
 	
 	var PubSub = TestUtil.resetPubSub();
 	deepEqual(false, PubSub.validateTopicName("bad topic name"), "topic names may not have white space");
@@ -35,10 +35,69 @@ test("internal functionality", function() {
 	deepEqual(true, PubSub.validateTopicName(topic), "topic names must be a string defined a la Unix directory");
 	var topics = PubSub.createTopics(topic);
 	deepEqual( topics, ["/app/module/class", "/app/module", "/app"], "ancestory of topics created in bubble-up order" );
+	
+	var u = PubSub.Util;
+	
+	strictEqual(u.isUndefined(undefined), true, "should be undefined");
+	strictEqual(u.isUndefined(""), false, "should not be undefined");
+	strictEqual(u.isNotNull(null), false, "should be null");
+	strictEqual(u.isNotNull(""), true, "should not be null");
+	strictEqual(u.isObject("de"), false, "should not be an object");
+	strictEqual(u.isObject({}),   true, "should be an object");
+	strictEqual(u.isFunction({}), false, "should not be a function");
+	strictEqual(u.isFunction(function() {}),   true, "should be a function");
+	
+	strictEqual(u.isString({}), false, "should not be a string");
+	strictEqual(u.isString(""), true,  "should be a string");
+	strictEqual(u.isNumber({}), false, "should not be a number");
+	strictEqual(u.isNumber(6),  true,  "should be a number");
+	
+	strictEqual(u.has(u,  "has"), true,  "should have 'has'");
+	strictEqual(u.has({}, "has"), false, "should not have 'has'");
+	strictEqual(u.identity(topic), topic, "identity should echo its input");
+	
+	var context = {};
+	var aList = [1,2,3];
+	u.each(aList, function(element,i,list) {
+		strictEqual(element, i + 1, "lists are 0-indexed for " + i )
+		strictEqual(this, context, "context bound to {}");
+	}, context);
+	
+	u.each({'1': 1, '2': 2, '3': 3 }, function(value,key,list) {
+		strictEqual(key, "" + value, "objects are enumerable by their key " + key )
+	});
+	aList = [1, 2, 3, 4, 5, 6];
+	var even = u.find(aList, function(num){ return num % 2 == 0; });
+	strictEqual(even, 2, "found first even number in " +  aList);
+	var evens = u.filter(aList, function(num){ return num % 2 == 0; });
+	deepEqual(evens, [2,4,6], "found all even numbers in " +  aList);
+	
+	aList = [1,2,3];
+	var sum = _.reduce([1, 2, 3], function(memo, num){ return memo + num; }, 0);
+	deepEqual(sum, 6, "this reduction of " +  aList + " should be 6");
+	
+	aList = [null, 0, 'yes', false];
+	var mapped = u.map(aList, function(each) {
+		var ret = each;
+		if (each === null) {
+			ret = "null";
+		}
+		return ret;
+	});
+	deepEqual(mapped, ["null", 0, "yes", false], "transformed array with truthy and untruthy values");
+	equal(_.some(aList), true, mapped + " has 1 truthy value");
+	
+	var fn = function(name) {
+		ok(true, "executing a callback for " + name);
+		strictEqual(this,context, name + " bound to context");
+	};
+	
+	var bound = u.bind(fn, context);
+	bound("bound fonction");
 });
 
 test("notification creation", function() {
-	expect( 9 );
+	expect( 10 );
 	
 	var PubSub = TestUtil.resetPubSub();
 	var topic = "/app/module/class";
@@ -52,6 +111,7 @@ test("notification creation", function() {
 	deepEqual( notification.data, data, "notification.data created" );
 	deepEqual( notification.publishTopic, topic, "notification.publishTopic created" );
 	deepEqual( notification.context, context, "notification.context created" );
+	deepEqual( publication.immediateExceptions, true, "publication created to throw exceptions immediately" );
 
 	publication = PubSub.createPublication(topic, { data : data });
 	notification = publication.notification;
@@ -514,16 +574,20 @@ asyncTest( "push data during asynchronous publication", function() {
 
 var testContinuations = true;
 if (testContinuations) {
-	test("continuation for sync publication w/o subscribers", function() {
+	test("continue sync publication w/o subscribers", function() {
 		expect( 1 );
 		
 		var PubSub = TestUtil.resetPubSub();
 		var topic = "/continuation/sync";
-		var publication = $.publishSync( topic );
+		var publication = $.publishSync( topic, {
+			progress : function() {
+				ok(false, "should never begin sync notifications");
+			}
+		});
 		strictEqual( publication, null, "return null when topic has no subscribers for sync pub" );
 	});
 
-	test("continuation for sync publication w/subscribers", function() {
+	test("continue sync publication w/subscribers", function() {
 		expect( 7 );
 		
 		var topic = "/continuation/sync";
@@ -553,7 +617,7 @@ if (testContinuations) {
 		strictEqual( publication.state() , "resolved", "sync publication should have resolved" );
 	});
 
-	test("discontinuation for sync publication w/1 subscriber returning false", function() {
+	test("discontinue sync publication when 1 subscriber returns false", function() {
 		expect( 7 );
 		
 		var PubSub = TestUtil.resetPubSub();
@@ -583,21 +647,55 @@ if (testContinuations) {
 		strictEqual( publication.state() , "rejected", "sync publication should have rejected" );
 	});
 
-
-	asyncTest( "continuation for async publication w/o subscribers", function() {
+	test("discontinue sync publication when 1 subscribers throws an error", function() {
+		expect( 7 );
+		
+		var PubSub = TestUtil.resetPubSub();
+		var topic = "/discontinuation/sync";
+		$.subscribe( topic, function(notification) {
+			ok( true, "continued after returning true for sync pub" );
+			throw new Error("stop publication");
+		});
+		$.subscribe( topic, function(notification) {
+			ok( false, "continued after returning false for sync pub" );
+		});
+		var publication = $.publishSync( topic, {
+			progress : function() {
+				ok(true, "begin sync notifications");
+			},
+			done: function() {
+				ok(false, "successful sync notifications");
+			},
+			fail: function() {
+				ok(true, "failed sync notifications");
+			},
+			always : function() {
+				ok(true, "completed sync notification");
+			}
+		});
+		strictEqual( publication !== null, true, "return publication when subscriptions are stopped during sync pub" );
+		strictEqual( publication.state() , "rejected", "sync publication should have rejected" );
+	});
+	
+	
+	asyncTest( "continue async publication w/o subscribers", function() {
 		expect( 1 );
 		
 		var PubSub = TestUtil.resetPubSub();
 		var topic = "/continuation/async";
 		
 		_.delay(function() {
-			var publication = $.publish(topic);
+			var publication = $.publish(topic, {
+				progress : function() {
+					ok(false, "should never begin async notifications");
+				}
+			});
 			start();
 			strictEqual( publication, null, "return null when topic has no subscribers for async pub" );
 		}, 10); 
 	});
 
-	asyncTest( "continuation for async publication w/subscribers", function() {
+	asyncTest( "continue async publication w/subscribers", function() {
 		var PubSub = TestUtil.resetPubSub();
 		expect( 7 );
 		
@@ -632,7 +730,41 @@ if (testContinuations) {
 	});
 
 
-	asyncTest("discontinuation for async publication w/1 subscriber returning false", function() {
+	asyncTest("discontinue async publication when 1 subscriber returns false", function() {
+		var PubSub = TestUtil.resetPubSub();
+		expect( 7 );
+
+		_.delay(function() {
+			var topic = "/discontinuation/async"
+			$.subscribe( topic, function(notification) {
+				ok( true, "continued after returning true for async pub" );
+				throw new Error("stop publication");
+			});
+			$.subscribe( topic, function(notification) {
+				ok( false, "continued after returning false for async pub" );
+			});
+			
+			var publication = $.publish(topic, {
+				progress : function() {
+					ok(true, "begin async notifications");
+				},
+				done: function() {
+					ok(false, "successful async notifications");
+				},
+				fail: function() {
+					ok(true, "failed async notifications");
+				},
+				always : function() {
+					ok(true, "completed async notification");
+					strictEqual( publication.state(), "rejected", "rejected when subscriptions are stopped during async pub" );
+				}
+			});
+			start();
+			strictEqual( publication.state(), "pending", "return pending immediately when subscriptions are stopped during async pub" );
+		}, 10);
+	});
+
+	asyncTest("discontinue async publication when 1 subscriber throws exception", function() {
 		var PubSub = TestUtil.resetPubSub();
 		expect( 7 );
 
@@ -666,8 +798,7 @@ if (testContinuations) {
 		}, 10);
 	});
 
-
-	test("publish synchronously on topic to see notifications bubbling up", function() {
+	test("notifications should bubble up during synchronous publication on a hierarchical topic", function() {
 		var PubSub = TestUtil.resetPubSub();
 		expect( 14 );
 		
@@ -717,9 +848,9 @@ if (testContinuations) {
 	});
 
 
-	asyncTest("publish asynchronously on topic to see notifications bubbling up", function() {
+	asyncTest("notifications should bubble up during asynchronous publication on a hierarchical topic", function() {
 		var PubSub = TestUtil.resetPubSub();
-		expect( 15 );
+		expect( 14 );
 		
 		_.delay(function() {
 			var topic = "/app/module/class";
@@ -766,7 +897,6 @@ if (testContinuations) {
 			});
 			// publish results and then see if it effected the change
 			start();
-			ok( true, "publish asynchronously requires a delay" );
 		}, 10);
 	});
 }

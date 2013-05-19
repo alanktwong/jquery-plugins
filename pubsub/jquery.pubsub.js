@@ -166,7 +166,9 @@
 				return obj.filter(iterator, context);
 			}
 			_each(obj, function(value, index, list) {
-				if (iterator.call(context, value, index, list)) results[results.length] = value;
+				if (iterator.call(context, value, index, list)) {
+					results[results.length] = value;
+				}
 			});
 			return results;
 		};
@@ -259,7 +261,6 @@
 		key : "PubSub",
 		subscriptions : {},
 		TOPIC_SEPARATOR : "/",
-		immediateExceptions : false,
 		/**
 		 * 
 		 * Subscribe to a message.
@@ -461,26 +462,27 @@
 			fail : function(notification) {},
 			always : function(notification) {}
 		},
-		createPublication : function(topic /* string */, options /* object */ ) {
+		createPublication : function(topic /* string */, publication /* object */ ) {
 			//var _self = PubSub;
 			if (!_self.validateTopicName(topic)) {
 				throw new Error( "You must provide a valid topic name to create a Notification." );
 			}
-			if (!Util.isObject(options)) {
+			if (!Util.isObject(publication)) {
 				throw new Error( "You must provide options to create a Notification." );
 			}
-			options.topic = topic;
+			publication.topic = topic;
 
-			options.data     = Util.isObject(options.data)       ? options.data : null;
-			options.context  = Util.isObject(options.context)    ? options.context : null;
-			options.progress = Util.isFunction(options.progress) ? options.progress : _self.defaultPublicationOptions.progress;
-			options.done     = Util.isFunction(options.done)     ? options.done : _self.defaultPublicationOptions.done;
-			options.fail     = Util.isFunction(options.fail)     ? options.fail : _self.defaultPublicationOptions.fail;
-			options.always   = Util.isFunction(options.always)   ? options.always : _self.defaultPublicationOptions.always;
+			publication.data     = Util.isObject(publication.data)       ? publication.data    : null;
+			publication.context  = Util.isObject(publication.context)    ? publication.context : null;
 			
-			var publication = options;
+			publication.progress = Util.isFunction(publication.progress) ? publication.progress : _self.defaultPublicationOptions.progress;
+			publication.done     = Util.isFunction(publication.done)     ? publication.done     : _self.defaultPublicationOptions.done;
+			publication.fail     = Util.isFunction(publication.fail)     ? publication.fail     : _self.defaultPublicationOptions.fail;
+			publication.always   = Util.isFunction(publication.always)   ? publication.always   : _self.defaultPublicationOptions.always;
+			
 			publication.notification = new Notification(topic, publication.data, publication.context);
 			publication.state = publication.notification.state;
+			publication.immediateExceptions = publication.notification.immediateExceptions;
 			return publication;
 		},
 		/**
@@ -545,13 +547,18 @@
 		this.currentTopic = topic;
 		this.data    = Util.isObject(data)    ? data : null;
 		this.context = Util.isObject(context) ? context : null;
+		this.immediateExceptions = true;
+		this.message = null;
 		
 		_publishPropagated = true;
 		
 		_state = "pending";
 		
-		this.reject = function() {
-			_publishPropgation = false;
+		this.reject = function(message) {
+			_publishPropagated = false;
+			if (message) {
+				this.message = message;
+			}
 			_state = "rejected";
 		};
 		
@@ -614,33 +621,28 @@
 		return context;
 	}
 	
+	function _createCallSubscriber() {
+		var _callSubscriberWithImmediateExceptions = function(subscriber, notification) {
+			var ret = true;
+			try {
+				ret = subscriber.apply(notification.context, [notification]);
+			} catch( ex ){
+				ret = false;
+				notification.reject(ex.message);
+			}
+			return ret;
+		}
+		return _callSubscriberWithImmediateExceptions;
+	}
+	
 	function _deliverMessage( publication ){
-		// var _self = PubSub;
+		//var _self = PubSub;
 		var notification  = publication.notification;
 		var originalTopic = notification.publishTopic;
 		var matchedTopic  = notification.currentTopic;
 		
-		var callSubscriber = function() {
-			if (_self.immediateExceptions) {
-				var _callSubscriberWithImmediateExceptions = function(subscriber, notification) {
-					return subscriber.apply(notification.context, [notification]);
-				}
-				return _callSubscriberWithImmediateExceptions;
-			} else {
-				var _callSubscriberWithDelayedExceptions = function(subscriber, notification) {
-					var ret = true;
-					try {
-						ret = subscriber.apply(notification.context, [notification]);
-					} catch( ex ){
-						ret = false;
-						Util.delay( _throwException( ex ), 0 );
-					}
-					return ret;
-				}
-				return _callSubscriberWithDelayedExceptions;
-			}
-		}();
-
+		var callSubscriber = _createCallSubscriber();
+		
 		var continuePropagating = publication.state() === "pending";
 		if ( !_self.subscriptions.hasOwnProperty( matchedTopic ) ) {
 			return continuePropagating;
@@ -662,7 +664,7 @@
 	}
 
 	function _createDeliveryFunction( publication ){
-		// var _self = PubSub;
+		//var _self = PubSub;
 		publication.progress();
 		var notification = publication.notification;
 		var topics = _self.createTopics(notification.publishTopic);
@@ -674,10 +676,11 @@
 			if (currentPublication.state() === "pending") {
 				for (var i = 0; i < topics.length; i++) {
 					var topic = topics[i];
-					currentPublication.notification.currentTopic = topic;
+					var notification = currentPublication.notification;
+					notification.currentTopic = topic;
 					var continuePropagating = _deliverMessage( currentPublication );
-					if (continuePropagating === false || !currentPublication.notification.isPropagation() ) {
-						currentPublication.notification.reject();
+					if (continuePropagating === false || !notification.isPropagation() ) {
+						notification.reject();
 						currentPublication.fail();
 						break;
 					}
