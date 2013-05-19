@@ -480,6 +480,14 @@
 			publication.fail     = Util.isFunction(publication.fail)     ? publication.fail     : _self.defaultPublicationOptions.fail;
 			publication.always   = Util.isFunction(publication.always)   ? publication.always   : _self.defaultPublicationOptions.always;
 			
+			/*
+			var deferredContext = null;
+			publication.progress = Util.bind(publication.progress, deferredContext);
+			publication.done     = Util.bind(publication.done, deferredContext);
+			publication.fail     = Util.bind(publication.fail, deferredContext);
+			publication.always   = Util.bind(publication.always, deferredContext);
+			*/
+			
 			publication.notification = new Notification(topic, publication.data, publication.context);
 			publication.state = publication.notification.state;
 			publication.immediateExceptions = publication.notification.immediateExceptions;

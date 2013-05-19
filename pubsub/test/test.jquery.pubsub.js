@@ -119,7 +119,7 @@ test("notification creation", function() {
 	equal(true, PubSub.Util.isNotNull(notification.timestamp), "timestamp added");
 	
 	try {
-		notification = PubSub.createPublication(topic)
+		publication = PubSub.createPublication(topic)
 	} catch( err ) {
 		strictEqual( err.message, "You must provide options to create a Notification.",
 			"cannot create notification w/o options" );
@@ -204,28 +204,36 @@ test("topic error handling", function() {
 });
 
 test("subscribe to topic with just a callback", function() {
-	expect( 8 );
+	expect( 12 );
 	
 	var PubSub = TestUtil.resetPubSub();
 	var topic = "/app/module/class";
 	var topics = PubSub.createTopics(topic);
-	var callback = function(notification) {
-		$.noop();
+	var callback0 = function(notification) {
+		ok(true, "1st subscriber notified");
+	};
+	var callback1 = function(notification) {
+		ok(true, "2nd subscriber notified");
 	};
 	
-	var subscription0 = $.subscribe(topic, callback);
+	var subscription0 = $.subscribe(topic, callback0);
 
 	equal(true, PubSub.hasSubscriptions(topic), "has a subscription");
 	equal(true, subscription0 !== null, "has returned a subscription");
 	equal(1, PubSub.getSubscriptions(topic).length, "has exactly 1 subscription");
-	equal(callback, subscription0.callback, "has returned a subscription w/ callback");
+	equal(callback0, subscription0.callback, "has returned a subscription w/ callback");
 	deepEqual( topics, subscription0.topics, "ancestory of topics for the subscription" );
 	equal(null, subscription0.context, "has returned a subscription w/o context");
 	
-	var subscription1 = $.subscribe(topic, callback);
+	var subscription1 = $.subscribe(topic, callback1);
 	equal(2, PubSub.getSubscriptions(topic).length, "now has exactly 2 subscriptions");
-	notStrictEqual(subscription0.id, subscription1.id, "IDs of both subscriptions are unique GUIDs");
 	
+	notStrictEqual(subscription0.id, subscription1.id, "IDs of both subscriptions are unique GUIDs");
+	strictEqual(subscription0.priority, subscription1.priority, "both subscriptions have same priority");
+	strictEqual(subscription1.timestamp > subscription0.timestamp, true, "2nd subscription has timestamp later than 1st");
+	
+	
+	$.publishSync(topic);
 	
 });
 
@@ -363,30 +371,30 @@ test( "priority for synchronous publication", function() {
 	var PubSub = TestUtil.resetPubSub();
 	expect( 5 );
 	
-	var order = 0,
+	var order = 1,
 		subscription,
 		topic = "/priority/sync";
 
 	subscription = $.subscribe( topic, function() {
-		strictEqual( order, 1, "priority default; #1" );
+		strictEqual( order, 2, "the initial subscriber has priority default, it is notified 2nd" );
 		order++;
 	});
 	subscription = $.subscribe( topic, function() {
-		strictEqual( order, 3, "priority 15; #1" );
+		strictEqual( order, 4, "this subscriber has priority 15; it is notified 4th");
 		order++;
 	}, 15 );
 	subscription = $.subscribe( topic, function() {
-		strictEqual( order, 2, "priority default; #2" );
+		strictEqual( order, 3, "this subscriber has priority default; it is notified 3rd after the initial subscriber as its timestamp is later" );
 		order++;
 	});
 	subscription = $.subscribe( topic, function() {
-		strictEqual( order, 0, "priority 1; #1" );
+		strictEqual( order, 1, "this subscriber greatest priority since it is the lowest number" );
 		order++;
 	}, 1 );
 	subscription = $.subscribe( topic, {}, function() {
-		strictEqual( order, 4, "priority 15; #2" );
+		strictEqual( order, 5, "this subscriber is dead last because it has a high priority number" );
 		order++;
-	}, 15 );
+	}, 100 );
 	
 	var publication = $.publishSync( topic );
 });
@@ -797,40 +805,78 @@ if (testContinuations) {
 			strictEqual( publication.state(), "pending", "return pending immediately when subscriptions are stopped during async pub" );
 		}, 10);
 	});
+}
 
+var testBubbling = true;
+
+if (testBubbling) {
 	test("notifications should bubble up during synchronous publication on a hierarchical topic", function() {
 		var PubSub = TestUtil.resetPubSub();
-		expect( 14 );
+		expect( 17 );
 		
-		var topic = "/app/module/class";
-		var topics = PubSub.createTopics(topic);
+		var neverNotified = function(notification) {
+			ok(false, "this callback should never be notified");
+		};
+		
+		var app = {
+			topic : "/app",
+			notify : function(notification) {
+				ok(true, "root was notified");
+				equal(2, count, "root subscriber called 3rd");
+				deepEqual(notification.data, app.data, "same data by reference passed to root");
+				count++;
+			},
+			padma : {
+				topic : "/app/padma",
+				notify : function(notification) {
+					ok(true, "padma was notified");
+					equal(1, count, "mid-level subscriber called 2nd");
+					deepEqual(notification.data.name, "empire strikes back", "data received by padma should have mutated");
+					count++;
+				},
+				luke : {
+					topic : "/app/padma/luke",
+					notify : neverNotified
+				},
+				leia : {
+					topic : "/app/padma/leia",
+					notify : function(notification) {
+						ok(true, "leia was notified");
+						deepEqual(notification.data, app.data, "leaf should receive data");
+						notification.data.name = "empire strikes back";
+						equal(0, count, "leaf subscriber called 1st");
+						count++;
+					}
+				}
+			},
+			anakin : {
+				topic : "/app/anakin",
+				notify : neverNotified
+			},
+			data : {
+				id : 1,
+				name : "star wars"
+			}
+		};
+		
+		var topics = PubSub.createTopics(app.padma.leia.topic);
 		var count = 0;
 		
-		var classSubscription = $.subscribe(topic, function(notification) {
-			equal(true, !!notification, "notification should be defined");
-			equal(0, count, "class subscriber called 1st");
-			count++;
-		});
+		var classSubscription = $.subscribe(app.padma.leia.topic, app.padma.leia.notify);
+		var moduleSubscription = $.subscribe(app.padma.topic, app.padma.notify);
+		var appSubscription = $.subscribe(app.topic, app.notify);
 		
-		var moduleSubscription = $.subscribe("/app/module", function(notification) {
-			equal(true, !!notification, "notification should be defined");
-			equal(1, count, "module subscriber called 2nd");
-			count++;
-		});
+		$.subscribe(app.anakin.topic, app.anakin.notify);
+		$.subscribe(app.padma.luke.topic, app.padma.luke.notify);
 		
-		var appSubscription = $.subscribe("/app", function(notification) {
-			equal(true, !!notification, "notification should be defined");
-			equal(2, count, "app subscriber called 3rd");
-			count++;
-		});
+		equal(1, PubSub.getSubscriptions(app.topic).length, "1 subscription should exist at app level");
+		equal(1, PubSub.getSubscriptions(app.padma.topic).length, "1 subscription should exist at padma level");
+		equal(1, PubSub.getSubscriptions(app.padma.leia.topic).length, "1 subscription should exist at leia level");
 		
-		equal(1, PubSub.getSubscriptions("/app").length, "1 subscription should exist at app level");
-		equal(1, PubSub.getSubscriptions("/app/module").length, "1 subscription should exist at module level");
-		equal(1, PubSub.getSubscriptions(topic).length, "1 subscription should exist at class level");
+		equal(5, _.keys(PubSub.subscriptions).length, "there should be 5 subscriptions total");
 		
-		equal(3, _.keys(PubSub.subscriptions).length, "there should be 3 subscriptions total");
-		
-		var publication = $.publishSync(topic, {
+		var publication = $.publishSync(app.padma.leia.topic, {
+			data : app.data,
 			progress : function() {
 				ok(true, "begin sync notifications");
 			},
@@ -847,40 +893,163 @@ if (testContinuations) {
 		equal(3, count, "synchronous publication blocks and mutates the count");
 	});
 
+	test("notifications attempts to bubble up during synchronous publication on a hierarchical topic b/c mid-level subscriber interrupts", function() {
+		var PubSub = TestUtil.resetPubSub();
+		expect( 27 );
+		
+		var neverNotified = function(notification) {
+			ok(false, "this callback should never be notified");
+		};
+		var exceptionThrown = function(notification) {
+			ok(true, "exceptionThrown was notified");
+			throw new Error("burp!");
+		};
+		var notificationReject = function(notification) {
+			ok(true, "notificationReject was notified");
+			notification.reject();
+		};
+		
+		var app = {
+			topic : "/app",
+			notify : neverNotified,
+			padma : {
+				topic : "/app/padma",
+				notify : function(notification) {
+					ok(true, "padma was notified");
+					equal(1, count, "mid-level subscriber called 2nd");
+					count++;
+					return false;
+				},
+				luke : {
+					topic : "/app/padma/luke",
+					notify : neverNotified
+				},
+				leia : {
+					topic : "/app/padma/leia",
+					notify : function(notification) {
+						ok(true, "leia was notified");
+						equal(0, count, "leaf subscriber called 1st");
+						count++;
+					}
+				}
+			},
+			anakin : {
+				topic : "/app/anakin",
+				notify : neverNotified
+			}
+		};
+		
+		var topics = PubSub.createTopics(app.padma.leia.topic);
+		var count = 0;
+		
+		var classSubscription = $.subscribe(app.padma.leia.topic, app.padma.leia.notify);
+		var moduleSubscription = $.subscribe(app.padma.topic, app.padma.notify);
+		var appSubscription = $.subscribe(app.topic, app.notify);
+		
+		$.subscribe(app.anakin.topic, app.anakin.notify);
+		$.subscribe(app.padma.luke.topic, app.padma.luke.notify);
+		
+		equal(1, PubSub.getSubscriptions(app.topic).length, "1 subscription should exist at app level");
+		equal(1, PubSub.getSubscriptions(app.padma.topic).length, "1 subscription should exist at padma level");
+		equal(1, PubSub.getSubscriptions(app.padma.leia.topic).length, "1 subscription should exist at leia level");
+		
+		equal(5, _.keys(PubSub.subscriptions).length, "there should be 5 subscriptions total");
+		
+		var options = {
+			progress : function() {
+				ok(true, "begin sync notifications");
+			},
+			done: function() {
+				ok(false, "successful sync notifications");
+			},
+			fail: function() {
+				ok(true, "failed sync notifications");
+			},
+			always : function() {
+				ok(true, "completed sync notification");
+			}
+		}
+		var publication = $.publishSync(app.padma.leia.topic, options);
+		equal(2, count, "synchronous publication blocks and mutates the count");
+		
+		$.unsubscribe(app.padma.topic);
+		count = 0;
+		$.subscribe(app.padma.topic, exceptionThrown);
+		$.publishSync(app.padma.leia.topic, options);
 
+		$.unsubscribe(app.padma.topic);
+		count = 0;
+		$.subscribe(app.padma.topic, notificationReject);
+		$.publishSync(app.padma.leia.topic, options);
+	});
+	
 	asyncTest("notifications should bubble up during asynchronous publication on a hierarchical topic", function() {
 		var PubSub = TestUtil.resetPubSub();
-		expect( 14 );
-		
+		expect( 17 );
 		_.delay(function() {
-			var topic = "/app/module/class";
-			var topics = PubSub.createTopics(topic);
+			var neverNotified = function(notification) {
+				ok(false, "this callback should never be notified");
+			};
+			
+			var app = {
+				topic : "/app",
+				notify : function(notification) {
+					ok(true, "root was notified");
+					equal(2, count, "root subscriber called 3rd");
+					deepEqual(notification.data, app.data, "same data by reference passed to root");
+					count++;
+				},
+				padma : {
+					topic : "/app/padma",
+					notify : function(notification) {
+						ok(true, "padma was notified");
+						equal(1, count, "mid-level subscriber called 2nd");
+						deepEqual(notification.data.name, "empire strikes back", "data received by padma should have mutated");
+						count++;
+					},
+					luke : {
+						topic : "/app/padma/luke",
+						notify : neverNotified
+					},
+					leia : {
+						topic : "/app/padma/leia",
+						notify : function(notification) {
+							ok(true, "leia was notified");
+							deepEqual(notification.data, app.data, "leaf should receive data");
+							notification.data.name = "empire strikes back";
+							equal(0, count, "leaf subscriber called 1st");
+							count++;
+						}
+					}
+				},
+				anakin : {
+					topic : "/app/anakin",
+					notify : neverNotified
+				},
+				data : {
+					id : 1,
+					name : "star wars"
+				}
+			};
+			
+			var topics = PubSub.createTopics(app.padma.leia.topic);
 			var count = 0;
 			
-			var classSubscription = $.subscribe(topic, function(notification) {
-				equal(true, !!notification, "notification should be defined");
-				equal(0, count, "class subscriber called 1st");
-				count++;
-			});
+			var classSubscription = $.subscribe(app.padma.leia.topic, app.padma.leia.notify);
+			var moduleSubscription = $.subscribe(app.padma.topic, app.padma.notify);
+			var appSubscription = $.subscribe(app.topic, app.notify);
 			
-			var moduleSubscription = $.subscribe("/app/module", function(notification) {
-				equal(true, !!notification, "notification should be defined");
-				equal(1, count, "module subscriber called 2nd");
-				count++;
-			});
+			$.subscribe(app.anakin.topic, app.anakin.notify);
+			$.subscribe(app.padma.luke.topic, app.padma.luke.notify);
 			
-			var appSubscription = $.subscribe("/app", function(notification) {
-				equal(true, !!notification, "notification should be defined");
-				equal(2, count, "app subscriber called 3rd");
-				count++;
-			});
+			equal(1, PubSub.getSubscriptions(app.topic).length, "1 subscription should exist at app level");
+			equal(1, PubSub.getSubscriptions(app.padma.topic).length, "1 subscription should exist at padma level");
+			equal(1, PubSub.getSubscriptions(app.padma.leia.topic).length, "1 subscription should exist at leia level");
 			
-			equal(1, PubSub.getSubscriptions("/app").length, "1 subscription should exist at app level");
-			equal(1, PubSub.getSubscriptions("/app/module").length, "1 subscription should exist at module level");
-			equal(1, PubSub.getSubscriptions(topic).length, "1 subscription should exist at class level");
-			equal(3, _.keys(PubSub.subscriptions).length, "there should be 3 subscriptions total");
+			equal(5, _.keys(PubSub.subscriptions).length, "there should be 5 subscriptions total");
 			
-			var publication = $.publish(topic, {
+			var publication = $.publish(app.padma.leia.topic, {
+				data : app.data,
 				progress : function() {
 					ok(true, "begin async notifications");
 				},
@@ -899,5 +1068,94 @@ if (testContinuations) {
 			start();
 		}, 10);
 	});
+	
+	asyncTest("notifications attempt to bubble up during asynchronous publication on a hierarchical topic b/c mid-level subscriber interrupts", function() {
+		var PubSub = TestUtil.resetPubSub();
+		expect( 15 );
+		_.delay(function() {
+			var neverNotified = function(notification) {
+				ok(false, "this callback should never be notified");
+			};
+			var exceptionThrown = function(notification) {
+				ok(true, "exceptionThrown was notified");
+				throw new Error("burp!");
+			};
+			var notificationReject = function(notification) {
+				ok(true, "notificationReject was notified");
+				notification.reject();
+			};
+			
+			var app = {
+				topic : "/app",
+				notify : neverNotified,
+				padma : {
+					topic : "/app/padma",
+					notify : function(notification) {
+						ok(true, "padma was notified");
+						equal(1, count, "mid-level subscriber called 2nd");
+						count++;
+						return false;
+					},
+					luke : {
+						topic : "/app/padma/luke",
+						notify : neverNotified
+					},
+					leia : {
+						topic : "/app/padma/leia",
+						notify : function(notification) {
+							ok(true, "leia was notified");
+							equal(0, count, "leaf subscriber called 1st");
+							count++;
+						}
+					}
+				},
+				anakin : {
+					topic : "/app/anakin",
+					notify : neverNotified
+				}
+			};
+			
+			var topics = PubSub.createTopics(app.padma.leia.topic);
+			var count = 0;
+			
+			var classSubscription = $.subscribe(app.padma.leia.topic, app.padma.leia.notify);
+			var moduleSubscription = $.subscribe(app.padma.topic, app.padma.notify);
+			var appSubscription = $.subscribe(app.topic, app.notify);
+			
+			$.subscribe(app.anakin.topic, app.anakin.notify);
+			$.subscribe(app.padma.luke.topic, app.padma.luke.notify);
+			
+			equal(1, PubSub.getSubscriptions(app.topic).length, "1 subscription should exist at app level");
+			equal(1, PubSub.getSubscriptions(app.padma.topic).length, "1 subscription should exist at padma level");
+			equal(1, PubSub.getSubscriptions(app.padma.leia.topic).length, "1 subscription should exist at leia level");
+			
+			equal(5, _.keys(PubSub.subscriptions).length, "there should be 5 subscriptions total");
+			
+			var options = {
+				progress : function() {
+					ok(true, "begin async notifications");
+				},
+				done: function() {
+					ok(false, "successful async notifications");
+				},
+				fail: function() {
+					ok(true, "failed async notifications");
+				},
+				always : function() {
+					ok(true, "completed async notification");
+				}
+			};
+			
+			var publication = $.publish(app.padma.leia.topic, options);
+			start();
+			
+			$.unsubscribe(app.padma.topic);
+			$.subscribe(app.padma.topic, exceptionThrown);
+			$.publish(app.padma.leia.topic, options);
+			
+			$.unsubscribe(app.padma.topic);
+			$.subscribe(app.padma.topic, notificationReject);
+			$.publish(app.padma.leia.topic, options);
+		}, 10);
+	});
 }
-
