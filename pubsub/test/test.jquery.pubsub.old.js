@@ -3,20 +3,21 @@ module( "jquery.pubsub testing" );
 test( "unsubscribe during publish", function() {
 	expect( 4 );
 
+	var topic = "/racy";
 	function racer() {
 		ok( true, "second subscriber" );
-		var subscribers = $.unsubscribe( "racy", racer );
+		var subscribers = $.unsubscribe( topic, racer );
 		strictEqual(2, subscribers.length, "unsubscribed myself");
 	}
 
-	$.subscribe( "racy", function() {
+	$.subscribe( topic, function() {
 		ok( true, "first subscriber" );
 	});
-	$.subscribe( "racy", racer );
-	$.subscribe( "racy", function() {
+	$.subscribe( topic, racer );
+	$.subscribe( topic, function() {
 		ok( true, "third subscriber" );
 	});
-	$.publish( "racy" );
+	$.publishSync( topic );
 });
 
 test( "multiple subscriptions", function() {
@@ -25,7 +26,7 @@ test( "multiple subscriptions", function() {
 	$.subscribe( "/sub/a/1 /sub/a/2 /sub/a/3", function() {
 		ok( true );
 	});
-	$.publish( "/sub/a/1" );
+	$.publishSync( "/sub/a/1" );
 
 	$.subscribe( "/sub/b/1 /sub/b/2", function() {
 		ok( true );
@@ -36,7 +37,7 @@ test( "multiple subscriptions", function() {
 		ok( true );
 	});
 	
-	$.publish( "/sub/b/2" );
-	$.publish( "/sub/b/2" );
-	$.publish( "/sub/b/3" );
+	$.publishSync( "/sub/b/2" );
+	$.publishSync( "/sub/b/2" );
+	$.publishSync( "/sub/b/3" );
 });
