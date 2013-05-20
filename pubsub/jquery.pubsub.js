@@ -705,16 +705,16 @@
 		return deliverNamespaced;
 	}
 	
+	// store PubSub object for unit testing
+	if ($.store) {
+		$.store(PubSub.key, PubSub);
+	} else if (window && window.document) {
+		var $document = $(document);
+		$document.data(PubSub.key, PubSub);
+	}
 	// now publicize the API on the pubsub object onto the jQuery object
 	$.publish = PubSub.publish;
 	$.publishSync = PubSub.publishSync;
 	$.subscribe = PubSub.subscribe;
 	$.unsubscribe = PubSub.unsubscribe;
-	
-	if ($.store) {
-		$.store("pubsub", PubSub);
-	} else if (window && window.document) {
-		var $document = $(document);
-		$document.data('pubsub', PubSub);
-	}
 }( jQuery ) );

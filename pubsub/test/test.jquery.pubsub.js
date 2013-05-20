@@ -3,15 +3,11 @@ module( "jquery.pubsub testing" );
 var TestUtil = {
 	getPubSub : function() {
 		if ($.store) {
-			return $.store("pubsub");
+			return $.store("PubSub");
 		} else if (window && window.document) {
 			var $document = $(document);
-			return $document.data('pubsub');
+			return $document.data('PubSub');
 		}
-	},
-	clone : function(obj) {
-		// used to clone objects like Notification or Subscription
-		_.clone(obj);
 	},
 	resetPubSub : function() {
 		var PubSub = TestUtil.getPubSub();
@@ -391,7 +387,7 @@ test( "priority for synchronous publication", function() {
 		strictEqual( order, 1, "this subscriber greatest priority since it is the lowest number" );
 		order++;
 	}, 1 );
-	subscription = $.subscribe( topic, {}, function() {
+	subscription = $.subscribe( topic, function() {
 		strictEqual( order, 5, "this subscriber is dead last because it has a high priority number" );
 		order++;
 	}, 100 );
