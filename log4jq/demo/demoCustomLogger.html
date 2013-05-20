@@ -28,7 +28,8 @@ $(document).ready(function() {
 		 * Parameters:
 		 *		entry -   The entry to log.
 		 */
-		log: function log(entry) {
+		log: function log(notification) {
+			var entry = notification.data;
 			var $rollingLog = $('p:last',customTarget.$dom);
 			var msg = entry.format();
 			$rollingLog.after("<p> CUSTOM: " + msg + "</p>");

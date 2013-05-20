@@ -29,7 +29,7 @@ $(document).ready(function() {
 			},
 			{
 				name: "divInsert",
-				subscribed: true,
+				subscribed: false,
 				$dom : $("div#console-log")
 			}
 		]
@@ -58,7 +58,7 @@ $(document).ready(function() {
 </head>
 <body>
 	<h3>jQuery Logger: Standard Log Targets</h3>
-	<p id="receiver">Logs should appear here</p>
+	<p id="receiver">Logs should NOT appear here. Only console logger is configured</p>
 	<div id="console-log" style="font-size: 14px;">
 		<p id="last"></p>
 	</div>
