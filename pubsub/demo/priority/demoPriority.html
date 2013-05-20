@@ -12,36 +12,74 @@
 <script type="text/javascript" src="../../jquery.pubsub.js"></script>
 <script>
 $(document).ready(function() {
-
+	var topic = "/priority/example";
 	// we can subscribe to a topic with a priority
-	$.subscribe( "priorityexample", function( data ) {
-		$( "p#receiver" ).append( "\nsecond highest priority: " + data.foo + "\n" );
+	$.subscribe( topic, function( n ) {
+		var data = n.data;
+		$( "#receiver2" ).append( "\n 2nd highest priority: " + data.foo + "\n" );
 	}, 2 );
 
 	// we can use the highest priority possibly
 	// keep other subscriptions from firing.
-	$.subscribe( "priorityexample", function( data ) {
-		$( "p#receiver" ).append( "\nhighest priority:" + data.foo + "\n" );
+	$.subscribe( topic, function( n ) {
+		var data = n.data;
+		$( "#receiver" ).append( "\n highest priority:" + data.foo + "\n" );
 		if ( data.foo === "oops" ) {
+			$( "#oops" ).append( "\n received oops:" + data.foo + "\n" );
 			return false;
 		}
 	}, 1 );
 
 	// the default priority is '10'.
-	$.subscribe( "priorityexample", function( data ) {
-		$( "p#receiver2" ).append( "default priority is 10: " + data.foo+ "\n" );
+	$.subscribe( topic, function( n ) {
+		var data = n.data;
+		$( "#receiver3" ).append( "\n default priority is 10: " + data.foo+ "\n" );
 	});
 
-	$.publish( "priorityexample", { foo: "bar" } );
-	$.publish( "priorityexample", { foo: "oops" } );
+	$.publishSync( topic, {
+		data : { foo: "bar"},
+		progress: function() {
+			console.log("begin pub of 'bar'");
+		},
+		done: function() {
+			console.log("done pub of 'bar'");
+		},
+		fail: function() {
+			console.log("fail pub of 'bar'");
+		},
+		always: function() {
+			console.log("always pub of 'bar'");
+		}
+	});
+	$.publishSync( topic, {
+		data : { foo: "oops" },
+		progress: function() {
+			console.log("begin pub of 'oops'");
+		},
+		done: function() {
+			console.log("done pub of 'oops'");
+		},
+		fail: function() {
+			console.log("fail pub of 'oops'");
+		},
+		always: function() {
+			console.log("always pub of 'oops'");
+		}
+	});
 });
 </script>
 </head>
 <body>
 	<h3>jQuery PubSub: Priority Usage</h3>
+	<div id="note">
+		<p>Only synchronous part of demo works for co-publishing</p>
+		<p>Asynchronous part of demo does not work for co-publishing</p>
+	</div>
 	<div id="console-log" style="font-size: 14px;">
 		<p id="receiver"></p>
 		<p id="receiver2"></p>
+		<p id="receiver3"></p>
+		<p id="oops"></p>
 	</div>
 </body>
 

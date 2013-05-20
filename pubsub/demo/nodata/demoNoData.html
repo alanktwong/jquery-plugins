@@ -12,18 +12,32 @@
 <script type="text/javascript" src="../../jquery.pubsub.js"></script>
 <script>
 $(document).ready(function() {
-	$.subscribe( "nodataexample", function() {
-		$( "p#receiver").append( "<p>first subscription called</p>" );
+	var topic = "/nodataexample";
+	$.subscribe( topic, function(n) {
+		$( "p#receiver").append( "<p>1st subscription called</p>" );
 	});
 
 	// there can be more than one subscriber for a topic
-	$.subscribe( "nodataexample", function() {
-		$( "p#receiver").append( "<p>second subscription called</p>" );
+	$.subscribe( topic, function(n) {
+		$( "p#receiver").append( "<p>2nd subscription called</p>" );
 	});
 
 	// the subscriptions are triggered through a publish
 	// call on the topic
-	$.publish( "nodataexample" );
+	$.publish(topic, {
+		progress: function() {
+			console.log("begin topic");
+		},
+		done: function() {
+			console.log("done topic");
+		},
+		fail: function() {
+			console.log("fail topic");
+		},
+		always: function() {
+			console.log("always topic");
+		}
+	});
 });
 </script>
 </head>

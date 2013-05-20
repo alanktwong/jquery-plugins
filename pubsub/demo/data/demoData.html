@@ -12,55 +12,52 @@
 <script type="text/javascript" src="../../jquery.pubsub.js"></script>
 <script>
 $(document).ready(function() {
+	var topic1  = "/dataexample/1";
+	var topic2 = "/dataexample/2";
 	// data can be expected as an object literal / hash
-	$.subscribe( "dataexample", function( data ) {
-		$( "p#receiver" ).append( "dataexample: " + data.foo ); // bar
+	$.subscribe( topic1, function( n ) {
+		var msg =   topic1 + " : " + n.data.foo  ;
+		$( "#receiver",'#console-log' ).append( msg );
+		console.log(msg);
 	});
 
 	// or individual parameters.
-	$.subscribe( "dataexample2", function( param1, param2 ) {
-		$( "p#receiver2" ).append( "dataexample2: " + param1 + param2 ); // barbaz
+	$.subscribe( topic2, function( n ) {
+		var msg =  topic2 + " : " + n.data.param1 + n.data.param2 ;
+		$( "#receiver2", '#console-log' ).append(msg);
+		console.log(msg);
 	});
 
-	$.publish( "dataexample", { foo: "bar" } );
-	$.publish( "dataexample2", "bar", "baz" );
-	
-	
-	function asyncEvent(){
-	    var dfd = new $.Deferred();
-
-	    // Resolve after a random interval
-	    setTimeout(function(){
-	        dfd.resolve("hurray");
-	    }, Math.floor(400+Math.random()*2000));
-
-	    // Reject after a random interval
-	    setTimeout(function(){
-	        dfd.reject("sorry");
-	    }, Math.floor(400+Math.random()*2000));
-
-	    // Show a "working..." message every half-second
-	    setTimeout(function working(){
-	        if ( dfd.state() === "pending" ) {
-	            dfd.notify("working... ");
-	            setTimeout(working, 500);
-	        }
-	    }, 1);
-
-	    // Return the Promise so caller can't change the Deferred
-	    return dfd.promise();
-	};
-	$.when( asyncEvent() ).then(
-		    function(status){
-	          $("#receiver4").append( status+', things are going well' );
-		    },
-		    function(status){
-		        $("#receiver4").append( status+', you fail this time' );
-		    },
-		    function(status){
-		        $("#receiver3").append(status);
-		    }
-	);
+	$.publishSync( topic1, {
+		data : {foo: "bar" },
+		progress: function() {
+			console.log("begin topic1");
+		},
+		done: function() {
+			console.log("done topic1");
+		},
+		fail: function() {
+			console.log("fail topic1");
+		},
+		always: function() {
+			console.log("always topic1");
+		}
+	});
+	$.publishSync( topic2, {
+		data : {param1 : "bar", param2: "baz"},
+		progress: function() {
+			console.log("begin topic2");
+		},
+		done: function() {
+			console.log("done topic2");
+		},
+		fail: function() {
+			console.log("fail topic2");
+		},
+		always: function() {
+			console.log("always topic2");
+		}
+	});
 
 });
 </script>
@@ -68,14 +65,14 @@ $(document).ready(function() {
 <body>
 	<h3>jQuery PubSub: Data Usage</h3>
 	<div id="note">
-		<p>Under jQuery 1.4.4, only synchronous part of demo works</p>
-		<p>Under jQuery 1.7.1, asynchronous part of demo also works</p>
+		<p>Only synchronous part of demo works for co-publishing</p>
+		<p>Asynchronous part of demo does not work for co-publishing</p>
 	</div>
 	<div id="console-log" style="font-size: 14px;">
 		<p id="receiver"></p>
 		<p id="receiver2"></p>
 		<p id="receiver3"></p>
-    <p id="receiver4"></p>
+		<p id="receiver4"></p>
 	</div>
 </body>
 

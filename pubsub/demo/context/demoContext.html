@@ -12,16 +12,33 @@
 <script type="text/javascript" src="../../jquery.pubsub.js"></script>
 <script>
 $(document).ready(function() {
+	var topic = "/data/context/example"
 	// set up subscription with context specified
 	// for the callback function
-	$.subscribe( "datacontextexample",
+	$.subscribe( topic,
 		$( "p#receiver" ),
-		function( data ) {
-			this.text( data.exampleText );
+		function( n ) {
+			var msg = n.data.exampleText
+			this.text( msg );
+			console.log("subsciber received: " + msg);
 		}
 	);
 
-	$.publish( "datacontextexample", { exampleText: "if you see: foo bar baz, then it works" } );
+	$.publish( topic, {
+		data :{ exampleText: "if you see on page: foo bar baz, then it works" },
+		progress: function() {
+			console.log("begin topic");
+		},
+		done: function() {
+			console.log("done topic");
+		},
+		fail: function() {
+			console.log("fail topic");
+		},
+		always: function() {
+			console.log("always topic");
+		}
+	});
 });
 </script>
 </head>
