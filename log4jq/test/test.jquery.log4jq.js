@@ -10,7 +10,8 @@ var testTarget = {
 		 * Parameters:
 		 *		entry -   The entry to log.
 		 */
-		log: function (entry) {
+		log: function (notification) {
+			var entry = notification.data;
 			var _self = testTarget;
 			testTarget.set(entry);
 		},
@@ -46,24 +47,37 @@ var configure = function(level) {
 				$dom : $("div#console-log")
 			},
 			testTarget
-		]
+		],
+		progress : function() {
+			ok(true, "began publication to logging topic");
+		},
+		done : function() {
+			ok(true, "successfully published to logging topic");
+		},
+		fail : function() {
+			ok(false, "failed to publish to logging topic");
+		},
+		always : function() {
+			ok(true, "complete publishing to logging topic");
+		}
 	});
 }
 
 test( "configuring the logger", function() {
-	expect( 10 );
+	expect( 11 );
 	var logger = configure("debug");
 
-	equal( true, logger.enabled(), "logger should be enabled" );
+	equal( logger.enabled(), true, "logger should be enabled" );
+	equal( logger.sync, true , "logger should publish synchronously" );
 	var activeTargets = logger.subscribers();
 	equal( 3, activeTargets.length, "only 3 log targets should be set up" );
 	
 	equal( "debug", logger.level(), "logging level set to debug" );
 	
-	var alertTarget   = logger.help.findTarget("alert");
-	var consoleTarget = logger.help.findTarget("console");
-	var divTarget     = logger.help.findTarget("divInsert");
-	var customTarget  = logger.help.findTarget("testTarget");
+	var alertTarget   = logger.findTarget("alert");
+	var consoleTarget = logger.findTarget("console");
+	var divTarget     = logger.findTarget("divInsert");
+	var customTarget  = logger.findTarget("testTarget");
 	
 	equal( false, alertTarget.subscribed, "alert target should be disabled");
 	equal( true, consoleTarget.subscribed, "alert target should be enabled");
@@ -76,14 +90,56 @@ test( "configuring the logger", function() {
 
 });
 
-test( "logging debug messages", function() {
-	expect( 10 );
+test( "logging TRACE messages", function() {
+	expect( 21 );
+	var logger = configure("trace");
+
+	equal( logger.enabled(), true , "logger should be enabled" );
+	equal( "trace", logger.level(), "logger should be at trace level" );
+	equal( 3, logger.subscribers().length, "only 3 log targets should be set up" );
+	var testTarget  = logger.findTarget("testTarget");
+	
+	$.trace("hello");
+	var logEntry = testTarget.get();
+	// msg : [TRACE] {date time} hello
+	equal( "hello", logEntry.message, "echo log message" );
+	equal( true, logEntry.timestamp instanceof Date, "timestamp should be current" );
+	equal( "trace" , logEntry.getLevel(), "log entry level should be at trace");
+
+	var plan = { planId : "alan", foo : function() { var bar }, baz : "quus" }; 
+	$.trace(plan);
+	logEntry = testTarget.get();
+	equal( "", logEntry.message, "logEntry message should be empty");
+	equal( plan, logEntry.json, "logEntry.json should not be empty");
+	
+	$.trace("plan", plan);
+	logEntry = testTarget.get();
+	equal( "plan", logEntry.message, "logEntry.message should not be empty" );
+	equal( plan, logEntry.json, "logEntry.json should not be empty" );
+	
+	var moduleSvc = {
+		name : "moduleSvc",
+		execute : function() {
+			$.trace("trace message", {}, moduleSvc );
+			logEntry = testTarget.get();
+			var logMessage = logEntry.format();
+			equal(logMessage.contains("[TRACE]"),true, "should contain TRACE");
+			equal(logMessage.contains(moduleSvc.name),true, "should contain 'moduleSvc'");
+			equal(logMessage.contains("trace message"),true, "should contain 'trace message'");
+		}
+	};
+	moduleSvc.execute();
+});
+
+
+test( "logging DEBUG messages", function() {
+	expect( 21 );
 	var logger = configure("debug");
 
-	equal( true, logger.enabled(), "logger should be enabled" );
+	equal( logger.enabled(), true, "logger should be enabled" );
 	equal( "debug", logger.level(), "logger should be at debug level" );
 	equal( 3, logger.subscribers().length, "only 3 log targets should be set up" );
-	var testTarget  = logger.help.findTarget("testTarget");
+	var testTarget  = logger.findTarget("testTarget");
 	
 	//var $dom = $("div#console-log");
 	$.debug("hello");
@@ -107,25 +163,29 @@ test( "logging debug messages", function() {
 	var moduleSvc = {
 		name : "moduleSvc",
 		execute : function() {
-			$.debug("moduleSvc", { msg : "debug in moduleSvc" }, moduleSvc );
+			$.debug("debug message", {}, moduleSvc );
+			logEntry = testTarget.get();
+			var logMessage = logEntry.format();
+			equal(logMessage.contains("[DEBUG]"),true, "should contain DEBUG");
+			equal(logMessage.contains(moduleSvc.name),true, "should contain 'moduleSvc'");
+			equal(logMessage.contains("debug message"),true, "should contain 'debug message'");
 		}
-	}
+	};
 	moduleSvc.execute();
-	logEntry = testTarget.get();
 });
 
 
-test( "logging information messages", function() {
-	expect( 10 );
+test( "logging INFO messages", function() {
+	expect( 21 );
 	var logger = configure("info");
 
 	equal( true, logger.enabled(), "logger should be enabled" );
 	equal( "info", logger.level(), "logger should be at info level" );
 	equal( 3, logger.subscribers().length, "only 3 log targets should be set up" );
-	var testTarget  = logger.help.findTarget("testTarget");
+	var testTarget  = logger.findTarget("testTarget");
 	
 	$.info("hello");
-	var testTarget  = logger.help.findTarget("testTarget");
+	var testTarget  = logger.findTarget("testTarget");
 	var logEntry = testTarget.get();
 	// msg : [DEBUG] {date time} hello
 	equal( "hello", logEntry.message, "echo log message" );
@@ -146,22 +206,26 @@ test( "logging information messages", function() {
 	var moduleSvc = {
 		name : "moduleSvc",
 		execute : function() {
-			$.info("moduleSvc", { msg : "info in moduleSvc" }, moduleSvc );
+			$.info("info message", {}, moduleSvc );
+			logEntry = testTarget.get();
+			var logMessage = logEntry.format();
+			equal(logMessage.contains("[INFO]"),true, "should contain INFO");
+			equal(logMessage.contains(moduleSvc.name),true, "should contain 'moduleSvc'");
+			equal(logMessage.contains("info message"),true, "should contain 'info message'");
 		}
-	}
+	};
 	moduleSvc.execute();
-	logEntry = testTarget.get();
 });
 
 
-test( "logging warning messages", function() {
-	expect( 10 );
+test( "logging WARN messages", function() {
+	expect( 21 );
 	var logger = configure("warn");
 
 	equal( true, logger.enabled(), "logger should be enabled" );
 	equal( "warn", logger.level(), "logger should be at warning level" );
 	equal( 3, logger.subscribers().length, "only 3 log targets should be set up" );
-	var testTarget  = logger.help.findTarget("testTarget");
+	var testTarget  = logger.findTarget("testTarget");
 
 	var $dom = $("div#console-log");
 	$.warn("hello");
@@ -186,22 +250,25 @@ test( "logging warning messages", function() {
 	var moduleSvc = {
 		name : "moduleSvc",
 		execute : function() {
-			$.warn("moduleSvc", { msg : "warning in moduleSvc" }, moduleSvc );
+			$.warn("warning message", {}, moduleSvc );
+			logEntry = testTarget.get();
+			var logMessage = logEntry.format();
+			equal(logMessage.contains("[WARN]"),true, "should contain WARN");
+			equal(logMessage.contains(moduleSvc.name),true, "should contain 'moduleSvc'");
+			equal(logMessage.contains("warning message"),true, "should contain 'warning message'");
 		}
-	}
+	};
 	moduleSvc.execute();
-	logEntry = testTarget.get();
-	
 });
 
-test( "logging error messages", function() {
-	expect( 11 );
+test( "logging ERROR messages", function() {
+	expect( 21 );
 	var logger = configure("error");
 
 	equal( true, logger.enabled(), "logger should be enabled" );
 	equal( "error", logger.level(), "logger should be at error level" );
 	equal( 3, logger.subscribers().length, "only 3 log targets should be set up" );
-	var testTarget  = logger.help.findTarget("testTarget");
+	var testTarget  = logger.findTarget("testTarget");
 
 	$.error("hello");
 
@@ -225,11 +292,13 @@ test( "logging error messages", function() {
 	var moduleSvc = {
 		name : "moduleSvc",
 		execute : function() {
-			$.error("moduleSvc", { msg : "error in moduleSvc" }, moduleSvc );
+			$.error("failure message", {}, moduleSvc );
+			logEntry = testTarget.get();
+			var logMessage = logEntry.format();
+			equal(logMessage.contains("[ERROR]"),true, "should contain ERROR");
+			equal(logMessage.contains(moduleSvc.name),true, "should contain 'moduleSvc'");
+			equal(logMessage.contains("failure message"),true, "should contain 'failure message'");
 		}
-	}
+	};
 	moduleSvc.execute();
-	logEntry = testTarget.get();
-	equal("", logEntry.format(), "should contain moduleSvc");
-	
 });
