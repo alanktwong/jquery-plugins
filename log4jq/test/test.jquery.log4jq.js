@@ -10,8 +10,7 @@ var testTarget = {
 		 * Parameters:
 		 *		entry -   The entry to log.
 		 */
-		log: function (notification) {
-			var entry = notification.data;
+		log: function (entry) {
 			var _self = testTarget;
 			testTarget.set(entry);
 		},
@@ -47,28 +46,15 @@ var configure = function(level) {
 				$dom : $("div#console-log")
 			},
 			testTarget
-		],
-		progress : function() {
-			ok(true, "began publication to logging topic");
-		},
-		done : function() {
-			ok(true, "successfully published to logging topic");
-		},
-		fail : function() {
-			ok(false, "failed to publish to logging topic");
-		},
-		always : function() {
-			ok(true, "complete publishing to logging topic");
-		}
+		]
 	});
 }
 
 test( "configuring the logger", function() {
-	expect( 11 );
+	expect( 10 );
 	var logger = configure("debug");
 
 	equal( logger.enabled(), true, "logger should be enabled" );
-	equal( logger.sync, true , "logger should publish synchronously" );
 	var activeTargets = logger.subscribers();
 	equal( 3, activeTargets.length, "only 3 log targets should be set up" );
 	
@@ -91,7 +77,7 @@ test( "configuring the logger", function() {
 });
 
 test( "logging TRACE messages", function() {
-	expect( 21 );
+	expect( 13 );
 	var logger = configure("trace");
 
 	equal( logger.enabled(), true , "logger should be enabled" );
@@ -133,7 +119,7 @@ test( "logging TRACE messages", function() {
 
 
 test( "logging DEBUG messages", function() {
-	expect( 21 );
+	expect( 13 );
 	var logger = configure("debug");
 
 	equal( logger.enabled(), true, "logger should be enabled" );
@@ -176,7 +162,7 @@ test( "logging DEBUG messages", function() {
 
 
 test( "logging INFO messages", function() {
-	expect( 21 );
+	expect( 13 );
 	var logger = configure("info");
 
 	equal( true, logger.enabled(), "logger should be enabled" );
@@ -219,7 +205,7 @@ test( "logging INFO messages", function() {
 
 
 test( "logging WARN messages", function() {
-	expect( 21 );
+	expect( 13 );
 	var logger = configure("warn");
 
 	equal( true, logger.enabled(), "logger should be enabled" );
@@ -262,7 +248,7 @@ test( "logging WARN messages", function() {
 });
 
 test( "logging ERROR messages", function() {
-	expect( 21 );
+	expect( 13 );
 	var logger = configure("error");
 
 	equal( true, logger.enabled(), "logger should be enabled" );

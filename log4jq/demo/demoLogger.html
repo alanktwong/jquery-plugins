@@ -1,60 +1,56 @@
 <!DOCTYPE HTML>
 <html lang="en-US">
 <head>
-<meta charset="UTF-8">
-<title>jQuery Logger: Demo Page for Standard Log Targets</title>
-
-<script type="text/javascript"  src="http://www.google.com/jsapi"></script>
-<script type="text/javascript">
-  google.load("jquery", "1.7.1", {uncompressed: true});
-</script>
-
-<script type="text/javascript" src="../../pubsub/jquery.pubsub.js"></script>
-
-
-<script type="text/javascript" src="../jquery.log4jq.js"></script>
-<script>
-$(document).ready(function() {
-	 var logger = $.configureLog4jq({
-		enabled: true,
-		level : "debug",
-		targets : [
-			{
-				name: "alert",
-				subscribed: false
-			},
-			{
-				name: "console",
-				subscribed: true
-			},
-			{
-				name: "divInsert",
-				subscribed: false,
-				$dom : $("div#console-log")
-			}
-		]
+	<meta charset="UTF-8">
+	<title>jQuery Logger: Demo Page for Standard Log Targets</title>
+	
+	<script type="text/javascript"  src="http://www.google.com/jsapi"></script>
+	<script type="text/javascript">
+	  google.load("jquery", "1.7.1", {uncompressed: true});
+	</script>
+	<script type="text/javascript" src="../jquery.log4jq.js"></script>
+	<script>
+	$(document).ready(function() {
+		var logger = $.configureLog4jq({
+			enabled: true,
+			level : "debug",
+			targets : [
+				{
+					name: "alert",
+					subscribed: false
+				},
+				{
+					name: "console",
+					subscribed: true
+				},
+				{
+					name: "divInsert",
+					subscribed: false,
+					$dom : $("div#console-log")
+				}
+			]
+		});
+		
+		if (logger.subscribers().length !== 1) {
+			var msg = "2 log targets must be subscribed";
+			throw(msg);
+		}
+		$.debug("debug msg");
+		$.info("info msg")
+		$.warn("warning msg");
+		$.error("error msg");
+		
+		$.debug({foo: "debug"});
+		$.info({foo: "info"})
+		$.warn({foo: "warn"});
+		$.error({foo: "error"});
+		
+		$.debug("Debug", {foo: "debug", bar: function() {},baz:1 });
+		$.info("Info", {foo: "info", bar: function() {},baz:1 })
+		$.warn("Warning", {foo: "warn", bar: function() {},baz:1 });
+		$.error("Error", {foo: "error", bar: function() {}, baz:1 });
 	});
-	
-	if (logger.subscribers().length != 2) {
-		var msg = "2 log targets must be subscribed";
-		throw(msg);
-	}
-	$.debug("debug msg");
-	$.info("info msg")
-	$.warn("warning msg");
-	$.error("error msg");
-	
-	$.debug({foo: "debug"});
-	$.info({foo: "info"})
-	$.warn({foo: "warn"});
-	$.error({foo: "error"});
-	
-	$.debug("Debug", {foo: "debug", bar: function() {},baz:1 });
-	$.info("Info", {foo: "info", bar: function() {},baz:1 })
-	$.warn("Warning", {foo: "warn", bar: function() {},baz:1 });
-	$.error("Error", {foo: "error", bar: function() {}, baz:1 });
-});
-</script>
+	</script>
 </head>
 <body>
 	<h3>jQuery Logger: Standard Log Targets</h3>

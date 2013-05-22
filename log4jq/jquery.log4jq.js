@@ -15,8 +15,6 @@
 		_enabled: false,
 		version : "1.0.0.SNAPSHOT",
 		key: "log4jq",
-		// whether to publish to topic synchronously
-		sync : true,
 		/*
 		 * Use the following topic to publish log entries to 
 		 * the log targets using jquery.pubsub.
@@ -171,30 +169,21 @@
 				if (!_log4jq.isExcluded(entry)) {
 					// Log the entry with each of the registered targets.
 					try {
-						if (_log4jq.sync !== false) {
-							$.publishSync(_log4jq.topic, {
-								data: entry,
-								context : _context,
-								progress : _log4jq.progress,
-								done : _log4jq.done,
-								fail : _log4jq.fail,
-								always : _log4jq.always
-							});
-						} else {
-							$.publish(_log4jq.topic, {
-								data: entry,
-								context : _context,
-								progress : _log4jq.progress,
-								done : _log4jq.done,
-								fail : _log4jq.fail,
-								always : _log4jq.always
-							});
-						}
+						_log4jq.publish(entry, _context);
 					} catch (err) {
 						// Ignore any errors and carry on logging!
 					}
 				}
 			}
+		},
+		publish : function(logEntry, context) {
+			var _log4jq = this;
+			var publishTargets = _log4jq.findActiveTargets();
+			$.each(publishTargets, function(i,target) {
+				if (target && $.type(target) === 'object' && target.log && $.type(target.log) === 'function') {
+					target.log.apply(context,[logEntry]);
+				};
+			});
 		},
 		/*
 		Determines if a log entry will be excluded from being logged.
@@ -345,8 +334,7 @@
 			Parameters:
 			   entry -   The entry to log.
 			*/
-			log: function(notification) {
-				var entry = notification.data;
+			log: function(entry) {
 				alert(entry.format(this));
 			},
 			configure : function(cfg, self) {
@@ -359,9 +347,6 @@
 				}
 				var _log4jq = log4jq;
 				_log4jq.targets.alert = self;
-				if (self.subscribed) {
-					$.subscribe(_log4jq.topic, self.log, _priority);
-				}
 			}
 	};
 	log4jq.outOfBoxTargets.alert = $.extend({}, log4jq.targetDefaults, _alertTarget);
@@ -374,8 +359,7 @@
 			 * Parameters:
 			 *		entry -   The entry to log.
 			 */
-			log: function(notification) {
-				var entry = notification.data;
+			log: function(entry) {
 				var msg = entry.format(this);
 				// Check for the browser console object...
 				if (window.console) {
@@ -448,10 +432,6 @@
 				}
 				var _log4jq = log4jq;
 				_log4jq.targets.console = self;
-				
-				if (self.subscribed) {
-					$.subscribe(_log4jq.topic, self.log, _priority);
-				}
 			}
 	};
 	log4jq.outOfBoxTargets.console = $.extend({}, log4jq.targetDefaults, _consoleTarget);
@@ -465,8 +445,7 @@
 			 * Parameters:
 			 *		entry -   The entry to log.
 			 */
-			log: function(notification) {
-				var entry = notification.data;
+			log: function(entry) {
 				var $rollingLog = $('p:last',_domInsert.$dom);
 				var msg = entry.format(this);
 				$rollingLog.after("<p>" + msg + "</p>");
@@ -484,11 +463,7 @@
 				if (cfg.$dom !== 'undefined' && cfg.$dom instanceof jQuery) {
 					self.$dom = cfg.$dom;
 				}
-				
 				_log4jq.targets.domInsert = self;
-				if (self.subscribed) {
-					$.subscribe(_log4jq.topic, self.log, _priority);
-				}
 			}
 	};
 	log4jq.outOfBoxTargets.domInsert = $.extend({}, log4jq.targetDefaults, _domInsert);
@@ -510,30 +485,16 @@
 				name : "divInsert",
 				subscribed: false
 			}
-		],
-		sync : true,
-		enablePublicationCallback : false,
-		progress : function() {
-			if (this.enablePublicationCallback && console && console.log) {
-				console.log("beginning progress of publication");
-			}
-		},
-		done : function() {
-			if (this.enablePublicationCallback && console && console.log) {
-				console.log("succeeded in publication");
-			}
-			
-		},
-		fail : function() {
-			if (this.enablePublicationCallback && console && console.log) {
-				console.log("failed in publication");
-			}
-		},
-		always : function() {
-			if (this.enablePublicationCallback && console && console.log) {
-				console.log("done w/publication");
-			}
+		]
+	};
+	var _sortBy = function(array, callback) {
+		var clone = array;
+		if (callback) {
+			clone.sort(callback);
+		} else {
+			clone.sort();
 		}
+		return clone;
 	};
 	
 	log4jq = $.extend(log4jq, {
@@ -584,45 +545,21 @@
 			var active = [];
 			var _log4jq = log4jq;
 			$.each(_log4jq.targets, function(key,target) {
-				if (target.subscribed) {
+				if (target && target.subscribed === true) {
 					active.push(target);
 				}
+			});
+			active = _sortBy(active, function(thiz,that) {
+				var delta = thiz.priority - that.priority;
+				return delta;
 			});
 			return active;
 		},
 		reset : function() {
 			var _log4jq = log4jq;
 			log4jq.targets = log4jq.outOfBoxTargets;
-			$.unsubscribe(_log4jq.topic);
 			_log4jq._enabled = false;
 			_log4jq._level = null;
-			_log4jq.sync = true;
-		},
-		configurePublicationCallbacks : function(cfg) {
-			var _log4jq = log4jq;
-			if (cfg.progress && $.type(cfg.progress === 'function')) {
-				_log4jq.progress = cfg.progress;
-			} else {
-				_log4jq.progress = _defaultConfiguration.progress;
-			}
-			
-			if (cfg.done && $.type(cfg.done === 'function')) {
-				_log4jq.done = cfg.done;
-			} else {
-				_log4jq.done = _defaultConfiguration.done;
-			}
-			
-			if (cfg.fail && $.type(cfg.done === 'function')) {
-				_log4jq.fail = cfg.fail;
-			} else {
-				_log4jq.fail = _defaultConfiguration.fail;
-			}
-			
-			if (cfg.always && $.type(cfg.always === 'function')) {
-				_log4jq.always = cfg.failalways;
-			} else {
-				_log4jq.always = _defaultConfiguration.always;
-			}
 		}
 	});
 	
@@ -658,8 +595,6 @@
 			self.findLevel(_defaultConfiguration.level);
 		}
 		
-		self.configurePublicationCallbacks(cfg);
-		
 		$.each(cfg.targets, function(key,cfgTarget) {
 			var target = self.findTarget(cfgTarget.name);
 			cfgTarget.priority = 10 + key;
@@ -682,10 +617,6 @@
 						var _log4jq = log4jq;
 
 						_log4jq.targets[self.name] = self;
-
-						if (self.subscribed) {
-							$.subscribe(_log4jq.topic, self.log, _priority);
-						}
 					};
 					target.configure(cfgTarget, target);
 				}
