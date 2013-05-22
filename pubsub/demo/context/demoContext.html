@@ -3,42 +3,63 @@
 <head>
 <meta charset="UTF-8">
 <title>jQuery Publish/Subscribe: Context Demo Page</title>
-
-<script type="text/javascript"  src="http://www.google.com/jsapi"></script>
-<script type="text/javascript">
-  google.load("jquery", "1.4.4", {uncompressed: true});
-</script>
-
-<script type="text/javascript" src="../../jquery.pubsub.js"></script>
+	<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.4/jquery.js"></script>
+	<!--
+	<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.0/jquery.js"></script>
+	-->
+	
+	<script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.4.3/underscore-min.js"></script>
+	<script type="text/javascript" src="../../jquery.pubsub.js"></script>
+	<script type="text/javascript" src="../../../log4jq/jquery.log4jq.js"></script>
 <script>
 $(document).ready(function() {
+	var logger = $.configureLog4jq({
+		enabled: true,
+		level : "debug",
+		targets : [
+			{
+				name: "console",
+				subscribed: true
+			}
+		]
+	});
+	var log = function(msg) {
+		$.debug(msg);
+	};
+	
+	
 	var topic = "/data/context/example"
-	// set up subscription with context specified
-	// for the callback function
-	$.subscribe( topic,
-		$( "p#receiver" ),
-		function( n ) {
+	// set up subscription with context specified for the callback function
+	$.subscribe( topic, $( "p#receiver" ), function( n ) {
 			var msg = n.data.exampleText
 			this.text( msg );
-			console.log("subsciber received: " + msg);
+			log(msg);
 		}
 	);
+	
+	var createHandlers = function(topic) {
+		return {
+			progress: function() {
+				log("begin " + topic);
+			},
+			done: function() {
+				log("done " + topic);
+			},
+			fail: function() {
+				log("fail " + topic);
+			},
+			always: function() {
+				log("always " + topic);
+			}
+		};
+	};
 
-	$.publish( topic, {
-		data :{ exampleText: "if you see on page: foo bar baz, then it works" },
-		progress: function() {
-			console.log("begin topic");
-		},
-		done: function() {
-			console.log("done topic");
-		},
-		fail: function() {
-			console.log("fail topic");
-		},
-		always: function() {
-			console.log("always topic");
-		}
-	});
+	var sync = true;
+	if (sync) {
+		$.publishSync( topic, $.extend({data : {exampleText: "if you see on page: foo bar baz, then it works" }}, createHandlers(topic)));
+	} else {
+		$.publish( topic, $.extend({data : {exampleText: "if you see on page: foo bar baz, then it works" }}, createHandlers(topic)));
+	}
 });
 </script>
 </head>

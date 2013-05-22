@@ -42,9 +42,15 @@
 			nativeBind         = FuncProto.bind;
 
 		var _delay = function(func, wait) {
-			var context = null;
-			var args = slice.call(arguments, 2);
-			return setTimeout(function(){ return func.apply(context, args); }, wait);
+			if (_isFunction(func) && _isNumber(wait)) {
+				var context = null;
+				var args = slice.call(arguments, 2);
+				return setTimeout(function(){
+					return func.apply(context, args);
+				}, wait);
+			} else {
+				// throw new Error("Cannot delay anything except a function");
+			}
 		}
 		
 		var _identity = function(value) {
@@ -55,15 +61,6 @@
 			return hasOwnProperty.call(obj, key);
 		};
 		
-		var _memoize = function(func, hasher) {
-			var memo = {};
-			hasher || (hasher = _identity);
-			return function() {
-				var key = hasher.apply(this, arguments);
-				return _has(memo, key) ? memo[key] : (memo[key] = func.apply(this, arguments));
-			};
-		};
-		
 		var _bind = function(func, context) {
 			if (func.bind === nativeBind && nativeBind) {
 				return nativeBind.apply(func, slice.call(arguments, 1));
@@ -71,6 +68,23 @@
 			var args = slice.call(arguments, 2);
 			return function() {
 				return func.apply(context, args.concat(slice.call(arguments)));
+			}
+		};
+		
+		
+		var _partial = function(func) {
+			var args = slice.call(arguments, 1);
+			return function() {
+				return func.apply(this, args.concat(slice.call(arguments)));
+			};
+		};
+		
+		var _memoize = function(func, hasher) {
+			var memo = {};
+			hasher || (hasher = _identity);
+			return function() {
+				var key = hasher.apply(this, arguments);
+				return _has(memo, key) ? memo[key] : (memo[key] = func.apply(this, arguments));
 			};
 		};
 		
@@ -233,12 +247,13 @@
 			has : _has,
 			memoize : _memoize,
 			bind : _bind,
+			partial : _partial,
 			each : _each,
 			map : _map,
 			reduce : _reduce,
 			find : _find,
 			filter : _filter,
-			any : _any
+			any : _any,
 		};
 	}(jQuery));
 	
@@ -409,11 +424,15 @@
 			
 			publication = _self.createPublication( topic, options );
 			
-			var deliver = _createDeliveryFunction( publication );
-			if ( sync === true ){
-				deliver();
+			var deliver = createDeliveryFunction(publication);
+			if (Util.isFunction(deliver)) {
+				if ( sync === true ){
+					deliver();
+				} else {
+					Util.delay(deliver,0);
+				}
 			} else {
-				Util.delay(deliver,0);
+				throw new Error("should have created delivery function");
 			}
 			return publication;
 		},
@@ -640,22 +659,21 @@
 			}
 			return ret;
 		}
-		return _callSubscriberWithImmediateExceptions;
+		return Util.bind(_callSubscriberWithImmediateExceptions, self);
 	}
 	
 	function _deliverMessage( publication ){
-		//var _self = PubSub;
+		var _self = PubSub;
 		var notification  = publication.notification;
-		var originalTopic = notification.publishTopic;
-		var matchedTopic  = notification.currentTopic;
+		var currentTopic  = notification.currentTopic;
 		
 		var callSubscriber = _createCallSubscriber();
 		
-		var continuePropagating = publication.state() === "pending";
-		if ( !_self.subscriptions.hasOwnProperty( matchedTopic ) ) {
+		var continuePropagating = ( publication.state() === "pending" );
+		if ( !_self.subscriptions.hasOwnProperty( currentTopic ) ) {
 			return continuePropagating;
 		}
-		var subscribers = _self.getSubscriptions(matchedTopic);
+		var subscribers = _self.getSubscriptions(currentTopic);
 		if (continuePropagating) {
 			for (var i = 0; i < subscribers.length; i++) {
 				var subscription = subscribers[i];
@@ -663,7 +681,6 @@
 				var continuePropagating  = callSubscriber(subscription.callback, notification);
 				if (continuePropagating === false || !notification.isPropagation()) {
 					notification.reject();
-					publication.fail();
 					break;
 				}
 			}
@@ -671,38 +688,38 @@
 		return continuePropagating;
 	}
 
-	function _createDeliveryFunction( publication ){
-		//var _self = PubSub;
-		publication.progress();
-		var notification = publication.notification;
-		var topics = _self.createTopics(notification.publishTopic);
-
-		var deliverNamespaced = function() {
+	function createDeliveryFunction(publication){
+		var deliver = function(_publication) {
+			var _self = PubSub;
+			
+			_publication.progress();
+			var _notification = _publication.notification;
+			var topics = _self.createTopics(_notification.publishTopic);
+			
 			// deliver notification to each level by using topic bubbling.
 			// i.e. deliver by going up the hierarchy through each topic
-			var currentPublication = publication;
-			if (currentPublication.state() === "pending") {
+			if (_publication.state() === "pending") {
 				for (var i = 0; i < topics.length; i++) {
 					var topic = topics[i];
-					var notification = currentPublication.notification;
-					notification.currentTopic = topic;
-					var continuePropagating = _deliverMessage( currentPublication );
-					if (continuePropagating === false || !notification.isPropagation() ) {
-						notification.reject();
-						currentPublication.fail();
+					_notification.currentTopic = topic;
+					var continuePropagating = _deliverMessage( _publication );
+					if (continuePropagating === false || !_notification.isPropagation() ) {
+						_notification.reject();
 						break;
 					}
 				}
 			}
-			if (currentPublication.state() !== "rejected") {
-				currentPublication.notification.resolve();
+			if (_publication.state() !== "rejected") {
+				_notification.resolve();
 			}
-			if (currentPublication.state() === "resolved") {
-				currentPublication.done();
+			if (_publication.state() === "resolved") {
+				_publication.done();
+			} else {
+				_publication.fail();
 			}
-			currentPublication.always();
+			_publication.always();
 		};
-		return deliverNamespaced;
+		return Util.partial(deliver,publication);
 	}
 	
 	// store PubSub object for unit testing

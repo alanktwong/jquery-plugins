@@ -1,17 +1,34 @@
 <!DOCTYPE HTML>
 <html lang="en-US">
 <head>
-<meta charset="UTF-8">
-<title>jQuery Publish/Subscribe: Priority Demo Page</title>
+	<meta charset="UTF-8">
+	<title>jQuery Publish/Subscribe: Priority Demo Page</title>
 
-<script type="text/javascript"  src="http://www.google.com/jsapi"></script>
-<script type="text/javascript">
-  google.load("jquery", "1.4.4", {uncompressed: true});
-</script>
-
-<script type="text/javascript" src="../../jquery.pubsub.js"></script>
+	<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.4/jquery.js"></script>
+	<!--
+	<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.0/jquery.js"></script>
+	-->
+	
+	<script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.4.3/underscore-min.js"></script>
+	<script type="text/javascript" src="../../jquery.pubsub.js"></script>
+	<script type="text/javascript" src="../../../log4jq/jquery.log4jq.js"></script>
 <script>
 $(document).ready(function() {
+	var logger = $.configureLog4jq({
+		enabled: true,
+		level : "debug",
+		targets : [
+			{
+				name: "console",
+				subscribed: true
+			}
+		]
+	});
+	var log = function(msg) {
+		$.debug(msg);
+	};
+	
+	
 	var topic = "/priority/example";
 	// we can subscribe to a topic with a priority
 	$.subscribe( topic, function( n ) {
@@ -35,37 +52,31 @@ $(document).ready(function() {
 		var data = n.data;
 		$( "#receiver3" ).append( "\n default priority is 10: " + data.foo+ "\n" );
 	});
-
-	$.publishSync( topic, {
-		data : { foo: "bar"},
-		progress: function() {
-			console.log("begin pub of 'bar'");
-		},
-		done: function() {
-			console.log("done pub of 'bar'");
-		},
-		fail: function() {
-			console.log("fail pub of 'bar'");
-		},
-		always: function() {
-			console.log("always pub of 'bar'");
-		}
-	});
-	$.publishSync( topic, {
-		data : { foo: "oops" },
-		progress: function() {
-			console.log("begin pub of 'oops'");
-		},
-		done: function() {
-			console.log("done pub of 'oops'");
-		},
-		fail: function() {
-			console.log("fail pub of 'oops'");
-		},
-		always: function() {
-			console.log("always pub of 'oops'");
-		}
-	});
+	var createHandlers = function(topic) {
+		return {
+			progress: function() {
+				log("begin " + topic);
+			},
+			done: function() {
+				log("done " + topic);
+			},
+			fail: function() {
+				log("fail " + topic);
+			},
+			always: function() {
+				log("always " + topic);
+			}
+		};
+	};
+	
+	var sync = true;
+	if (sync) {
+		$.publishSync( topic, $.extend({data : {foo: "bar" }}, createHandlers("pub of 'bar'")) );
+		$.publishSync( topic, $.extend({data : {foo: "oops"}}, createHandlers("pub of 'oops'")) );
+	} else {
+		$.publish( topic, $.extend({data : {foo: "bar" }}, createHandlers("pub of 'bar'")) );
+		$.publish( topic, $.extend({data : {foo: "oops"}}, createHandlers("pub of 'oops'")) );
+	}
 });
 </script>
 </head>

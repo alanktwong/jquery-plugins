@@ -1,5 +1,3 @@
-module( "jquery.pubsub testing" );
-
 var TestUtil = {
 	getPubSub : function() {
 		if ($.store) {
@@ -12,11 +10,42 @@ var TestUtil = {
 	resetPubSub : function() {
 		var PubSub = TestUtil.getPubSub();
 		PubSub.reset();
+		TestUtil.configureLogger();
 		return PubSub;
+	},
+	configureLogger : function() {
+		var log4jq = $.configureLog4jq({
+			enabled: true,
+			level : "debug",
+			targets : [
+				{
+					name: "console",
+					subscribed: true
+				}
+			]
+		});
+		return log4jq;
+	},
+	subscribeApp: function(app, PubSub) {
+		var classSubscription = $.subscribe(app.padma.leia.topic, app.padma.leia.notify);
+		var moduleSubscription = $.subscribe(app.padma.topic, app.padma.notify);
+		var appSubscription = $.subscribe(app.topic, app.notify);
+		
+		$.subscribe(app.anakin.topic, app.anakin.notify);
+		$.subscribe(app.padma.luke.topic, app.padma.luke.notify);
+		
+		equal(1, PubSub.getSubscriptions(app.topic).length, "1 subscription should exist for: " + app.topic);
+		equal(1, PubSub.getSubscriptions(app.padma.topic).length, "1 subscription should exist for: " + app.padma.topic);
+		equal(1, PubSub.getSubscriptions(app.padma.leia.topic).length, "1 subscription should exist for: " + app.padma.leia.topic);
+		
+		equal(1, PubSub.getSubscriptions(app.anakin.topic).length, "1 subscription should exist for: " + app.anakin.topic);
+		equal(1, PubSub.getSubscriptions(app.padma.luke.topic).length, "1 subscription should exist for: " + app.padma.luke.topic);
+		
+		equal(5, _.keys(PubSub.subscriptions).length, "there should be 5 subscriptions total");
 	}
 };
 
-
+module( "jquery.pubsub core" );
 test("internal functionality", function() {
 	expect( 38 );
 	
@@ -54,42 +83,53 @@ test("internal functionality", function() {
 	
 	var context = {};
 	var aList = [1,2,3];
-	u.each(aList, function(element,i,list) {
-		strictEqual(element, i + 1, "lists are 0-indexed for " + i )
-		strictEqual(this, context, "context bound to {}");
-	}, context);
-	
-	u.each({'1': 1, '2': 2, '3': 3 }, function(value,key,list) {
-		strictEqual(key, "" + value, "objects are enumerable by their key " + key )
-	});
-	aList = [1, 2, 3, 4, 5, 6];
-	var even = u.find(aList, function(num){ return num % 2 == 0; });
-	strictEqual(even, 2, "found first even number in " +  aList);
-	var evens = u.filter(aList, function(num){ return num % 2 == 0; });
-	deepEqual(evens, [2,4,6], "found all even numbers in " +  aList);
+	if (u.each) {
+		u.each(aList, function(element,i,list) {
+			strictEqual(element, i + 1, "lists are 0-indexed for " + i )
+			strictEqual(this, context, "context bound to {}");
+		}, context);
+		
+		u.each({'1': 1, '2': 2, '3': 3 }, function(value,key,list) {
+			strictEqual(key, "" + value, "objects are enumerable by their key " + key )
+		});
+	}
+	if (u.find) {
+		aList = [1, 2, 3, 4, 5, 6];
+		var even = u.find(aList, function(num){ return num % 2 == 0; });
+		strictEqual(even, 2, "found first even number in " +  aList);
+	}
+	if (u.filter) {
+		var evens = u.filter(aList, function(num){ return num % 2 == 0; });
+		deepEqual(evens, [2,4,6], "found all even numbers in " +  aList);
+	}
 	
 	aList = [1,2,3];
-	var sum = _.reduce([1, 2, 3], function(memo, num){ return memo + num; }, 0);
-	deepEqual(sum, 6, "this reduction of " +  aList + " should be 6");
+	if (u.reduce) {
+		var sum = _.reduce([1, 2, 3], function(memo, num){ return memo + num; }, 0);
+		deepEqual(sum, 6, "this reduction of " +  aList + " should be 6");
+	}
 	
-	aList = [null, 0, 'yes', false];
-	var mapped = u.map(aList, function(each) {
-		var ret = each;
-		if (each === null) {
-			ret = "null";
-		}
-		return ret;
-	});
-	deepEqual(mapped, ["null", 0, "yes", false], "transformed array with truthy and untruthy values");
-	equal(_.some(aList), true, mapped + " has 1 truthy value");
-	
-	var fn = function(name) {
-		ok(true, "executing a callback for " + name);
-		strictEqual(this,context, name + " bound to context");
-	};
-	
-	var bound = u.bind(fn, context);
-	bound("bound fonction");
+	if (u.map) {
+		aList = [null, 0, 'yes', false];
+		var mapped = u.map(aList, function(each) {
+			var ret = each;
+			if (each === null) {
+				ret = "null";
+			}
+			return ret;
+		});
+		deepEqual(mapped, ["null", 0, "yes", false], "transformed array with truthy and untruthy values");
+		equal(_.some(aList), true, mapped + " has 1 truthy value");
+	}
+	if (u.bind) {
+		var fn = function(name) {
+			ok(true, "executing a callback for " + name);
+			strictEqual(this,context, name + " bound to context");
+		};
+		
+		var bound = u.bind(fn, context);
+		bound("bound function");
+	}
 });
 
 test("notification creation", function() {
@@ -199,17 +239,22 @@ test("topic error handling", function() {
 	}
 });
 
+module("subscribe functionality");
 test("subscribe to topic with just a callback", function() {
-	expect( 12 );
+	expect( 14 );
 	
 	var PubSub = TestUtil.resetPubSub();
 	var topic = "/app/module/class";
 	var topics = PubSub.createTopics(topic);
+	var count = 0;
 	var callback0 = function(notification) {
 		ok(true, "1st subscriber notified");
+		strictEqual(count, 0, "1st subscriber has not yet mutated count");
+		count++;
 	};
 	var callback1 = function(notification) {
 		ok(true, "2nd subscriber notified");
+		strictEqual(count, 1, "1st subscriber has mutated count for 2nd subscriber");
 	};
 	
 	var subscription0 = $.subscribe(topic, callback0);
@@ -226,11 +271,8 @@ test("subscribe to topic with just a callback", function() {
 	
 	notStrictEqual(subscription0.id, subscription1.id, "IDs of both subscriptions are unique GUIDs");
 	strictEqual(subscription0.priority, subscription1.priority, "both subscriptions have same priority");
-	strictEqual(subscription1.timestamp > subscription0.timestamp, true, "2nd subscription has timestamp later than 1st");
-	
-	
+	strictEqual(subscription1.timestamp >= subscription0.timestamp, true, "2nd subscription has timestamp later than 1st");
 	$.publishSync(topic);
-	
 });
 
 
@@ -241,7 +283,7 @@ test("subscribe to topic with a callback and a context", function() {
 	var topic = "/app/module/class";
 	var topics = PubSub.createTopics(topic);
 	var callback = function(notification) {
-		$.noop();
+		$.debug("notified");
 	};
 	var context = {};
 	
@@ -263,7 +305,7 @@ test("subscribe to topic with a callback and a priority", function() {
 	var topic = "/app/module/class";
 	var topics = PubSub.createTopics(topic);
 	var callback = function(notification) {
-		$.noop();
+		$.debug("notified");
 	};
 	var priority = 100;
 	
@@ -284,7 +326,7 @@ test("subscribe to topic with a callback, a priority and a context", function() 
 	var topic = "/app/module/class";
 	var topics = PubSub.createTopics(topic);
 	var callback = function(notification) {
-		$.noop();
+		$.debug("notified");
 	};
 	var priority = 100;
 	var context = {};
@@ -300,6 +342,7 @@ test("subscribe to topic with a callback, a priority and a context", function() 
 	equal(context, subscription.context, "has returned a subscription w/ context");
 });
 
+module("unsubscribe functionality");
 test("unsubscribe", function() {
 	expect( 4 );
 	var PubSub = TestUtil.resetPubSub();
@@ -308,19 +351,27 @@ test("unsubscribe", function() {
 
 	var order = 0;
 	var subscriber1 = $.subscribe( topic, function() {
-		strictEqual( order, 0, "first subscriber called" );
+		var msg = "1st subscriber called";
+		$.debug(msg);
+		strictEqual( order, 0, msg );
 		order++;
 	});
 	var subscriber2 = $.subscribe( topic, function() {
-		ok( false, "removed by original reference" );
+		var msg = "unsubscribed and should not have been notified";
+		$.error(msg);
+		ok( false, msg );
 		order++;
 	});
 	var subscriber3 = $.subscribe( topic, function() {
-		strictEqual( order, 1, "second subscriber called" );
+		var msg = "2nd subscriber called";
+		$.debug(msg);
+		strictEqual( order, 1, msg );
 		order++;
 	});
 	var subscriber4 = $.subscribe( topic, function() {
-		ok( false, "removed by returned reference" );
+		var msg = "unsubscribed and should not have been notified";
+		$.error(msg);
+		ok( false, msg );
 		order++;
 	});
 	
@@ -345,12 +396,16 @@ test("unsubscribe all", function() {
 	var PubSub = TestUtil.resetPubSub();
 	var topic  = "/unsubscribeAll";
 	var subscriber1 = $.subscribe( topic, function() {
-		strictEqual( order, 0, "first subscriber called" );
+		var msg = "1st subscriber called";
+		$.debug(msg);
+		strictEqual( order, 0, msg );
 		order++;
 	});
 	
 	var subscriber2 = $.subscribe( topic, function() {
-		strictEqual( order, 1, "2nd subscriber called" );
+		var msg = "2nd subscriber called";
+		$.debug(msg);
+		strictEqual( order, 1, msg );
 		order++;
 	});
 
@@ -360,9 +415,10 @@ test("unsubscribe all", function() {
 	strictEqual(0, subscribers.length, "no subscribers left on the topic");
 	
 	var result2 = $.publishSync( topic );
-	ok(result2, "no subscribers notified");
+	strictEqual(2,order, "no subscribers notified");
 });
 
+module("setting priorities during pubsub");
 test( "priority for synchronous publication", function() {
 	var PubSub = TestUtil.resetPubSub();
 	expect( 5 );
@@ -400,28 +456,28 @@ asyncTest( "priority for asynchronous publication", function() {
 	expect( 5 );
 
 	_.delay(function() {
-		var order = 0,
+		var order = 1,
 			subscription,
 			topic = "/priority/async";
 		
 		subscription = $.subscribe( topic, function() {
-			strictEqual( order, 1, "priority default; #1" );
+			strictEqual( order, 2, "the initial subscriber has priority default, it is notified 2nd" );
 			order++;
 		});
 		subscription = $.subscribe( topic, function() {
-			strictEqual( order, 3, "priority 15; #1" );
+			strictEqual( order, 4, "this subscriber has priority 15; it is notified 4th");
 			order++;
 		}, 15 );
 		subscription = $.subscribe( topic, function() {
-			strictEqual( order, 2, "priority default; #2" );
+			strictEqual( order, 3, "this subscriber has priority default; it is notified 3rd after the initial subscriber as its timestamp is later" );
 			order++;
 		});
 		subscription = $.subscribe( topic, function() {
-			strictEqual( order, 0, "priority 1; #1" );
+			strictEqual( order, 1, "this subscriber greatest priority since it is the lowest number" );
 			order++;
 		}, 1 );
 		subscription = $.subscribe( topic, {}, function() {
-			strictEqual( order, 4, "priority 15; #2" );
+			strictEqual( order, 5, "this subscriber is dead last because it has a high priority number" );
 			order++;
 		}, 15 );
 		
@@ -430,9 +486,10 @@ asyncTest( "priority for asynchronous publication", function() {
 	}, 10); 
 });
 
-test( "subscriber context for sync", function() {
+module("setting context during pubsub");
+test( "subscriber context for sync publication", function() {
 	var PubSub = TestUtil.resetPubSub();
-	expect( 3 );
+	expect( 4 );
 	var subscription,
 		obj = {},
 		topic = "/context/subscriber",
@@ -442,6 +499,7 @@ test( "subscriber context for sync", function() {
 		strictEqual( this, window, "default context" );
 	});
 	subscription = $.subscribe( topic, obj, function() {
+		strictEqual( this !== null, true, "has context from subscription" );
 		strictEqual( this, obj, "object bound during subscription" );
 	});
 	try {
@@ -456,7 +514,7 @@ test( "subscriber context for sync", function() {
 
 test( "publisher context", function() {
 	var PubSub = TestUtil.resetPubSub();
-	expect( 1 );
+	expect( 2 );
 	var topic = "/context/publisher",
 		subscription,
 		obj = {
@@ -464,12 +522,14 @@ test( "publisher context", function() {
 		};
 
 	subscription = $.subscribe( topic, function() {
+		strictEqual( this !== null, true, "has context from publisher" );
 		strictEqual( this, obj, "context from publisher" );
 	});
 
 	$.publishSync(topic, { context : obj });
 });
 
+module("pushing data during notifications");
 test( "push data during synchronous publication", function() {
 	var PubSub = TestUtil.resetPubSub();
 	expect( 10 );
@@ -477,19 +537,22 @@ test( "push data during synchronous publication", function() {
 	var subscription, publication;
 	
 	subscription = $.subscribe( topic, function( notification ) {
-		strictEqual( notification.data.string, "hello", "string passed during sync notification" );
-		strictEqual( notification.data.number, 5, "number passed during sync notification" );
+		var data = notification.data;
+		strictEqual( data.string, "hello", "string passed during sync notification" );
+		strictEqual( data.number, 5, "number passed during sync notification" );
 		deepEqual( notification.data.object, {
 			foo: "bar",
 			baz: "qux"
 		}, "object passed" );
-		notification.data.string = "goodbye";
-		notification.data.object.baz = "quux";
+		$.debug("1st subscriber mutating data")
+		data.string = "goodbye";
+		data.object.baz = "quux";
 	});
 	subscription = $.subscribe( topic, function( notification ) {
-		strictEqual( notification.data.string, "goodbye", "string changed during sync notification" );
-		strictEqual( notification.data.number, 5, "number unchanged during sync notification" );
-		deepEqual( notification.data.object, {
+		var data = notification.data;
+		strictEqual( data.string, "goodbye", "string changed during sync notification" );
+		strictEqual( data.number, 5, "number unchanged during sync notification" );
+		deepEqual( data.object, {
 			foo: "bar",
 			baz: "quux"
 		}, "object changed during sync notification" );
@@ -501,16 +564,24 @@ test( "push data during synchronous publication", function() {
 	};
 	publication = $.publishSync( topic, {
 		progress : function() {
-			ok(true, "begin sync notifications w/data");
+			var msg = "begin sync notifications w/data";
+			$.debug(msg);
+			ok(true, msg);
 		},
 		done: function() {
-			ok(true, "successful sync notifications w/data");
+			var msg = "successful sync notifications w/data";
+			$.debug(msg);
+			ok(true, msg);
 		},
 		fail: function() {
-			ok(false, "failed sync notifications w/data");
+			var msg = "failed sync notifications w/data";
+			$.error(msg);
+			ok(false, msg);
 		},
 		always : function() {
-			ok(true, "completed sync notification w/data");
+			var msg = "completed sync notifications w/data";
+			$.info(msg);
+			ok(true, msg);
 			deepEqual( obj, {
 				foo: "bar",
 				baz: "quux"
@@ -529,41 +600,50 @@ asyncTest( "push data during asynchronous publication", function() {
 		var topic = "/data/async";
 		var subscription, publication;
 		subscription = $.subscribe( topic, function( notification ) {
-			strictEqual( notification.data.string, "hello", "string passed during async notification" );
-			strictEqual( notification.data.number, 5, "number passed during async notification" );
-			deepEqual( notification.data.object, {
+			var data = notification.data;
+			strictEqual( data.string, "hello", "string passed during async notification" );
+			strictEqual( data.number, 5, "number passed during async notification" );
+			deepEqual( data.object, {
 				foo: "bar",
 				baz: "qux"
 			}, "object passed" );
-			notification.data.string = "goodbye";
-			notification.data.object.baz = "quux";
+			data.string = "goodbye";
+			data.object.baz = "quux";
 		});
 		subscription = $.subscribe( topic, function( notification ) {
-			strictEqual( notification.data.string, "goodbye", "string changed during async notification" );
-			strictEqual( notification.data.number, 5, "number unchanged during async notification" );
-			deepEqual( notification.data.object, {
+			var data = notification.data;
+			strictEqual( data.string, "goodbye", "string changed during async notification" );
+			strictEqual( data.number, 5, "number unchanged during async notification" );
+			deepEqual( data.object, {
 				foo: "bar",
 				baz: "quux"
 			}, "object changed during async notification" );
 		});
 
-
 		var obj = {
 			foo: "bar",
 			baz: "qux"
 		};
-		publication = $.publishSync( topic, {
+		publication = $.publish( topic, {
 			progress : function() {
-				ok(true, "begin async notifications w/data");
+				var msg = "begin async notifications w/data";
+				$.debug(msg);
+				ok(true, msg);
 			},
 			done: function() {
-				ok(true, "successful async notifications w/data");
+				var msg = "successful async notifications w/data";
+				$.debug(msg);
+				ok(true, msg);
 			},
 			fail: function() {
-				ok(false, "failed async notifications w/data");
+				var msg = "failed async notifications w/data";
+				$.error(msg);
+				ok(false, msg);
 			},
 			always : function() {
-				ok(true, "completed async notification w/data");
+				var msg = "completed async notifications w/data";
+				$.info(msg);
+				ok(true, msg);
 				deepEqual( obj, {
 					foo: "bar",
 					baz: "quux"
@@ -575,259 +655,621 @@ asyncTest( "push data during asynchronous publication", function() {
 	},10);
 });
 
-
-var testContinuations = true;
-if (testContinuations) {
-	test("continue sync publication w/o subscribers", function() {
-		expect( 1 );
+asyncTest( "push data during asynchronous publication to 2 different topics", function() {
+	var PubSub = TestUtil.resetPubSub();
+	expect( 16 );
+	
+	_.delay(function() {
+		var topic1 = "/data/async/1";
+		var obj1 = {
+				foo: "bar",
+				baz: "qux"
+		};
 		
-		var PubSub = TestUtil.resetPubSub();
-		var topic = "/continuation/sync";
-		var publication = $.publishSync( topic, {
+		var topic2 = "/data/async/2";
+		var obj2 = {
+				foo: "bar2",
+				baz: "qux2"
+		};
+		var subscription1, subscription2;
+		subscription1 = $.subscribe( topic1, function( notification ) {
+			var data = notification.data;
+			var msg = "async notification of topic: " + topic1;
+			$.debug(msg);
+			ok( true, msg );
+			strictEqual( data.string, "hello", "string passed during async notification of " + topic1 );
+			strictEqual( data.number, 5, "number passed during async notification of " + topic1 );
+			deepEqual( data.object, {
+				foo: "bar",
+				baz: "qux"
+			}, "object passed for " + topic1 );
+			data.string = "goodbye";
+			data.object.baz = "qux";
+			$( "#receiver",'#console-log' ).append( JSON.stringify(data) );
+		});
+		subscription2 = $.subscribe( topic2, function( notification ) {
+			var data = notification.data;
+			var msg = "async notification of topic: " + topic2;
+			$.debug(msg);
+			ok( true, msg);
+			strictEqual( data.string, "goodbye", "string changed during async notification of " + topic2 );
+			strictEqual( data.number, 5, "number unchanged during async notification of " + topic2 );
+			deepEqual( data.object, {
+				foo: "bar2",
+				baz: "qux2"
+			}, "object changed during async notification of " + topic2 );
+			$( "#receiver2",'#console-log' ).append( JSON.stringify(data) );
+		});
+
+
+		var publication1,  publication2;
+		publication1 = $.publish( topic1, {
 			progress : function() {
-				ok(false, "should never begin sync notifications");
+				var msg = "begin async notifications w/data of " + topic1;
+				$.debug(msg);
+				ok(true, msg);
+			},
+			done: function() {
+				var msg = "successful async notifications w/data of " + topic1;
+				$.debug(msg);
+				ok(true, msg);
+			},
+			fail: function() {
+				var msg = "failed async notifications w/data of " + topic1;
+				$.error(msg);
+				ok(false, msg);
+			},
+			always : function() {
+				var msg = "completed async notifications w/data of " + topic1;
+				$.info(msg);
+				ok(true, msg);
+				deepEqual( obj1, {
+					foo: "bar",
+					baz: "qux"
+				}, "object updated after async notification for " + topic1 );
+			},
+			data: { string: "hello", number: 5, object: obj1 }
+		});
+		publication2 = $.publish( topic2, {
+			progress : function() {
+				var msg = "begin async notifications w/data of " + topic2;
+				$.debug(msg);
+				ok(true, msg);
+			},
+			done: function() {
+				var msg = "successful async notifications w/data of " + topic2;
+				$.debug(msg);
+				ok(true, msg);
+			},
+			fail: function() {
+				var msg = "failed async notifications w/data of " + topic2;
+				$.error(msg);
+				ok(false, msg);
+			},
+			always : function() {
+				var msg = "completed async notifications w/data of " + topic2;
+				$.info(msg);
+				ok(true, msg);
+				deepEqual( obj2, {
+					foo: "bar2",
+					baz: "qux2"
+				}, "object updated after async notification for " + topic2 );
+			},
+			data: { string: "hello", number: 5, object: obj2 }
+		});
+		start();
+	},5);
+});
+
+module("continuation of synchronous notifications");
+test("continue sync publication w/o subscribers", function() {
+	expect( 1 );
+	
+	var PubSub = TestUtil.resetPubSub();
+	var topic = "/continuation/sync";
+	var publication = $.publishSync( topic, {
+		progress : function() {
+			ok(false, "should never begin sync notifications");
+		}
+	});
+	strictEqual( publication, null, "return null when topic has no subscribers for sync pub" );
+});
+
+test("continue sync publication w/subscribers", function() {
+	expect( 7 );
+	
+	var topic = "/continuation/sync";
+	
+	$.subscribe( topic, function(notification) {
+		var msg = "1st subscriber called for sync pub";
+		$.debug(msg);
+		ok( true, msg );
+	});
+	$.subscribe( topic, function(notification) {
+		var msg = "continued with 2nd subscriber after 1st does not return value for sync pub";
+		$.debug(msg);
+		ok( true, msg );
+		return true;
+	});
+	var publication = $.publishSync( topic, {
+		progress : function() {
+			var msg = "begin sync notification";
+			$.debug(msg);
+			ok(true, msg);
+		},
+		done: function() {
+			var msg = "successful sync notification";
+			$.debug(msg);
+			ok(true, msg);
+		},
+		fail: function() {
+			var msg = "failed sync notification";
+			$.error(msg);
+			ok(false, msg);
+		},
+		always : function() {
+			var msg = "completed sync notification";
+			$.info(msg);
+			ok(true, msg);
+		}
+	});
+	strictEqual( publication !== null , true, "return publication for sync pub when subscriptions are not stopped" );
+	strictEqual( publication.state() , "resolved", "sync publication should have resolved" );
+});
+
+module("discontinuation of synchronous notifications");
+test("discontinue sync publication when 1 subscriber returns false", function() {
+	expect( 6 );
+	
+	var PubSub = TestUtil.resetPubSub();
+	var topic = "/discontinuation/sync";
+	$.subscribe( topic, function(notification) {
+		var msg = "continued after returning true for sync pub";
+		$.debug(msg);
+		ok( true, msg );
+		return false;
+	});
+	$.subscribe( topic, function(notification) {
+		var msg = "continued after returning false for sync pub";
+		$.error(msg);
+		ok( false, msg );
+	});
+	var publication = $.publishSync( topic, {
+		progress : function() {
+			var msg = "begun sync notifications";
+			$.debug(msg);
+			ok(true, msg);
+		},
+		done: function() {
+			var msg = "successful sync notifications";
+			$.error(msg);
+			ok(false, msg);
+		},
+		fail: function() {
+			var msg = "failed sync notifications";
+			$.debug(msg);
+			ok(true, msg);
+		},
+		always : function() {
+			var msg = "completed sync notifications";
+			$.info(msg);
+			ok(true, msg);
+		}
+	});
+	strictEqual( publication !== null, true, "return publication when subscriptions are stopped during sync pub" );
+	strictEqual( publication.state() , "rejected", "sync publication should have been rejected" );
+});
+
+test("discontinue sync publication when 1 subscriber throws an error", function() {
+	expect( 6 );
+	
+	var PubSub = TestUtil.resetPubSub();
+	var topic = "/discontinuation/sync";
+	$.subscribe( topic, function(notification) {
+		ok( true, "continued after returning true for sync pub" );
+		throw new Error("stop publication");
+	});
+	$.subscribe( topic, function(notification) {
+		ok( false, "continued after returning false for sync pub" );
+	});
+	var publication = $.publishSync( topic, {
+		progress : function() {
+			var msg = "begun sync notifications";
+			$.debug(msg);
+			ok(true, msg);
+		},
+		done: function() {
+			var msg = "successful sync notifications";
+			$.error(msg);
+			ok(false, msg);
+		},
+		fail: function() {
+			var msg = "failed sync notifications";
+			$.debug(msg);
+			ok(true, msg);
+		},
+		always : function() {
+			var msg = "completed sync notifications";
+			$.info(msg);
+			ok(true, msg);
+		}
+	});
+	strictEqual( publication !== null, true, "return publication when subscriptions are stopped during sync pub" );
+	strictEqual( publication.state() , "rejected", "sync publication should have rejected" );
+});
+
+module("continuation of asynchronous notifications");
+asyncTest( "continue async publication w/o subscribers", function() {
+	expect( 1 );
+	
+	var PubSub = TestUtil.resetPubSub();
+	var topic = "/continuation/async";
+	
+	_.delay(function() {
+		var publication = $.publish(topic, {
+			progress : function() {
+				ok(false, "should never begin async notifications");
 			}
 		});
-		strictEqual( publication, null, "return null when topic has no subscribers for sync pub" );
-	});
+		start();
+		strictEqual( publication, null, "return null when topic has no subscribers for async pub" );
+	}, 10); 
+});
 
-	test("continue sync publication w/subscribers", function() {
-		expect( 7 );
-		
-		var topic = "/continuation/sync";
-		
+asyncTest( "continue async publication w/subscribers", function() {
+	var PubSub = TestUtil.resetPubSub();
+	expect( 7 );
+	
+	_.delay(function() {
+		var topic = "/continuation/async";
 		$.subscribe( topic, function(notification) {
-			ok( true, "1st subscriber called for sync pub" );
+			var msg = "1st subscriber called for async pub";
+			$.debug(msg);
+			ok( true, msg );
 		});
 		$.subscribe( topic, function(notification) {
-			ok( true, "continued after no return value for sync pub" );
+			var msg = "continued w/2nd subscriber after 1st does not return value for async pub";
+			$.debug(msg);
+			ok( true, msg );
 			return true;
 		});
-		var publication = $.publishSync( topic, {
+		
+		var publication = $.publish(topic, {
 			progress : function() {
-				ok(true, "begin sync notifications");
+				var msg = "begin async notifcations";
+				$.debug(msg);
+				ok(true, msg);
+				strictEqual( publication.state(), "pending", "pending immediately when subscriptions are not stopped during async pub" );
 			},
 			done: function() {
-				ok(true, "successful sync notifications");
+				var msg = "successful async notifcations";
+				$.debug(msg);
+				ok(true, msg);
 			},
 			fail: function() {
-				ok(false, "failed sync notifications");
+				var msg = "failed async notifcations";
+				$.error(msg);
+				ok(false, msg);
 			},
 			always : function() {
-				ok(true, "completed sync notification");
+				var msg = "completed async notifcations";
+				$.info(msg);
+				ok(true, msg);
+				strictEqual( publication.state(), "resolved", "resolved when subscriptions are not stopped during async pub" );
 			}
 		});
-		strictEqual( publication !== null , true, "return publication for sync pub when subscriptions are not stopped" );
-		strictEqual( publication.state() , "resolved", "sync publication should have resolved" );
-	});
+		start();
+	}, 10);
+});
 
-	test("discontinue sync publication when 1 subscriber returns false", function() {
-		expect( 7 );
-		
-		var PubSub = TestUtil.resetPubSub();
-		var topic = "/discontinuation/sync";
-		$.subscribe( topic, function(notification) {
-			ok( true, "continued after returning true for sync pub" );
-			return false;
-		});
-		$.subscribe( topic, function(notification) {
-			ok( false, "continued after returning false for sync pub" );
-		});
-		var publication = $.publishSync( topic, {
-			progress : function() {
-				ok(true, "begin sync notifications");
-			},
-			done: function() {
-				ok(false, "successful sync notifications");
-			},
-			fail: function() {
-				ok(true, "failed sync notifications");
-			},
-			always : function() {
-				ok(true, "completed sync notification");
-			}
-		});
-		strictEqual( publication !== null, true, "return publication when subscriptions are stopped during sync pub" );
-		strictEqual( publication.state() , "rejected", "sync publication should have rejected" );
-	});
+module("discontinuation of asynchronous notifications");
+asyncTest("discontinue async publication when 1 subscriber throws an exception", function() {
+	var PubSub = TestUtil.resetPubSub();
+	expect( 6 );
 
-	test("discontinue sync publication when 1 subscribers throws an error", function() {
-		expect( 7 );
-		
-		var PubSub = TestUtil.resetPubSub();
-		var topic = "/discontinuation/sync";
+	_.delay(function() {
+		var topic = "/discontinuation/async"
 		$.subscribe( topic, function(notification) {
-			ok( true, "continued after returning true for sync pub" );
+			var msg = "continued after returning true for async pub";
+			$.debug(msg);
+			ok( true, msg );
 			throw new Error("stop publication");
 		});
 		$.subscribe( topic, function(notification) {
-			ok( false, "continued after returning false for sync pub" );
+			var msg = "should not have continued after throwing error for async pub";
+			$.error(msg);
+			ok( false, msg );
 		});
-		var publication = $.publishSync( topic, {
+		
+		var publication = $.publish(topic, {
 			progress : function() {
-				ok(true, "begin sync notifications");
+				var msg = "begin async notifications";
+				$.debug(msg);
+				strictEqual( publication.state(), "pending", "return pending immediately when subscriptions are stopped during async pub" );
+				ok(true, msg);
 			},
 			done: function() {
-				ok(false, "successful sync notifications");
+				var msg = "successful async notifications";
+				$.error(msg);
+				ok(false, msg);
 			},
 			fail: function() {
-				ok(true, "failed sync notifications");
+				var msg = "failed async notifications";
+				$.debug(msg);
+				ok(true, msg);
 			},
 			always : function() {
-				ok(true, "completed sync notification");
+				var msg = "completed async notifications";
+				$.info(msg);
+				ok(true, msg);
+				strictEqual( publication.state(), "rejected", "rejected when subscriptions are stopped during async pub" );
 			}
 		});
-		strictEqual( publication !== null, true, "return publication when subscriptions are stopped during sync pub" );
-		strictEqual( publication.state() , "rejected", "sync publication should have rejected" );
-	});
+		start();
+	}, 10);
+});
+
+asyncTest("discontinue async publication when 1 subscriber returns false", function() {
+	var PubSub = TestUtil.resetPubSub();
+	expect( 6 );
+
+	_.delay(function() {
+		var topic = "/discontinuation/async"
+		$.subscribe( topic, function(notification) {
+			var msg = "continued after returning true for async pub";
+			$.debug(msg);
+			ok( true, msg );
+			return false;
+		});
+		$.subscribe( topic, function(notification) {
+			var msg = "should have discontinued after previous subscriber returned false for async pub";
+			$.error(msg);
+			ok( false, msg );
+		});
+		
+		var publication = $.publish(topic, {
+			progress : function() {
+				var msg = "begin async notifications";
+				$.debug(msg);
+				strictEqual( publication.state(), "pending", "return pending immediately when subscriptions are stopped during async pub" );
+				ok(true, msg);
+			},
+			done: function() {
+				var msg = "successful async notifications";
+				$.error(msg);
+				ok(false, msg);
+			},
+			fail: function() {
+				var msg = "failed async notifications";
+				$.debug(msg);
+				ok(true, msg);
+			},
+			always : function() {
+				var msg = "completed async notifications";
+				$.info(msg);
+				ok(true, msg);
+				strictEqual( publication.state(), "rejected", "rejected when subscriptions are stopped during async pub" );
+			}
+		});
+		start();
+	}, 10);
+});
+
+module("synchronous bubbling of notifications");
+test("notifications should bubble up during synchronous publication on a hierarchical topic", function() {
+	var PubSub = TestUtil.resetPubSub();
+	expect( 19 );
 	
+	var neverNotified = function(notification) {
+		var msg = "this callback should never be notified";
+		$.error(msg)
+		ok(false, msg);
+	};
 	
-	asyncTest( "continue async publication w/o subscribers", function() {
-		expect( 1 );
-		
-		var PubSub = TestUtil.resetPubSub();
-		var topic = "/continuation/async";
-		
-		_.delay(function() {
-			var publication = $.publish(topic, {
-				progress : function() {
-					ok(false, "should never begin async notifications");
+	var app = {
+		topic : "/app",
+		notify : function(notification) {
+			var msg = "notification of subscriber @ " + notification.currentTopic;
+			$.debug(msg)
+			ok(true, msg);
+			equal(2, count, "root subscriber called 3rd");
+			deepEqual(notification.data, app.data, "same data by reference passed to root");
+			count++;
+		},
+		padma : {
+			topic : "/app/padma",
+			notify : function(notification) {
+				var msg = "notification of subscriber @ " + notification.currentTopic;
+				$.debug(msg)
+				ok(true, msg);
+				equal(1, count, "mid-level subscriber called 2nd");
+				deepEqual(notification.data.name, "empire strikes back", "data received by padma should have mutated");
+				count++;
+			},
+			luke : {
+				topic : "/app/padma/luke",
+				notify : neverNotified
+			},
+			leia : {
+				topic : "/app/padma/leia",
+				notify : function(notification) {
+					var data = notification.data;
+					var msg = "notification of subscriber @ " + notification.currentTopic;
+					$.debug(msg)
+					ok(true, msg);
+					deepEqual(data, app.data, "leaf should receive data");
+					data.name = "empire strikes back";
+					equal(0, count, "leaf subscriber called 1st");
+					count++;
 				}
-			});
-			start();
-			strictEqual( publication, null, "return null when topic has no subscribers for async pub" );
-		}, 10); 
+			}
+		},
+		anakin : {
+			topic : "/app/anakin",
+			notify : neverNotified
+		},
+		data : {
+			id : 1,
+			name : "star wars"
+		}
+	};
+	
+	var topics = PubSub.createTopics(app.padma.leia.topic);
+	var count = 0;
+	TestUtil.subscribeApp(app, PubSub);
+	
+	var publication = $.publishSync(app.padma.leia.topic, {
+		data : app.data,
+		progress : function() {
+			var msg = "begin sync notifications";
+			$.debug(msg);
+			ok(true, msg);
+		},
+		done: function() {
+			var msg = "successful sync notifications";
+			$.debug(msg);
+			ok(true, msg);
+		},
+		fail: function() {
+			var msg = "failed sync notifications";
+			$.error(msg);
+			ok(false, msg);
+		},
+		always : function() {
+			var msg = "completed sync notifications";
+			$.info(msg);
+			ok(true, msg);
+		}
 	});
+	equal(3, count, "synchronous publication blocks and mutates the count");
+});
 
-	asyncTest( "continue async publication w/subscribers", function() {
-		var PubSub = TestUtil.resetPubSub();
-		expect( 7 );
-		
-		_.delay(function() {
-			var topic = "/continuation/async";
-			$.subscribe( topic, function(notification) {
-				ok( true, "1st subscriber called for async pub" );
-			});
-			$.subscribe( topic, function(notification) {
-				ok( true, "continued after no return value for async pub" );
-				return true;
-			});
-			
-			var publication = $.publish(topic, {
-				progress : function() {
-					ok(true, "begin async notifications");
-				},
-				done: function() {
-					ok(true, "successful async notifications");
-				},
-				fail: function() {
-					ok(false, "failed async notifications");
-				},
-				always : function() {
-					ok(true, "completed async notification");
-					strictEqual( publication.state(), "resolved", "resolved when subscriptions are not stopped during async pub" );
-				}
-			});
-			start();
-			strictEqual( publication.state(), "pending", "pending immediately when subscriptions are not stopped during async pub" );
-		}, 10);
-	});
-
-
-	asyncTest("discontinue async publication when 1 subscriber returns false", function() {
-		var PubSub = TestUtil.resetPubSub();
-		expect( 7 );
-
-		_.delay(function() {
-			var topic = "/discontinuation/async"
-			$.subscribe( topic, function(notification) {
-				ok( true, "continued after returning true for async pub" );
-				throw new Error("stop publication");
-			});
-			$.subscribe( topic, function(notification) {
-				ok( false, "continued after returning false for async pub" );
-			});
-			
-			var publication = $.publish(topic, {
-				progress : function() {
-					ok(true, "begin async notifications");
-				},
-				done: function() {
-					ok(false, "successful async notifications");
-				},
-				fail: function() {
-					ok(true, "failed async notifications");
-				},
-				always : function() {
-					ok(true, "completed async notification");
-					strictEqual( publication.state(), "rejected", "rejected when subscriptions are stopped during async pub" );
-				}
-			});
-			start();
-			strictEqual( publication.state(), "pending", "return pending immediately when subscriptions are stopped during async pub" );
-		}, 10);
-	});
-
-	asyncTest("discontinue async publication when 1 subscriber throws exception", function() {
-		var PubSub = TestUtil.resetPubSub();
-		expect( 7 );
-
-		_.delay(function() {
-			var topic = "/discontinuation/async"
-			$.subscribe( topic, function(notification) {
-				ok( true, "continued after returning true for async pub" );
+test("notifications attempts to bubble up during synchronous publication on a hierarchical topic b/c mid-level subscriber interrupts", function() {
+	var PubSub = TestUtil.resetPubSub();
+	expect( 28 );
+	
+	var neverNotified = function(notification) {
+		ok(false, "this callback should never be notified");
+	};
+	var exceptionThrown = function(notification) {
+		ok(true, "exceptionThrown was notified @ " + notification.currentTopic);
+		count++;
+		throw new Error("burp!");
+	};
+	var notificationReject = function(notification) {
+		ok(true, "notificationReject was notified @ " + notification.currentTopic);
+		count++;
+		notification.reject();
+	};
+	
+	var app = {
+		topic : "/app",
+		notify : neverNotified,
+		padma : {
+			topic : "/app/padma",
+			notify : function(notification) {
+				var msg = "notification of subscriber @ " + notification.currentTopic;
+				$.debug(msg)
+				ok(true, msg);
+				equal(1, count, "mid-level subscriber called 2nd");
+				count++;
+				$.debug("returning false");
 				return false;
-			});
-			$.subscribe( topic, function(notification) {
-				ok( false, "continued after returning false for async pub" );
-			});
-			
-			var publication = $.publish(topic, {
-				progress : function() {
-					ok(true, "begin async notifications");
-				},
-				done: function() {
-					ok(false, "successful async notifications");
-				},
-				fail: function() {
-					ok(true, "failed async notifications");
-				},
-				always : function() {
-					ok(true, "completed async notification");
-					strictEqual( publication.state(), "rejected", "rejected when subscriptions are stopped during async pub" );
+			},
+			luke : {
+				topic : "/app/padma/luke",
+				notify : neverNotified
+			},
+			leia : {
+				topic : "/app/padma/leia",
+				notify : function(notification) {
+					var msg = "notification of subscriber @ " + notification.currentTopic;
+					$.debug(msg)
+					ok(true, msg);
+					equal(0, count, "leaf subscriber called 1st");
+					count++;
 				}
-			});
-			start();
-			strictEqual( publication.state(), "pending", "return pending immediately when subscriptions are stopped during async pub" );
-		}, 10);
-	});
-}
+			}
+		},
+		anakin : {
+			topic : "/app/anakin",
+			notify : neverNotified
+		}
+	};
+	
+	var topics = PubSub.createTopics(app.padma.leia.topic);
+	var count = 0;
+	TestUtil.subscribeApp(app, PubSub);
+	
+	var options = {
+		progress : function() {
+			var msg = "begin sync notifications";
+			$.debug(msg);
+			ok(true, msg);
+		},
+		done: function() {
+			var msg = "successful sync notifications";
+			$.error(msg);
+			ok(false, msg);
+		},
+		fail: function() {
+			var msg = "failed sync notifications";
+			$.debug(msg);
+			ok(true, msg);
+		},
+		always : function() {
+			var msg = "completed sync notifications";
+			$.info(msg);
+			ok(true, msg);
+		}
+	}
+	var publication = $.publishSync(app.padma.leia.topic, options);
+	equal(count, 2, "synchronous publication blocks and mutates the count when 1 subscriber returned false");
+	
+	$.unsubscribe(app.padma.topic);
+	count = 0;
+	$.subscribe(app.padma.topic, exceptionThrown);
+	$.publishSync(app.padma.leia.topic, options);
+	equal(count, 2, "synchronous publication blocks and mutates the count when 1 subscriber threw an exception");
 
-var testBubbling = true;
+	$.unsubscribe(app.padma.topic);
+	count = 0;
+	$.subscribe(app.padma.topic, notificationReject);
+	$.publishSync(app.padma.leia.topic, options);
+	equal(count, 2, "synchronous publication blocks and mutates the count when 1 subscriber rejected notification");
+});
 
-if (testBubbling) {
-	test("notifications should bubble up during synchronous publication on a hierarchical topic", function() {
-		var PubSub = TestUtil.resetPubSub();
-		expect( 17 );
-		
+module("asynchronous bubbling of notifications");
+asyncTest("notifications should bubble up during asynchronous publication on a hierarchical topic", function() {
+	var PubSub = TestUtil.resetPubSub();
+	expect( 19 );
+	_.delay(function() {
 		var neverNotified = function(notification) {
-			ok(false, "this callback should never be notified");
+			var msg = "this callback should never be notified";
+			$.error(msg);
+			ok(false, msg);
 		};
 		
 		var app = {
 			topic : "/app",
 			notify : function(notification) {
-				ok(true, "root was notified");
+				var msg = "notification of subscriber @ " + notification.currentTopic;
+				$.debug(msg);
+				ok(true, msg);
 				equal(2, count, "root subscriber called 3rd");
-				deepEqual(notification.data, app.data, "same data by reference passed to root");
+				var data = notification.data;
+				deepEqual(data, app.data, "same data by reference passed to root");
 				count++;
 			},
 			padma : {
 				topic : "/app/padma",
 				notify : function(notification) {
-					ok(true, "padma was notified");
+					var msg = "notification of subscriber @ " + notification.currentTopic;
+					$.debug(msg);
+					ok(true, msg);
 					equal(1, count, "mid-level subscriber called 2nd");
-					deepEqual(notification.data.name, "empire strikes back", "data received by padma should have mutated");
+					var data = notification.data;
+					deepEqual(data.name, "empire strikes back", "data received by padma should have mutated");
 					count++;
 				},
 				luke : {
@@ -837,9 +1279,12 @@ if (testBubbling) {
 				leia : {
 					topic : "/app/padma/leia",
 					notify : function(notification) {
-						ok(true, "leia was notified");
-						deepEqual(notification.data, app.data, "leaf should receive data");
-						notification.data.name = "empire strikes back";
+						var msg = "notification of subscriber @ " + notification.currentTopic;
+						$.debug(msg);
+						ok(true, msg);
+						var data = notification.data;
+						deepEqual(data, app.data, "leaf should receive data");
+						data.name = "empire strikes back";
 						equal(0, count, "leaf subscriber called 1st");
 						count++;
 					}
@@ -857,51 +1302,54 @@ if (testBubbling) {
 		
 		var topics = PubSub.createTopics(app.padma.leia.topic);
 		var count = 0;
+		TestUtil.subscribeApp(app, PubSub);
 		
-		var classSubscription = $.subscribe(app.padma.leia.topic, app.padma.leia.notify);
-		var moduleSubscription = $.subscribe(app.padma.topic, app.padma.notify);
-		var appSubscription = $.subscribe(app.topic, app.notify);
-		
-		$.subscribe(app.anakin.topic, app.anakin.notify);
-		$.subscribe(app.padma.luke.topic, app.padma.luke.notify);
-		
-		equal(1, PubSub.getSubscriptions(app.topic).length, "1 subscription should exist at app level");
-		equal(1, PubSub.getSubscriptions(app.padma.topic).length, "1 subscription should exist at padma level");
-		equal(1, PubSub.getSubscriptions(app.padma.leia.topic).length, "1 subscription should exist at leia level");
-		
-		equal(5, _.keys(PubSub.subscriptions).length, "there should be 5 subscriptions total");
-		
-		var publication = $.publishSync(app.padma.leia.topic, {
+		var publication = $.publish(app.padma.leia.topic, {
 			data : app.data,
 			progress : function() {
-				ok(true, "begin sync notifications");
+				var msg = "begin async notifications";
+				$.debug(msg);
+				ok(true, msg);
 			},
 			done: function() {
-				ok(true, "successful sync notifications");
+				var msg = "successful async notifications";
+				$.error(msg);
+				ok(true, msg);
+				equal(3, count, "now count is succesfully mutated by async publication");
 			},
 			fail: function() {
-				ok(false, "failed sync notifications");
+				var msg = "failed async notifications";
+				$.debug(msg);
+				ok(false, msg);
 			},
 			always : function() {
-				ok(true, "completed sync notification");
+				var msg = "completed async notifications";
+				$.info(msg);
+				ok(true, msg);
 			}
 		});
-		equal(3, count, "synchronous publication blocks and mutates the count");
-	});
+		// publish results and then see if it effected the change
+		start();
+	}, 10);
+});
 
-	test("notifications attempts to bubble up during synchronous publication on a hierarchical topic b/c mid-level subscriber interrupts", function() {
-		var PubSub = TestUtil.resetPubSub();
-		expect( 27 );
-		
+asyncTest("notifications attempt to bubble up during asynchronous publication on a hierarchical topic b/c mid-level subscriber interrupts", function() {
+	var PubSub = TestUtil.resetPubSub();
+	expect( 17 );
+	_.delay(function() {
 		var neverNotified = function(notification) {
-			ok(false, "this callback should never be notified");
+			var msg = "this callback should never be notified";
+			$.error(msg);
+			ok(false, msg);
 		};
 		var exceptionThrown = function(notification) {
-			ok(true, "exceptionThrown was notified");
+			ok(true, "exceptionThrown was notified @ " + notification.currentTopic);
+			count++;
 			throw new Error("burp!");
 		};
 		var notificationReject = function(notification) {
-			ok(true, "notificationReject was notified");
+			ok(true, "notificationReject was notified @ " + notification.currentTopic);
+			count++;
 			notification.reject();
 		};
 		
@@ -911,8 +1359,9 @@ if (testBubbling) {
 			padma : {
 				topic : "/app/padma",
 				notify : function(notification) {
-					ok(true, "padma was notified");
-					equal(1, count, "mid-level subscriber called 2nd");
+					var msg = "notification of subscriber @ " + notification.currentTopic + " which returns false";
+					$.debug(msg);
+					ok(true, msg);
 					count++;
 					return false;
 				},
@@ -923,7 +1372,9 @@ if (testBubbling) {
 				leia : {
 					topic : "/app/padma/leia",
 					notify : function(notification) {
-						ok(true, "leia was notified");
+						var msg = "notification of subscriber @ " + notification.currentTopic;
+						$.debug(msg);
+						ok(true, msg);
 						equal(0, count, "leaf subscriber called 1st");
 						count++;
 					}
@@ -937,221 +1388,29 @@ if (testBubbling) {
 		
 		var topics = PubSub.createTopics(app.padma.leia.topic);
 		var count = 0;
-		
-		var classSubscription = $.subscribe(app.padma.leia.topic, app.padma.leia.notify);
-		var moduleSubscription = $.subscribe(app.padma.topic, app.padma.notify);
-		var appSubscription = $.subscribe(app.topic, app.notify);
-		
-		$.subscribe(app.anakin.topic, app.anakin.notify);
-		$.subscribe(app.padma.luke.topic, app.padma.luke.notify);
-		
-		equal(1, PubSub.getSubscriptions(app.topic).length, "1 subscription should exist at app level");
-		equal(1, PubSub.getSubscriptions(app.padma.topic).length, "1 subscription should exist at padma level");
-		equal(1, PubSub.getSubscriptions(app.padma.leia.topic).length, "1 subscription should exist at leia level");
-		
-		equal(5, _.keys(PubSub.subscriptions).length, "there should be 5 subscriptions total");
+		TestUtil.subscribeApp(app, PubSub);
 		
 		var options = {
 			progress : function() {
-				ok(true, "begin sync notifications");
+				ok(true, "begin async notifications");
 			},
 			done: function() {
-				ok(false, "successful sync notifications");
+				ok(false, "successful async notifications");
 			},
 			fail: function() {
-				ok(true, "failed sync notifications");
+				ok(true, "failed async notifications");
+				equal(2, count, "now count is succesfully mutated by async publication");
 			},
 			always : function() {
-				ok(true, "completed sync notification");
+				ok(true, "completed async notification");
 			}
-		}
-		var publication = $.publishSync(app.padma.leia.topic, options);
-		equal(2, count, "synchronous publication blocks and mutates the count");
+		};
+		
+		var publication = $.publish(app.padma.leia.topic, options);
 		
 		$.unsubscribe(app.padma.topic);
-		count = 0;
 		$.subscribe(app.padma.topic, exceptionThrown);
-		$.publishSync(app.padma.leia.topic, options);
-
-		$.unsubscribe(app.padma.topic);
-		count = 0;
-		$.subscribe(app.padma.topic, notificationReject);
-		$.publishSync(app.padma.leia.topic, options);
-	});
-	
-	asyncTest("notifications should bubble up during asynchronous publication on a hierarchical topic", function() {
-		var PubSub = TestUtil.resetPubSub();
-		expect( 17 );
-		_.delay(function() {
-			var neverNotified = function(notification) {
-				ok(false, "this callback should never be notified");
-			};
-			
-			var app = {
-				topic : "/app",
-				notify : function(notification) {
-					ok(true, "root was notified");
-					equal(2, count, "root subscriber called 3rd");
-					deepEqual(notification.data, app.data, "same data by reference passed to root");
-					count++;
-				},
-				padma : {
-					topic : "/app/padma",
-					notify : function(notification) {
-						ok(true, "padma was notified");
-						equal(1, count, "mid-level subscriber called 2nd");
-						deepEqual(notification.data.name, "empire strikes back", "data received by padma should have mutated");
-						count++;
-					},
-					luke : {
-						topic : "/app/padma/luke",
-						notify : neverNotified
-					},
-					leia : {
-						topic : "/app/padma/leia",
-						notify : function(notification) {
-							ok(true, "leia was notified");
-							deepEqual(notification.data, app.data, "leaf should receive data");
-							notification.data.name = "empire strikes back";
-							equal(0, count, "leaf subscriber called 1st");
-							count++;
-						}
-					}
-				},
-				anakin : {
-					topic : "/app/anakin",
-					notify : neverNotified
-				},
-				data : {
-					id : 1,
-					name : "star wars"
-				}
-			};
-			
-			var topics = PubSub.createTopics(app.padma.leia.topic);
-			var count = 0;
-			
-			var classSubscription = $.subscribe(app.padma.leia.topic, app.padma.leia.notify);
-			var moduleSubscription = $.subscribe(app.padma.topic, app.padma.notify);
-			var appSubscription = $.subscribe(app.topic, app.notify);
-			
-			$.subscribe(app.anakin.topic, app.anakin.notify);
-			$.subscribe(app.padma.luke.topic, app.padma.luke.notify);
-			
-			equal(1, PubSub.getSubscriptions(app.topic).length, "1 subscription should exist at app level");
-			equal(1, PubSub.getSubscriptions(app.padma.topic).length, "1 subscription should exist at padma level");
-			equal(1, PubSub.getSubscriptions(app.padma.leia.topic).length, "1 subscription should exist at leia level");
-			
-			equal(5, _.keys(PubSub.subscriptions).length, "there should be 5 subscriptions total");
-			
-			var publication = $.publish(app.padma.leia.topic, {
-				data : app.data,
-				progress : function() {
-					ok(true, "begin async notifications");
-				},
-				done: function() {
-					ok(true, "successful async notifications");
-					equal(3, count, "now count is succesfully mutated");
-				},
-				fail: function() {
-					ok(false, "failed async notifications");
-				},
-				always : function() {
-					ok(true, "completed async notification");
-				}
-			});
-			// publish results and then see if it effected the change
-			start();
-		}, 10);
-	});
-	
-	asyncTest("notifications attempt to bubble up during asynchronous publication on a hierarchical topic b/c mid-level subscriber interrupts", function() {
-		var PubSub = TestUtil.resetPubSub();
-		expect( 15 );
-		_.delay(function() {
-			var neverNotified = function(notification) {
-				ok(false, "this callback should never be notified");
-			};
-			var exceptionThrown = function(notification) {
-				ok(true, "exceptionThrown was notified");
-				throw new Error("burp!");
-			};
-			var notificationReject = function(notification) {
-				ok(true, "notificationReject was notified");
-				notification.reject();
-			};
-			
-			var app = {
-				topic : "/app",
-				notify : neverNotified,
-				padma : {
-					topic : "/app/padma",
-					notify : function(notification) {
-						ok(true, "padma was notified");
-						equal(1, count, "mid-level subscriber called 2nd");
-						count++;
-						return false;
-					},
-					luke : {
-						topic : "/app/padma/luke",
-						notify : neverNotified
-					},
-					leia : {
-						topic : "/app/padma/leia",
-						notify : function(notification) {
-							ok(true, "leia was notified");
-							equal(0, count, "leaf subscriber called 1st");
-							count++;
-						}
-					}
-				},
-				anakin : {
-					topic : "/app/anakin",
-					notify : neverNotified
-				}
-			};
-			
-			var topics = PubSub.createTopics(app.padma.leia.topic);
-			var count = 0;
-			
-			var classSubscription = $.subscribe(app.padma.leia.topic, app.padma.leia.notify);
-			var moduleSubscription = $.subscribe(app.padma.topic, app.padma.notify);
-			var appSubscription = $.subscribe(app.topic, app.notify);
-			
-			$.subscribe(app.anakin.topic, app.anakin.notify);
-			$.subscribe(app.padma.luke.topic, app.padma.luke.notify);
-			
-			equal(1, PubSub.getSubscriptions(app.topic).length, "1 subscription should exist at app level");
-			equal(1, PubSub.getSubscriptions(app.padma.topic).length, "1 subscription should exist at padma level");
-			equal(1, PubSub.getSubscriptions(app.padma.leia.topic).length, "1 subscription should exist at leia level");
-			
-			equal(5, _.keys(PubSub.subscriptions).length, "there should be 5 subscriptions total");
-			
-			var options = {
-				progress : function() {
-					ok(true, "begin async notifications");
-				},
-				done: function() {
-					ok(false, "successful async notifications");
-				},
-				fail: function() {
-					ok(true, "failed async notifications");
-				},
-				always : function() {
-					ok(true, "completed async notification");
-				}
-			};
-			
-			var publication = $.publish(app.padma.leia.topic, options);
-			start();
-			
-			$.unsubscribe(app.padma.topic);
-			$.subscribe(app.padma.topic, exceptionThrown);
-			$.publish(app.padma.leia.topic, options);
-			
-			$.unsubscribe(app.padma.topic);
-			$.subscribe(app.padma.topic, notificationReject);
-			$.publish(app.padma.leia.topic, options);
-		}, 10);
-	});
-}
+		$.publish(app.padma.leia.topic, options);
+		start();
+	}, 10);
+});

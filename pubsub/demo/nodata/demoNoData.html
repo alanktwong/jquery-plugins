@@ -1,48 +1,81 @@
 <!DOCTYPE HTML>
 <html lang="en-US">
 <head>
-<meta charset="UTF-8">
-<title>jQuery Publish/Subscribe: No Data Demo Page</title>
+	<meta charset="UTF-8">
+	<title>jQuery Publish/Subscribe: No Data Demo Page</title>
 
-<script type="text/javascript"  src="http://www.google.com/jsapi"></script>
-<script type="text/javascript">
-  google.load("jquery", "1.4.4", {uncompressed: true});
-</script>
-
-<script type="text/javascript" src="../../jquery.pubsub.js"></script>
+	<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.4/jquery.js"></script>
+	<!--
+	<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.0/jquery.js"></script>
+	-->
+	
+	<script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.4.3/underscore-min.js"></script>
+	<script type="text/javascript" src="../../jquery.pubsub.js"></script>
+	<script type="text/javascript" src="../../../log4jq/jquery.log4jq.js"></script>
 <script>
 $(document).ready(function() {
-	var topic = "/nodataexample";
+	var logger = $.configureLog4jq({
+		enabled: true,
+		level : "debug",
+		targets : [
+			{
+				name: "console",
+				subscribed: true
+			}
+		]
+	});
+	
+	var log = function(msg) {
+		$.debug(msg);
+	};
+	
+	var topic = "/example/nodata";
 	$.subscribe( topic, function(n) {
-		$( "p#receiver").append( "<p>1st subscription called</p>" );
+		var msg = "1st subscription called";
+		$( "#receiver").append( "<p>" + msg + "</p>" );
+		log(msg);
 	});
 
 	// there can be more than one subscriber for a topic
 	$.subscribe( topic, function(n) {
-		$( "p#receiver").append( "<p>2nd subscription called</p>" );
+		var msg = "2nd subscription called";
+		$( "#receiver").append( "<p>" + msg + "</p>" );
+		log(msg);
 	});
 
-	// the subscriptions are triggered through a publish
-	// call on the topic
-	$.publish(topic, {
-		progress: function() {
-			console.log("begin topic");
-		},
-		done: function() {
-			console.log("done topic");
-		},
-		fail: function() {
-			console.log("fail topic");
-		},
-		always: function() {
-			console.log("always topic");
-		}
-	});
+	var createHandlers = function(topic) {
+		return {
+			progress: function() {
+				log("begin " + topic);
+			},
+			done: function() {
+				log("done " + topic);
+			},
+			fail: function() {
+				log("fail " + topic);
+			},
+			always: function() {
+				log("always " + topic);
+			}
+		};
+	};
+	
+	// the subscriptions are triggered through a publish call on the topic
+	var sync = true;
+	if (sync) {
+		$.publishSync(topic, createHandlers(topic));
+	} else {
+		$.publish(topic, createHandlers(topic));
+	}
 });
 </script>
 </head>
 <body>
 	<h3>jQuery PubSub: NoData Usage</h3>
+	<div id="note">
+		<p>Only synchronous part of demo works for co-publishing</p>
+		<p>Asynchronous part of demo does not work for co-publishing</p>
+	</div>
 	<div id="console-log" style="font-size: 14px;">
 		<p id="receiver"></p>
 	</div>

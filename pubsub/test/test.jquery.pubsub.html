@@ -3,6 +3,12 @@
 <head>
 	<meta charset="utf-8">
 	<title>jQuery PubSub Test Suite</title>
+	<style type="text/css">
+		.show { display:block; }
+		.hide { display:none; }
+		.pubsubDivTarget { font-size: 14px; }
+	</style>
+	
 	<script type="text/javascript">
 	function loadInDocument(doesNotExist, jsSrc) {
 		if (doesNotExist) {
@@ -24,8 +30,9 @@
 	</script>
 	<script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.4.3/underscore-min.js"></script>
 	
-	<script src="../jquery.pubsub.js"></script>
-	<script src="test.jquery.pubsub.js"></script>
+	<script type="text/javascript" src="../jquery.pubsub.js"></script>
+	<script type="text/javascript" src="test.jquery.pubsub.js"></script>
+	<script type="text/javascript" src="../../log4jq/jquery.log4jq.js"></script>
 </head>
 <body>
 	<h1 id="qunit-header">jQuery PubSub Test Suite</h1>
@@ -33,5 +40,17 @@
 	<div id="qunit-testrunner-toolbar"></div>
 	<h2 id="qunit-userAgent"></h2>
 	<ol id="qunit-tests"></ol>
+	
+	<div id="pubsubDivTarget" class="hide pubsubDivTarget">
+		<div id="note">
+			<p>Both synchronous and asynchronous parts of demo work for co-publishing</p>
+		</div>
+		<div id="console-log" style="">
+			<p id="receiver"></p>
+			<p id="receiver2"></p>
+			<p id="receiver3"></p>
+			<p id="receiver4"></p>
+		</div>
+	</div>
 </body>
 </html>
