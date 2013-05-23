@@ -591,6 +591,137 @@ test( "push data during synchronous publication", function() {
 	});
 });
 
+test( "push data during synchronous publication to 2 different topics", function() {
+	var PubSub = TestUtil.resetPubSub();
+	expect( 24 );
+	var app = {
+		topic : "/data",
+		notify : function(notification) {
+			var data   = notification.data;
+			var topic  = notification.currentTopic;
+			var origin = notification.publishTopic;
+			var msg = "sync notification of topic: " + topic + " from " + origin;
+			$.debug(msg);
+			ok( true, msg);
+			if (app.one.topic === origin ) {
+				strictEqual(data.object.id, app.one.data.object.id, "data originating from " + origin + " should have same id");
+				strictEqual(data.number, app.one.data.number, "data originating from " + origin + " should have same number");
+				data.number++;
+			} else if (app.two.topic === origin ) {
+				strictEqual(data.object.id, app.two.data.object.id, "data originating from " + origin + " should have same id");
+				strictEqual(data.number, app.two.data.number, "data originating from " + origin + " should have same number");
+				data.number++;
+			}
+		},
+		one: {
+			topic : "/data/1",
+			notify : function(notification) {
+				var data  = notification.data;
+				var topic = notification.currentTopic;
+				var msg = "sync notification of topic: " + topic;
+				$.debug(msg);
+				ok( true, msg );
+				strictEqual( data.string, "hello", "string passed during sync notification of " + topic );
+				strictEqual( data.number, app.one.data.number, "number passed during sync notification of " + topic );
+				deepEqual( data.object, app.one.data.object, "object passed for " + topic );
+				data.string = "goodbye";
+				data.object.baz = "quux";
+				$( "#receiver",'#console-log' ).append( JSON.stringify(data) );
+			},
+			data: {
+				string: "hello",
+				number : 100,
+				object : {
+					id:  1,
+					foo: "bar",
+					baz: "qux"
+				}
+			}
+		},
+		two: {
+			topic : "/data/2",
+			notify : function(notification) {
+				var data  = notification.data;
+				var topic = notification.currentTopic;
+				var msg = "async notification of topic: " + topic;
+				$.debug(msg);
+				ok( true, msg);
+				strictEqual( data.string, app.two.data.string, "string unchanged during sync notification of " + topic );
+				strictEqual( data.number, app.two.data.number, "number unchanged during sync notification of " + topic );
+				deepEqual( data.object, app.two.data.object, "object passed for " + topic );
+				data.string = "guten tag";
+				data.object.baz = "quux 2";
+				$( "#receiver2",'#console-log' ).append( JSON.stringify(data) );
+			},
+			data : {
+				string: "hello",
+				number : 200,
+				object : {
+					id:  2,
+					foo: "bar2",
+					baz: "qux2"
+				}
+			}
+		}
+	};
+		
+	app.subscription = $.subscribe(app.topic, app.notify);
+	app.one.subscription = $.subscribe(app.one.topic, app.one.notify);
+	app.two.subscription = $.subscribe(app.two.topic, app.two.notify);
+	
+	app.one.publication = $.publishSync( app.one.topic, {
+		data: app.one.data,
+		progress : function() {
+			var msg = "begin sync notifications with data of " + app.one.topic;
+			$.debug(msg);
+			ok(true, msg);
+		},
+		done: function() {
+			var msg = "successful sync notifications with data of " + app.one.topic;
+			$.debug(msg);
+			ok(true, msg);
+		},
+		fail: function() {
+			var msg = "failed sync notifications with data of " + app.one.topic;
+			$.error(msg);
+			ok(false, msg);
+		},
+		always : function() {
+			var msg = "completed sync notifications with data of " + app.one.topic;
+			$.info(msg);
+			ok(true, msg);
+			var data = app.one.data;
+			deepEqual( data.object.baz, "quux", "object updated after sync notification for " + app.one.topic );
+			deepEqual( data.string, "goodbye", "string updated after sync notification for " + app.one.topic );
+		}
+	});
+	app.two.publication = $.publishSync( app.two.topic, {
+		data: app.two.data,
+		progress : function() {
+			var msg = "begin sync notifications with data of " + app.two.topic;
+			$.debug(msg);
+			ok(true, msg);
+		},
+		done: function() {
+			var msg = "successful sync notifications with data of " + app.two.topic;
+			$.debug(msg);
+			ok(true, msg);
+		},
+		fail: function() {
+			var msg = "failed sync notifications with data of " + app.two.topic;
+			$.error(msg);
+			ok(false, msg);
+		},
+		always : function() {
+			var msg = "completed sync notifications with data of " + app.two.topic;
+			$.info(msg);
+			ok(true, msg);
+			var data = app.two.data;
+			deepEqual( data.object.baz, "quux 2", "object updated after async notification for " + app.two.topic );
+			deepEqual( data.string, "guten tag", "string updated after async notification for " + app.two.topic );
+		}
+	});
+});
 
 asyncTest( "push data during asynchronous publication", function() {
 	var PubSub = TestUtil.resetPubSub();
@@ -657,108 +788,139 @@ asyncTest( "push data during asynchronous publication", function() {
 
 asyncTest( "push data during asynchronous publication to 2 different topics", function() {
 	var PubSub = TestUtil.resetPubSub();
-	expect( 16 );
+	expect( 20 );
 	
 	_.delay(function() {
-		var topic1 = "/data/async/1";
-		var obj1 = {
-				foo: "bar",
-				baz: "qux"
+		var app = {
+			topic : "/data",
+			notify : function(notification) {
+				var data   = notification.data;
+				var topic  = notification.currentTopic;
+				var origin = notification.publishTopic;
+				var msg = "async notification of topic: " + topic + " from " + origin;
+				$.debug(msg);
+				ok( true, msg);
+				if (app.one.topic === origin ) {
+					strictEqual(data.object.id, app.one.data.object.id, "data originating from " + origin + " should have same id");
+					strictEqual(data.number, app.one.data.number, "data originating from " + origin + " should have same number");
+					data.number++;
+				} else if (app.two.topic === origin ) {
+					strictEqual(data.object.id, app.two.data.object.id, "data originating from " + origin + " should have same id");
+					strictEqual(data.number, app.two.data.number, "data originating from " + origin + " should have same number");
+					data.number++;
+				}
+			},
+			one: {
+				topic : "/data/1",
+				notify : function(notification) {
+					var data  = notification.data;
+					var topic = notification.currentTopic;
+					var msg = "async notification of topic: " + topic;
+					$.debug(msg);
+					ok( true, msg );
+					strictEqual( data.string, "hello", "string passed during async notification of " + topic );
+					strictEqual( data.number, app.one.data.number, "number passed during async notification of " + topic );
+					deepEqual( data.object, app.one.data.object, "object passed for " + topic );
+					data.string = "goodbye";
+					data.object.baz = "quux";
+					$( "#receiver",'#console-log' ).append( JSON.stringify(data) );
+				},
+				data: {
+					string: "hello",
+					number : 100,
+					object : {
+						id:  1,
+						foo: "bar",
+						baz: "qux"
+					}
+				}
+			},
+			two: {
+				topic : "/data/2",
+				notify : function(notification) {
+					var data  = notification.data;
+					var topic = notification.currentTopic;
+					var msg = "async notification of topic: " + topic;
+					$.debug(msg);
+					ok( true, msg);
+					strictEqual( data.string, "goodbye", "string changed during async notification of " + topic );
+					strictEqual( data.number, app.two.data.number, "number unchanged during async notification of " + topic );
+					deepEqual( data.object, app.two.data.object, "object passed for " + topic );
+					data.string = "guten tag";
+					data.object.baz = "quux 2";
+					$( "#receiver2",'#console-log' ).append( JSON.stringify(data) );
+				},
+				data : {
+					string: "hello",
+					number : 200,
+					object : {
+						id:  2,
+						foo: "bar2",
+						baz: "qux2"
+					}
+				}
+			}
 		};
 		
-		var topic2 = "/data/async/2";
-		var obj2 = {
-				foo: "bar2",
-				baz: "qux2"
-		};
-		var subscription1, subscription2;
-		subscription1 = $.subscribe( topic1, function( notification ) {
-			var data = notification.data;
-			var msg = "async notification of topic: " + topic1;
-			$.debug(msg);
-			ok( true, msg );
-			strictEqual( data.string, "hello", "string passed during async notification of " + topic1 );
-			strictEqual( data.number, 5, "number passed during async notification of " + topic1 );
-			deepEqual( data.object, {
-				foo: "bar",
-				baz: "qux"
-			}, "object passed for " + topic1 );
-			data.string = "goodbye";
-			data.object.baz = "qux";
-			$( "#receiver",'#console-log' ).append( JSON.stringify(data) );
-		});
-		subscription2 = $.subscribe( topic2, function( notification ) {
-			var data = notification.data;
-			var msg = "async notification of topic: " + topic2;
-			$.debug(msg);
-			ok( true, msg);
-			strictEqual( data.string, "goodbye", "string changed during async notification of " + topic2 );
-			strictEqual( data.number, 5, "number unchanged during async notification of " + topic2 );
-			deepEqual( data.object, {
-				foo: "bar2",
-				baz: "qux2"
-			}, "object changed during async notification of " + topic2 );
-			$( "#receiver2",'#console-log' ).append( JSON.stringify(data) );
-		});
-
-
-		var publication1,  publication2;
-		publication1 = $.publish( topic1, {
+		// https://gist.github.com/rustle/4115414
+		app.subscription = $.subscribe(app.topic, app.notify);
+		app.one.subscription = $.subscribe(app.one.topic, app.one.notify);
+		app.two.subscription = $.subscribe(app.two.topic, app.two.notify);
+		
+		app.one.publication = $.publish( app.one.topic, {
+			data: app.one.data,
 			progress : function() {
-				var msg = "begin async notifications w/data of " + topic1;
+				var msg = "begin async notifications with data of " + app.one.topic;
 				$.debug(msg);
 				ok(true, msg);
 			},
 			done: function() {
-				var msg = "successful async notifications w/data of " + topic1;
+				var msg = "successful async notifications with data of " + app.one.topic;
 				$.debug(msg);
 				ok(true, msg);
 			},
 			fail: function() {
-				var msg = "failed async notifications w/data of " + topic1;
+				var msg = "failed async notifications with data of " + app.one.topic;
 				$.error(msg);
 				ok(false, msg);
 			},
 			always : function() {
-				var msg = "completed async notifications w/data of " + topic1;
+				var msg = "completed async notifications with data of " + app.one.topic;
 				$.info(msg);
 				ok(true, msg);
-				deepEqual( obj1, {
-					foo: "bar",
-					baz: "qux"
-				}, "object updated after async notification for " + topic1 );
-			},
-			data: { string: "hello", number: 5, object: obj1 }
+				var data = app.one.data;
+				deepEqual( data.object.baz, "quux", "object updated after async notification for " + app.one.topic );
+				deepEqual( data.string, "goodbye", "string updated after async notification for " + app.one.topic );
+			}
 		});
-		publication2 = $.publish( topic2, {
+		app.two.publication = $.publish( app.two.topic, {
+			data: app.two.data,
 			progress : function() {
-				var msg = "begin async notifications w/data of " + topic2;
+				var msg = "begin async notifications with data of " + app.two.topic;
 				$.debug(msg);
 				ok(true, msg);
 			},
 			done: function() {
-				var msg = "successful async notifications w/data of " + topic2;
+				var msg = "successful async notifications with data of " + app.two.topic;
 				$.debug(msg);
 				ok(true, msg);
 			},
 			fail: function() {
-				var msg = "failed async notifications w/data of " + topic2;
+				var msg = "failed async notifications with data of " + app.two.topic;
 				$.error(msg);
 				ok(false, msg);
 			},
 			always : function() {
-				var msg = "completed async notifications w/data of " + topic2;
+				var msg = "completed async notifications with data of " + app.two.topic;
 				$.info(msg);
 				ok(true, msg);
-				deepEqual( obj2, {
-					foo: "bar2",
-					baz: "qux2"
-				}, "object updated after async notification for " + topic2 );
-			},
-			data: { string: "hello", number: 5, object: obj2 }
+				var data = app.two.data;
+				deepEqual( data.object.baz, "quux 2", "object updated after async notification for " + app.two.topic );
+				deepEqual( data.string, "guten tag", "string updated after async notification for " + app.two.topic );
+			}
 		});
 		start();
-	},5);
+	}, 20);
 });
 
 module("continuation of synchronous notifications");
