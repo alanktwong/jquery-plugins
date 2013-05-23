@@ -1,4 +1,4 @@
-describe("Log4jq", function() {
+describe("jquery.log4jq", function() {
 
 	var testTarget = {
 		name: "testTarget",
