@@ -165,7 +165,6 @@
 		reset : function() {
 			//var _self = PubSub;
 			_self.subscriptions = {};
-			_self.immediateExceptions = false;
 		},
 		publishImpl : function( topic /* string */, options /* object */, sync /* boolean */ ){
 			// var _self = PubSub;
@@ -173,24 +172,30 @@
 			if (!_self.validateTopicName(topic)) {
 				throw new Error( "You must provide a valid topic name to publish." );
 			}
-			var hasSubscribers = _self.hasSubscriptions(topic);
-			if ( !hasSubscribers ){
-				return publication;
-			}
 			options = options || {};
 			
 			publication = _self.createPublication( topic, options );
 			
-			var deliver = createDeliveryFunction(publication);
-			if (Util.isFunction(deliver)) {
-				if ( sync === true ){
-					deliver();
-				} else {
-					Util.delay(deliver,0);
-				}
+			var hasSubscribers = _self.hasSubscriptions(topic);
+			if ( !hasSubscribers ){
+				var _notification = publication.notification;
+				_notification.reject();
+				publication.progress(_notification);
+				publication.fail(_notification);
+				publication.always(_notification);
 			} else {
-				throw new Error("should have created delivery function");
+				var deliver = createDeliveryFunction(publication);
+				if (Util.isFunction(deliver)) {
+					if ( sync === true ){
+						deliver();
+					} else {
+						Util.delay(deliver,0);
+					}
+				} else {
+					throw new Error("should have created delivery function");
+				}
 			}
+			
 			return publication;
 		},
 		validateTopicName : function(name /*string */) {
@@ -250,22 +255,23 @@
 			publication.data     = Util.isObject(publication.data)       ? publication.data    : null;
 			publication.context  = Util.isObject(publication.context)    ? publication.context : null;
 			
-			publication.progress = Util.isFunction(publication.progress) ? publication.progress : _self.defaultPublicationOptions.progress;
-			publication.done     = Util.isFunction(publication.done)     ? publication.done     : _self.defaultPublicationOptions.done;
-			publication.fail     = Util.isFunction(publication.fail)     ? publication.fail     : _self.defaultPublicationOptions.fail;
-			publication.always   = Util.isFunction(publication.always)   ? publication.always   : _self.defaultPublicationOptions.always;
+			var createCallback = function(callback, safe, context) {
+				var cb = Util.isFunction(callback) ? callback : safe;
+				cb = Util.bind(cb, context);
+				return cb;
+			};
 			
-			/*
-			var deferredContext = null;
-			publication.progress = Util.bind(publication.progress, deferredContext);
-			publication.done     = Util.bind(publication.done, deferredContext);
-			publication.fail     = Util.bind(publication.fail, deferredContext);
-			publication.always   = Util.bind(publication.always, deferredContext);
-			*/
+			var deferredContext = publication.context;
+			var callbacks = {
+				progress : createCallback(publication.progress, _self.defaultPublicationOptions.progress, deferredContext),
+				done :     createCallback(publication.done,     _self.defaultPublicationOptions.done,     deferredContext),
+				fail :     createCallback(publication.fail,     _self.defaultPublicationOptions.fail,     deferredContext),
+				always :   createCallback(publication.always,   _self.defaultPublicationOptions.always,   deferredContext)
+			};
 			
 			publication.notification = new Notification(topic, publication.data, publication.context);
 			publication.state = publication.notification.state;
-			publication.immediateExceptions = publication.notification.immediateExceptions;
+			publication = $.extend({}, publication, callbacks);
 			return publication;
 		},
 		/**
@@ -330,7 +336,6 @@
 		this.currentTopic = topic;
 		this.data    = Util.isObject(data)    ? data : null;
 		this.context = Util.isObject(context) ? context : null;
-		this.immediateExceptions = true;
 		this.message = null;
 		
 		_publishPropagated = true;
@@ -448,9 +453,9 @@
 		var deliver = function(_publication) {
 			var _self = PubSub;
 			
-			_publication.progress();
 			var _notification = _publication.notification;
 			var topics = _self.createTopics(_notification.publishTopic);
+			_publication.progress(_notification);
 			
 			// deliver notification to each level by using topic bubbling.
 			// i.e. deliver by going up the hierarchy through each topic
@@ -469,11 +474,11 @@
 				_notification.resolve();
 			}
 			if (_publication.state() === "resolved") {
-				_publication.done();
+				_publication.done(_notification);
 			} else {
-				_publication.fail();
+				_publication.fail(_notification);
 			}
-			_publication.always();
+			_publication.always(_notification);
 		};
 		return Util.partial(deliver,publication);
 	}
