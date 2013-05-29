@@ -81,7 +81,7 @@ describe("jquery.pubsub", function() {
 			expect(_.isEqual(topics,["/app/module/class", "/app/module", "/app"])).toBe(true);
 		});
 	});
-	describe("when testing the utilities of the pubsub", function() {
+	describe("when testing the utilities of the PubSub", function() {
 		var PubSub, u;
 		var topic = "/app/module/class";
 		
@@ -176,13 +176,13 @@ describe("jquery.pubsub", function() {
 			var context = {};
 			var obj = {
 				execute : function(name) {
-					expect(obj.execute).toHaveBeenCalled();
 					expect(this).toBe(context);
 				}
 			}
-			spyOn(obj, 'execute');
+			spyOn(obj, 'execute').andCallThrough();
 			var bound = u.bind(obj.execute, context);
 			bound("bound function");
+			expect(obj.execute).toHaveBeenCalled();
 		});
 	});
 	
@@ -326,7 +326,6 @@ describe("jquery.pubsub", function() {
 			var callbacks = {
 				first: {
 					notify : function(notification) {
-						expect(callbacks.first).toHaveBeenCalled();
 						$.debug("1st subscriber notified");
 						expect(count).toBe(0);
 						count++;
@@ -334,21 +333,19 @@ describe("jquery.pubsub", function() {
 				},
 				second: {
 					notify : function(notification) {
-						expect(callbacks.second).toHaveBeenCalled();
 						$.debug("1st subscriber notified");
 						expect(count).toBe(1);
 						count++;
 					}
 				}
 			};
-			spyOn(callbacks.first, 'notify');
-			spyOn(callbacks.second, 'notify');
+			spyOn(callbacks.first, 'notify').andCallThrough();
+			spyOn(callbacks.second, 'notify').andCallThrough();
 			
 			callbacks.first.subscription = $.subscribe(topic, callbacks.first.notify);
 			expect(PubSub.hasSubscriptions(topic)).toBe(true);
 			expect(PubSub.getSubscriptions(topic).length).toBe(1);
 			expect(callbacks.first.subscription).toBeSubscribedCorrectly(topic, null, callbacks.first.notify, null, topics);
-
 
 			callbacks.second.subscription = $.subscribe(topic, callbacks.second.notify);
 			expect(callbacks.second.subscription).toBeSubscribedCorrectly(topic, null, callbacks.second.notify, null, topics);
@@ -360,19 +357,20 @@ describe("jquery.pubsub", function() {
 			expect(callbacks.second.subscription.timestamp >= callbacks.first.subscription.timestamp).toBe(true);
 			
 			$.publishSync(topic);
+			expect(callbacks.first.notify).toHaveBeenCalled();
+			expect(callbacks.second.notify).toHaveBeenCalled();
 		});
 		it("should subscribe correctly to a topic with a context", function() {
 			var callbacks = {
 					first: {
 						notify : function(notification) {
-							expect(callbacks.first).toHaveBeenCalled();
 							$.debug("1st subscriber notified");
 							expect(count).toBe(0);
 						},
 						context : {}
 					}
 			};
-			spyOn(callbacks.first, 'notify');
+			spyOn(callbacks.first, 'notify').andCallThrough();
 			callbacks.first.subscription = $.subscribe(topic, callbacks.first.context, callbacks.first.notify);
 
 			expect(PubSub.hasSubscriptions(topic)).toBe(true);
@@ -380,20 +378,20 @@ describe("jquery.pubsub", function() {
 			expect(callbacks.first.subscription).toBeSubscribedCorrectly(topic, callbacks.first.context, callbacks.first.notify, null, topics);
 
 			$.publishSync(topic);
+			expect(callbacks.first.notify).toHaveBeenCalled();
 		});
 		
 		it("should subscribe correctly to topic with a callback and a priority", function() {
 			var callbacks = {
 					first: {
 						notify : function(notification) {
-							expect(callbacks.first).toHaveBeenCalled();
 							$.debug("1st subscriber notified");
 							expect(count).toBe(0);
 						},
 						priority : 100
 					}
 			};
-			spyOn(callbacks.first, 'notify');
+			spyOn(callbacks.first, 'notify').andCallThrough();
 			callbacks.first.subscription = $.subscribe(topic, callbacks.first.notify, callbacks.first.priority);
 
 			expect(PubSub.hasSubscriptions(topic)).toBe(true);
@@ -401,12 +399,12 @@ describe("jquery.pubsub", function() {
 			expect(callbacks.first.subscription).toBeSubscribedCorrectly(topic, null, callbacks.first.notify, callbacks.first.priority, topics);
 
 			$.publishSync(topic);
+			expect(callbacks.first.notify).toHaveBeenCalled();
 		});
 		it("should subscribe correctly to a topic with a callback, a priority and a context", function() {
 			var callbacks = {
 					first: {
 						notify : function(notification) {
-							expect(callbacks.first).toHaveBeenCalled();
 							$.debug("1st subscriber notified");
 							expect(count).toBe(0);
 						},
@@ -415,14 +413,124 @@ describe("jquery.pubsub", function() {
 					}
 			};
 			
-			spyOn(callbacks.first, 'notify');
+			spyOn(callbacks.first, 'notify').andCallThrough();
 			callbacks.first.subscription = $.subscribe(topic, callbacks.first.context, callbacks.first.notify, callbacks.first.priority);
 			expect(PubSub.hasSubscriptions(topic)).toBe(true);
 			expect(PubSub.getSubscriptions(topic).length).toBe(1);
 			expect(callbacks.first.subscription).toBeSubscribedCorrectly(topic,callbacks.first.context, callbacks.first.notify, callbacks.first.priority, topics);
 			
 			$.publishSync(topic);
+			expect(callbacks.first.notify).toHaveBeenCalled();
 		});
+	});
+	describe("when unsubscribing", function() {
+		var PubSub, topics;
+		
+		beforeEach(function() {
+			PubSub = TestUtil.resetPubSub();
+		});
+		it("should unsubscribe each subscription correctly", function() {
+			var order = 0;
+			var fixture = {
+					topic : "/unsubscribe",
+					first:  {
+						notify : function(notification) {
+							var msg = "1st subscriber called";
+							$.debug(msg);
+							expect(order).toBe(0);
+							order++;
+						}
+					},
+					second: {
+						notify : function(notification) {
+							var msg = "unsubscribed and should not have been notified";
+							$.error(msg);
+							expect(msg).toBe(false);
+							order++;
+						}
+					},
+					third: {
+						notify : function(notification) {
+							var msg = "2nd subscriber called";
+							$.debug(msg);
+							strictEqual( order, 1, msg );
+							order++;
+						}
+					},
+					fourth: {
+						notify : function(notification) {
+							var msg = "unsubscribed and should not have been notified";
+							$.error(msg);
+							expect(msg).toBe(false);
+							order++;
+						}
+					}
+			};
+			spyOn(fixture.first,  'notify').andCallThrough();
+			spyOn(fixture.second, 'notify').andCallThrough();
+			spyOn(fixture.third,  'notify').andCallThrough();
+			spyOn(fixture.fourth, 'notify').andCallThrough();
+			
+			fixture.first.subscription  = $.subscribe(fixture.topic, fixture.first.notify);
+			fixture.second.subscription = $.subscribe(fixture.topic, fixture.second.notify);
+			fixture.third.subscription  = $.subscribe(fixture.topic, fixture.third.notify);
+			fixture.fourth.subscription = $.subscribe(fixture.topic, fixture.fourth.notify);
+			
+			expect(PubSub.hasSubscriptions(fixture.topic)).toBe(true);
+			expect(PubSub.getSubscriptions(fixture.topic).length).toBe(4);
+			
+			var subscribers = [];
+			// remove even numbered subscriptions
+			subscribers = $.unsubscribe( fixture.topic, fixture.second.subscription );
+			subscribers = $.unsubscribe( fixture.topic, fixture.fourth.subscription );
+			expect(PubSub.getSubscriptions(fixture.topic).length).toBe(2);
+			
+			try {
+				subscribers = $.unsubscribe( fixture.topic, function() {});
+			} catch ( err ) {
+				expect( err.message ).toBe("You must provide the subscription generated for the callback to remove it.");
+			}
+			$.publishSync( fixture.topic );
+			expect(fixture.first.notify).toHaveBeenCalled();
+			expect(fixture.third.notify).toHaveBeenCalled();
+		});
+		it("should unsubscribe all", function() {
+			var order = 0;
+			var fixture = {
+					topic : "/unsubscribe/all",
+					first:  {
+						notify : function(notification) {
+							var msg = "1st subscriber called";
+							$.debug(msg);
+							expect(order).toBe(0);
+							order++;
+						}
+					},
+					second:  {
+						notify : function(notification) {
+							var msg = "2nd subscriber called";
+							$.debug(msg);
+							expect(order).toBe(1);
+							order++;
+						}
+					}
+			};
+			spyOn(fixture.first,  'notify').andCallThrough();
+			spyOn(fixture.second, 'notify').andCallThrough();
+			
+			fixture.first.subscription =  $.subscribe(fixture.topic, fixture.first.notify);
+			fixture.second.subscription = $.subscribe(fixture.topic, fixture.second.notify);
+			$.publishSync( fixture.topic );
+			expect(fixture.first.notify).toHaveBeenCalled();
+			expect(fixture.second.notify).toHaveBeenCalled();
+			expect(order).toBe(2);
+			
+			var subscribers = $.unsubscribe( fixture.topic );
+			expect(subscribers.length).toBe(0);
+			$.publishSync( fixture.topic );
+			expect(order).toBe(2);
+		});
+		
 	});
 
 });

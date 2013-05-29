@@ -12,250 +12,7 @@
  */
 ;(function( $, undefined ) {
 	
-	var Util = (function ($) {
-		/**
-		 * clones parts of underscore.js
-		 */
-		var ArrayProto  = Array.prototype,
-			ObjProto    = Object.prototype,
-			FuncProto   = Function.prototype;
-		
-		// Create quick reference variables for speed access to core prototypes.
-		var push             = ArrayProto.push,
-			slice            = ArrayProto.slice,
-			concat           = ArrayProto.concat,
-			toString         = ObjProto.toString,
-			hasOwnProperty   = ObjProto.hasOwnProperty;
-		
-		// All ECMAScript 5 native function implementations that we hope to use are declared here.
-		var nativeForEach      = ArrayProto.forEach,
-			nativeMap          = ArrayProto.map,
-			nativeReduce       = ArrayProto.reduce,
-			nativeReduceRight  = ArrayProto.reduceRight,
-			nativeFilter       = ArrayProto.filter,
-			nativeEvery        = ArrayProto.every,
-			nativeSome         = ArrayProto.some,
-			nativeIndexOf      = ArrayProto.indexOf,
-			nativeLastIndexOf  = ArrayProto.lastIndexOf,
-			nativeIsArray      = Array.isArray,
-			nativeKeys         = Object.keys,
-			nativeBind         = FuncProto.bind;
 
-		var _delay = function(func, wait) {
-			if (_isFunction(func) && _isNumber(wait)) {
-				var context = null;
-				var args = slice.call(arguments, 2);
-				return setTimeout(function(){
-					return func.apply(context, args);
-				}, wait);
-			} else {
-				// throw new Error("Cannot delay anything except a function");
-			}
-		}
-		
-		var _identity = function(value) {
-			return value;
-		};
-		
-		var _has = function(obj, key) {
-			return hasOwnProperty.call(obj, key);
-		};
-		
-		var _bind = function(func, context) {
-			if (func.bind === nativeBind && nativeBind) {
-				return nativeBind.apply(func, slice.call(arguments, 1));
-			}
-			var args = slice.call(arguments, 2);
-			return function() {
-				return func.apply(context, args.concat(slice.call(arguments)));
-			}
-		};
-		
-		
-		var _partial = function(func) {
-			var args = slice.call(arguments, 1);
-			return function() {
-				return func.apply(this, args.concat(slice.call(arguments)));
-			};
-		};
-		
-		var _memoize = function(func, hasher) {
-			var memo = {};
-			hasher || (hasher = _identity);
-			return function() {
-				var key = hasher.apply(this, arguments);
-				return _has(memo, key) ? memo[key] : (memo[key] = func.apply(this, arguments));
-			};
-		};
-		
-		var breaker = {};
-		
-		// The cornerstone, an each implementation, aka forEach.
-		// Handles objects with the built-in forEach, arrays, and raw objects.
-		// Delegates to ECMAScript 5's native forEach if available.
-		var _each = function(obj, iterator, context) {
-			if (obj == null) {
-				return;
-			}
-			if (nativeForEach && obj.forEach === nativeForEach) {
-				obj.forEach(iterator, context);
-			} else if (obj.length === +obj.length) {
-				for (var i = 0, l = obj.length; i < l; i++) {
-					if (iterator.call(context, obj[i], i, obj) === breaker) {
-						return;
-					}
-				}
-			} else {
-				for (var key in obj) {
-					if (_has(obj, key)) {
-						if (iterator.call(context, obj[key], key, obj) === breaker) {
-							return;
-						}
-					}
-				}
-			}
-		};
-		// Return the results of applying the iterator to each element.
-		// Delegates to ECMAScript 5's native map if available.
-		var _map  = function(obj, iterator, context) {
-			var results = [];
-			if (obj == null) {
-				return results;
-			}
-			if (nativeMap && obj.map === nativeMap) {
-				return obj.map(iterator, context);
-			}
-			_each(obj, function(value, index, list) {
-				results[results.length] = iterator.call(context, value, index, list);
-			})
-			return results;
-		};
-
-		// Reduce builds up a single result from a list of values, aka inject, or foldl.
-		// Delegates to ECMAScript 5's native reduce if available.
-		var reduceError = 'Reduce of empty array with no initial value';
-		var _reduce = function(obj, iterator, memo, context) {
-			var initial = arguments.length > 2;
-			if (obj == null) {
-				obj = [];
-			}
-			if (nativeReduce && obj.reduce === nativeReduce) {
-				if (context) iterator = _.bind(iterator, context);
-				return initial ? obj.reduce(iterator, memo) : obj.reduce(iterator);
-			}
-			each(obj, function(value, index, list) {
-				if (!initial) {
-					memo = value;
-					initial = true;
-				} else {
-					memo = iterator.call(context, memo, value, index, list);
-				}
-			});
-			if (!initial) {
-				throw new TypeError(reduceError);
-			}
-			return memo;
-		};
-		
-		// Return the first value which passes a truth test.
-		var _find = function(obj, iterator, context) {
-			var result;
-			_any(obj, function(value, index, list) {
-				if (iterator.call(context, value, index, list)) {
-					result = value;
-					return true;
-				}
-			});
-			return result;
-		};
-		
-		// Return all the elements that pass a truth test.
-		// Delegates to ECMAScript 5's native filter if available. 
-		var _filter = function(obj, iterator, context) {
-			var results = [];
-			if (obj == null) {
-				return results;
-			}
-			if (nativeFilter && obj.filter === nativeFilter) {
-				return obj.filter(iterator, context);
-			}
-			_each(obj, function(value, index, list) {
-				if (iterator.call(context, value, index, list)) {
-					results[results.length] = value;
-				}
-			});
-			return results;
-		};
-		
-		// Determine if at least one element in the object matches a truth test.
-		// Delegates to ECMAScript 5's native some if available.
-		var _any = function(obj, iterator, context) {
-			iterator || (iterator = _identity);
-			var result = false;
-			if (obj == null) {
-				return result;
-			}
-			if (nativeSome && obj.some === nativeSome) {
-				return obj.some(iterator, context);
-			}
-			_each(obj, function(value, index, list) {
-				if (result || (result = iterator.call(context, value, index, list))) {
-					return breaker;
-				}
-			});
-			return !!result;
-		};
-		
-		var _generateGUID = function(){
-			var guid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-				var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
-				return v.toString(16);
-			});
-			return guid
-		};
-		
-		var _isUndefined = function(obj) {
-			return obj === undefined;
-		};
-		
-		var _isNotNull = function(obj) {
-			return (!_isUndefined(obj) && obj !== null);
-		};
-		var _isObject = function(obj) {
-			return (_isNotNull(obj) && $.type(obj) === "object");
-		};
-		var _isFunction = function(obj) {
-			return (_isNotNull(obj) && $.type(obj) === "function");
-		};
-		var _isString = function(obj) {
-			return (_isNotNull(obj) && $.type(obj) === "string");
-		};
-		var _isNumber = function(obj) {
-			return (_isNotNull(obj) && $.type(obj) === "number");
-		};
-		
-		return {
-			generateGUID : _generateGUID,
-			isUndefined : _isUndefined,
-			isNotNull : _isNotNull,
-			isObject : _isObject,
-			isFunction : _isFunction,
-			isString : _isString,
-			isNumber : _isNumber,
-			delay : _delay,
-			identity : _identity,
-			has : _has,
-			memoize : _memoize,
-			bind : _bind,
-			partial : _partial,
-			each : _each,
-			map : _map,
-			reduce : _reduce,
-			find : _find,
-			filter : _filter,
-			any : _any,
-		};
-	}(jQuery));
 	
 	/*
 	 * Encapsulate state of pubsub event bus in following object.
@@ -436,7 +193,6 @@
 			}
 			return publication;
 		},
-		Util : Util,
 		validateTopicName : function(name /*string */) {
 			//var _self = PubSub;
 			var result = false;
@@ -722,6 +478,253 @@
 		return Util.partial(deliver,publication);
 	}
 	
+	var Util = (function ($) {
+		/**
+		 * clones parts of underscore.js
+		 */
+		var ArrayProto  = Array.prototype,
+			ObjProto    = Object.prototype,
+			FuncProto   = Function.prototype;
+		
+		// Create quick reference variables for speed access to core prototypes.
+		var push             = ArrayProto.push,
+			slice            = ArrayProto.slice,
+			concat           = ArrayProto.concat,
+			toString         = ObjProto.toString,
+			hasOwnProperty   = ObjProto.hasOwnProperty;
+		
+		// All ECMAScript 5 native function implementations that we hope to use are declared here.
+		var nativeForEach      = ArrayProto.forEach,
+			nativeMap          = ArrayProto.map,
+			nativeReduce       = ArrayProto.reduce,
+			nativeReduceRight  = ArrayProto.reduceRight,
+			nativeFilter       = ArrayProto.filter,
+			nativeEvery        = ArrayProto.every,
+			nativeSome         = ArrayProto.some,
+			nativeIndexOf      = ArrayProto.indexOf,
+			nativeLastIndexOf  = ArrayProto.lastIndexOf,
+			nativeIsArray      = Array.isArray,
+			nativeKeys         = Object.keys,
+			nativeBind         = FuncProto.bind;
+
+		var _delay = function(func, wait) {
+			if (_isFunction(func) && _isNumber(wait)) {
+				var context = null;
+				var args = slice.call(arguments, 2);
+				return setTimeout(function(){
+					return func.apply(context, args);
+				}, wait);
+			} else {
+				// throw new Error("Cannot delay anything except a function");
+			}
+		}
+		
+		var _identity = function(value) {
+			return value;
+		};
+		
+		var _has = function(obj, key) {
+			return hasOwnProperty.call(obj, key);
+		};
+		
+		var _bind = function(func, context) {
+			if (func.bind === nativeBind && nativeBind) {
+				return nativeBind.apply(func, slice.call(arguments, 1));
+			}
+			var args = slice.call(arguments, 2);
+			return function() {
+				return func.apply(context, args.concat(slice.call(arguments)));
+			}
+		};
+		
+		
+		var _partial = function(func) {
+			var args = slice.call(arguments, 1);
+			return function() {
+				return func.apply(this, args.concat(slice.call(arguments)));
+			};
+		};
+		
+		var _memoize = function(func, hasher) {
+			var memo = {};
+			hasher || (hasher = _identity);
+			return function() {
+				var key = hasher.apply(this, arguments);
+				return _has(memo, key) ? memo[key] : (memo[key] = func.apply(this, arguments));
+			};
+		};
+		
+		var breaker = {};
+		
+		// The cornerstone, an each implementation, aka forEach.
+		// Handles objects with the built-in forEach, arrays, and raw objects.
+		// Delegates to ECMAScript 5's native forEach if available.
+		var _each = function(obj, iterator, context) {
+			if (obj == null) {
+				return;
+			}
+			if (nativeForEach && obj.forEach === nativeForEach) {
+				obj.forEach(iterator, context);
+			} else if (obj.length === +obj.length) {
+				for (var i = 0, l = obj.length; i < l; i++) {
+					if (iterator.call(context, obj[i], i, obj) === breaker) {
+						return;
+					}
+				}
+			} else {
+				for (var key in obj) {
+					if (_has(obj, key)) {
+						if (iterator.call(context, obj[key], key, obj) === breaker) {
+							return;
+						}
+					}
+				}
+			}
+		};
+		// Return the results of applying the iterator to each element.
+		// Delegates to ECMAScript 5's native map if available.
+		var _map  = function(obj, iterator, context) {
+			var results = [];
+			if (obj == null) {
+				return results;
+			}
+			if (nativeMap && obj.map === nativeMap) {
+				return obj.map(iterator, context);
+			}
+			_each(obj, function(value, index, list) {
+				results[results.length] = iterator.call(context, value, index, list);
+			})
+			return results;
+		};
+
+		// Reduce builds up a single result from a list of values, aka inject, or foldl.
+		// Delegates to ECMAScript 5's native reduce if available.
+		var reduceError = 'Reduce of empty array with no initial value';
+		var _reduce = function(obj, iterator, memo, context) {
+			var initial = arguments.length > 2;
+			if (obj == null) {
+				obj = [];
+			}
+			if (nativeReduce && obj.reduce === nativeReduce) {
+				if (context) iterator = _.bind(iterator, context);
+				return initial ? obj.reduce(iterator, memo) : obj.reduce(iterator);
+			}
+			each(obj, function(value, index, list) {
+				if (!initial) {
+					memo = value;
+					initial = true;
+				} else {
+					memo = iterator.call(context, memo, value, index, list);
+				}
+			});
+			if (!initial) {
+				throw new TypeError(reduceError);
+			}
+			return memo;
+		};
+		
+		// Return the first value which passes a truth test.
+		var _find = function(obj, iterator, context) {
+			var result;
+			_any(obj, function(value, index, list) {
+				if (iterator.call(context, value, index, list)) {
+					result = value;
+					return true;
+				}
+			});
+			return result;
+		};
+		
+		// Return all the elements that pass a truth test.
+		// Delegates to ECMAScript 5's native filter if available. 
+		var _filter = function(obj, iterator, context) {
+			var results = [];
+			if (obj == null) {
+				return results;
+			}
+			if (nativeFilter && obj.filter === nativeFilter) {
+				return obj.filter(iterator, context);
+			}
+			_each(obj, function(value, index, list) {
+				if (iterator.call(context, value, index, list)) {
+					results[results.length] = value;
+				}
+			});
+			return results;
+		};
+		
+		// Determine if at least one element in the object matches a truth test.
+		// Delegates to ECMAScript 5's native some if available.
+		var _any = function(obj, iterator, context) {
+			iterator || (iterator = _identity);
+			var result = false;
+			if (obj == null) {
+				return result;
+			}
+			if (nativeSome && obj.some === nativeSome) {
+				return obj.some(iterator, context);
+			}
+			_each(obj, function(value, index, list) {
+				if (result || (result = iterator.call(context, value, index, list))) {
+					return breaker;
+				}
+			});
+			return !!result;
+		};
+		
+		var _generateGUID = function(){
+			var guid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+				var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
+				return v.toString(16);
+			});
+			return guid
+		};
+		
+		var _isUndefined = function(obj) {
+			return obj === undefined;
+		};
+		
+		var _isNotNull = function(obj) {
+			return (!_isUndefined(obj) && obj !== null);
+		};
+		var _isObject = function(obj) {
+			return (_isNotNull(obj) && $.type(obj) === "object");
+		};
+		var _isFunction = function(obj) {
+			return (_isNotNull(obj) && $.type(obj) === "function");
+		};
+		var _isString = function(obj) {
+			return (_isNotNull(obj) && $.type(obj) === "string");
+		};
+		var _isNumber = function(obj) {
+			return (_isNotNull(obj) && $.type(obj) === "number");
+		};
+		
+		return {
+			generateGUID : _generateGUID,
+			isUndefined : _isUndefined,
+			isNotNull : _isNotNull,
+			isObject : _isObject,
+			isFunction : _isFunction,
+			isString : _isString,
+			isNumber : _isNumber,
+			delay : _delay,
+			identity : _identity,
+			has : _has,
+			memoize : _memoize,
+			bind : _bind,
+			partial : _partial,
+			each : _each,
+			map : _map,
+			reduce : _reduce,
+			find : _find,
+			filter : _filter,
+			any : _any,
+		};
+	}(jQuery));
+	
+	
+	PubSub.Util = Util;
 	// store PubSub object for unit testing
 	if ($.store) {
 		$.store(PubSub.key, PubSub);
