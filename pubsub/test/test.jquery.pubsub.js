@@ -45,51 +45,6 @@ var TestUtil = {
 	}
 };
 
-
-
-module("setting context during pubsub");
-test( "subscriber context for sync publication", function() {
-	var PubSub = TestUtil.resetPubSub();
-	expect( 4 );
-	var subscription,
-		obj = {},
-		topic = "/context/subscriber",
-		fn = function() {};
-
-	subscription = $.subscribe( topic, function() {
-		strictEqual( this, window, "default context" );
-	});
-	subscription = $.subscribe( topic, obj, function() {
-		strictEqual( this !== null, true, "has context from subscription" );
-		strictEqual( this, obj, "object bound during subscription" );
-	});
-	try {
-		subscription  = $.subscribe( topic, fn, function() {
-			ok( false, "function cannot be bound during subscription" );
-		});
-	} catch( err ) {
-		strictEqual( err.message, "You must provide an object for a context.", "function cannot be bound during subscription" );
-	}
-	$.publishSync( topic );
-});
-
-test( "publisher context", function() {
-	var PubSub = TestUtil.resetPubSub();
-	expect( 2 );
-	var topic = "/context/publisher",
-		subscription,
-		obj = {
-			name : "from publisher"
-		};
-
-	subscription = $.subscribe( topic, function() {
-		strictEqual( this !== null, true, "has context from publisher" );
-		strictEqual( this, obj, "context from publisher" );
-	});
-
-	$.publishSync(topic, { context : obj });
-});
-
 module("pushing data during notifications");
 test( "push data during synchronous publication", function() {
 	var PubSub = TestUtil.resetPubSub();

@@ -536,7 +536,6 @@ describe("jquery.pubsub", function() {
 		
 	});
 
-
 	describe("when setting priorities during PubSub", function() {
 		var PubSub, fixture, order;
 		
@@ -645,44 +644,65 @@ describe("jquery.pubsub", function() {
 					expect(fixture.fifth.notify).toHaveBeenCalled();
 				});
 			}, 20);
-			
-			
 		});
 	});
-	/*
-	asyncTest( "priority for asynchronous publication", function() {
-		var PubSub = TestUtil.resetPubSub();
-		expect( 5 );
-
-		_.delay(function() {
-			var order = 1,
-				subscription,
-				topic = "/priority/async";
+	
+	describe("when setting context during PubSub", function() {
+		var PubSub, fixture, order;
+		
+		beforeEach(function() {
+			PubSub = TestUtil.resetPubSub();
 			
-			subscription = $.subscribe( topic, function() {
-				strictEqual( order, 2, "the initial subscriber has priority default, it is notified 2nd" );
-				order++;
-			});
-			subscription = $.subscribe( topic, function() {
-				strictEqual( order, 4, "this subscriber has priority 15; it is notified 4th");
-				order++;
-			}, 15 );
-			subscription = $.subscribe( topic, function() {
-				strictEqual( order, 3, "this subscriber has priority default; it is notified 3rd after the initial subscriber as its timestamp is later" );
-				order++;
-			});
-			subscription = $.subscribe( topic, function() {
-				strictEqual( order, 1, "this subscriber greatest priority since it is the lowest number" );
-				order++;
-			}, 1 );
-			subscription = $.subscribe( topic, {}, function() {
-				strictEqual( order, 5, "this subscriber is dead last because it has a high priority number" );
-				order++;
-			}, 15 );
-			
-			var publication = $.publish(topic);
-			start();
-		}, 10); 
+			fixture = {
+				topic : "/context/notify",
+				contexts : {
+					publisher : {
+						name : "from publisher"
+					},
+					subscriber : {
+						name : "from subscriber"
+					}
+				},
+				callback : function() {},
+				defaultSubscriber : {
+					notify : function(n) {
+						$.debug("default context is the window");
+						expect(this).toBe(window);
+					}
+				},
+				contextualSubscriber : {
+					notify : function(n) {
+						$.debug("receives context from subscription");
+						expect(this !== null).toBe(true);
+						expect( _.isEqual(this, fixture.contexts.subscriber) ).toBe(true);
+					}
+				},
+				pubSubscriber : {
+					notify : function(n) {
+						$.debug("receives context from publisher");
+						expect(this !== null).toBe(true);
+						expect( _.isEqual(this, fixture.contexts.publisher) ).toBe(true);
+					}
+				}
+			};
+			spyOn(fixture.defaultSubscriber,    'notify').andCallThrough();
+			spyOn(fixture.contextualSubscriber, 'notify').andCallThrough();
+		});
+		
+		it("should have context from subscriber", function() {
+			fixture.defaultSubscriber.subscription = $.subscribe(fixture.topic, fixture.defaultSubscriber.notify);
+			fixture.contextualSubscriber.subscription = $.subscribe(fixture.topic, fixture.contexts.subscriber, fixture.contextualSubscriber.notify);
+			try {
+				$.subscribe(fixture.topic, fixture.callback, fixture.callback);
+				$.error("function cannot be bound during subscription");
+			} catch (err) {
+				expect(err.message).toBe("You must provide an object for a context.");
+			}
+			$.publishSync(fixture.topic);
+		});
+		it("should have context from publisher", function() {
+			fixture.pubSubscriber.subscription = $.subscribe(fixture.topic, fixture.pubSubscriber.notify);
+			$.publishSync(fixture.topic, { context : fixture.contexts.publisher });
+		});
 	});
-	*/
 });
