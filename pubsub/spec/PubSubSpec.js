@@ -81,6 +81,7 @@ describe("jquery.pubsub", function() {
 			expect(_.isEqual(topics,["/app/module/class", "/app/module", "/app"])).toBe(true);
 		});
 	});
+	
 	describe("when testing the utilities of the PubSub", function() {
 		var PubSub, u;
 		var topic = "/app/module/class";
@@ -225,6 +226,7 @@ describe("jquery.pubsub", function() {
 			expect(notification.context === null).toBe(true);
 		});
 	});
+	
 	describe("when creating subscriptions", function() {
 		var PubSub, subscription, topics;
 		var topic = "/app/module/class";
@@ -423,6 +425,7 @@ describe("jquery.pubsub", function() {
 			expect(callbacks.first.notify).toHaveBeenCalled();
 		});
 	});
+	
 	describe("when unsubscribing", function() {
 		var PubSub, topics;
 		
@@ -533,4 +536,153 @@ describe("jquery.pubsub", function() {
 		
 	});
 
+
+	describe("when setting priorities during PubSub", function() {
+		var PubSub, fixture, order;
+		
+		beforeEach(function() {
+			order = 1;
+			PubSub = TestUtil.resetPubSub();
+			fixture = {
+				topic : "/priority/notify",
+				first: {
+					notify : function(notification) {
+						$.debug("the initial subscriber has priority default, it is notified 2nd");
+						expect(order).toBe(2);
+						order++;
+					}
+				},
+				second : {
+					notify : function(notification) {
+						$.debug("this subscriber has priority 15; it is notified 4th");
+						expect(order).toBe(4);
+						order++;
+					},
+					priority : 15
+				},
+				third : {
+					notify : function(notification) {
+						$.debug("this subscriber has priority default; it is notified 3rd after the initial subscriber as its timestamp is later");
+						expect(order).toBe(3);
+						order++;
+					}
+				},
+				fourth : {
+					notify : function(notification) {
+						$.debug("this subscriber greatest priority since it is the lowest number");
+						expect(order).toBe(1);
+						order++;
+					},
+					priority : 1
+				},
+				fifth : {
+					notify : function(notification) {
+						$.debug("this subscriber is dead last because it has a high priority number");
+						expect(order).toBe(5);
+						order++;
+					},
+					priority : 100
+				},
+				publishOptions : {
+					progress : function() {
+						var msg = "begin notifications w/o data";
+						$.info(msg);
+					},
+					done: function() {
+						var msg = "successful notifications w/o data";
+						$.info(msg);
+					},
+					fail: function() {
+						var msg = "failed notifications w/o data";
+						$.error(msg);
+					},
+					always : function() {
+						var msg = "completed notifications w/o data";
+						$.info(msg);
+					}
+				}
+			};
+			spyOn(fixture.first,  'notify').andCallThrough();
+			spyOn(fixture.second, 'notify').andCallThrough();
+			spyOn(fixture.third,  'notify').andCallThrough();
+			spyOn(fixture.fourth, 'notify').andCallThrough();
+			spyOn(fixture.fifth,  'notify').andCallThrough();
+			
+			fixture.first.subscription = $.subscribe(fixture.topic, fixture.first.notify);
+			fixture.second.subscription = $.subscribe(fixture.topic, fixture.second.notify, fixture.second.priority);
+			fixture.third.subscription = $.subscribe(fixture.topic, fixture.third.notify);
+			fixture.fourth.subscription = $.subscribe(fixture.topic, fixture.fourth.notify, fixture.fourth.priority);
+			fixture.fifth.subscription = $.subscribe(fixture.topic, fixture.fifth.notify, fixture.fifth.priority);
+		});
+		
+		it("should notify in order during synchronous publication", function() {
+			var publication = $.publishSync( fixture.topic, fixture.publishOptions );
+			
+			expect(fixture.first.notify).toHaveBeenCalled();
+			expect(fixture.second.notify).toHaveBeenCalled();
+			expect(fixture.third.notify).toHaveBeenCalled();
+			expect(fixture.fourth.notify).toHaveBeenCalled();
+			expect(fixture.fifth.notify).toHaveBeenCalled();
+			
+			expect(order).toBe(6);
+		});
+		it("should notify in order during asynchronous publication", function() {
+			
+			waitsFor(function() {
+				var publication = $.publish( fixture.topic, fixture.publishOptions );
+				return publication !== null;
+			}, "publication should be sent asynchronously", 10);
+			
+			_.delay(function() {
+				runs(function() {
+					expect(order).toBeGreaterThan(1);
+					expect(order).toBe(6);
+					
+					expect(fixture.first.notify).toHaveBeenCalled();
+					expect(fixture.second.notify).toHaveBeenCalled();
+					expect(fixture.third.notify).toHaveBeenCalled();
+					expect(fixture.fourth.notify).toHaveBeenCalled();
+					expect(fixture.fifth.notify).toHaveBeenCalled();
+				});
+			}, 20);
+			
+			
+		});
+	});
+	/*
+	asyncTest( "priority for asynchronous publication", function() {
+		var PubSub = TestUtil.resetPubSub();
+		expect( 5 );
+
+		_.delay(function() {
+			var order = 1,
+				subscription,
+				topic = "/priority/async";
+			
+			subscription = $.subscribe( topic, function() {
+				strictEqual( order, 2, "the initial subscriber has priority default, it is notified 2nd" );
+				order++;
+			});
+			subscription = $.subscribe( topic, function() {
+				strictEqual( order, 4, "this subscriber has priority 15; it is notified 4th");
+				order++;
+			}, 15 );
+			subscription = $.subscribe( topic, function() {
+				strictEqual( order, 3, "this subscriber has priority default; it is notified 3rd after the initial subscriber as its timestamp is later" );
+				order++;
+			});
+			subscription = $.subscribe( topic, function() {
+				strictEqual( order, 1, "this subscriber greatest priority since it is the lowest number" );
+				order++;
+			}, 1 );
+			subscription = $.subscribe( topic, {}, function() {
+				strictEqual( order, 5, "this subscriber is dead last because it has a high priority number" );
+				order++;
+			}, 15 );
+			
+			var publication = $.publish(topic);
+			start();
+		}, 10); 
+	});
+	*/
 });
