@@ -26,6 +26,15 @@ beforeEach(function() {
 				}
 			}
 			return result;
+		},
+		toBeOk : function(bool, message) {
+			if (bool === true) {
+				$.debug(message);
+				return bool;
+			} else if (bool === false) {
+				$.error(message);
+				return !bool;
+			}
 		}
 	});
 });

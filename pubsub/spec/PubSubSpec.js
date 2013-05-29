@@ -205,7 +205,6 @@ describe("jquery.pubsub", function() {
 			expect(notification.publishTopic).toBe(topic);
 			expect(notification.context).toBe(context);
 			expect(notification.timestamp !== null).toBe(true);
-			expect(publication.immediateExceptions).toBe(true);
 		});
 		it("should create them with just data", function() {
 			publication = PubSub.createPublication(topic, { data : data });
@@ -583,20 +582,36 @@ describe("jquery.pubsub", function() {
 					priority : 100
 				},
 				publishOptions : {
-					progress : function() {
-						var msg = "begin notifications w/o data";
+					progress : function(notification) {
+						var data   = notification.data;
+						var topic  = notification.currentTopic;
+						var origin = notification.publishTopic;
+						
+						var msg = "begin notifications w/o data on: " + origin;
 						$.info(msg);
 					},
-					done: function() {
-						var msg = "successful notifications w/o data";
+					done: function(notification) {
+						var data   = notification.data;
+						var topic  = notification.currentTopic;
+						var origin = notification.publishTopic;
+						
+						var msg = "successful notifications w/o data on: " + origin;
 						$.info(msg);
 					},
-					fail: function() {
-						var msg = "failed notifications w/o data";
+					fail: function(notification) {
+						var data   = notification.data;
+						var topic  = notification.currentTopic;
+						var origin = notification.publishTopic;
+						
+						var msg = "failed notifications w/o data on: " + origin;
 						$.error(msg);
 					},
-					always : function() {
-						var msg = "completed notifications w/o data";
+					always : function(notification) {
+						var data   = notification.data;
+						var topic  = notification.currentTopic;
+						var origin = notification.publishTopic;
+						
+						var msg = "completed notifications w/o data on: " + origin;
 						$.info(msg);
 					}
 				}
@@ -699,10 +714,681 @@ describe("jquery.pubsub", function() {
 				expect(err.message).toBe("You must provide an object for a context.");
 			}
 			$.publishSync(fixture.topic);
+			
+			expect(fixture.defaultSubscriber.notify).toHaveBeenCalled();
+			expect(fixture.contextualSubscriber.notify).toHaveBeenCalled();
 		});
 		it("should have context from publisher", function() {
+			spyOn(fixture.pubSubscriber, 'notify').andCallThrough();
 			fixture.pubSubscriber.subscription = $.subscribe(fixture.topic, fixture.pubSubscriber.notify);
 			$.publishSync(fixture.topic, { context : fixture.contexts.publisher });
+			
+			expect(fixture.pubSubscriber.notify).toHaveBeenCalled();
 		});
 	});
+	
+	describe("when pushing data during publish", function() {
+		var PubSub, fixture, order;
+		
+		beforeEach(function() {
+			PubSub = TestUtil.resetPubSub();
+			fixture = {
+				topic : "/data/push",
+				first : {
+					notify : function(notification) {
+						var data = notification.data;
+						expect( data.string ).toBe("hello")
+						$.debug( "string passed to first.notify" );
+						expect( data.number).toBe(5);
+						$.debug("number passed to first.notify" );
+						var expected = {
+								foo: "bar",
+								baz: "qux"
+						};
+						expect(_.isEqual(data.object, expected)).toBe(true);
+						$.debug("object passed to first.notify" );
+						$.debug("first.notify mutating data")
+						data.string = "goodbye";
+						data.object.baz = "quux";
+					}
+				},
+				second : {
+					notify : function(notification) {
+						var data = notification.data;
+						expect( data.string ).toBe("goodbye");
+						$.debug( "string changed on reception of data by second.notify" );
+						expect( data.number ).toBe(5);
+						$.debug("number changed on reception of data by second.notify" );
+						var expected = {
+								foo: "bar",
+								baz: "quux"
+						};
+						expect(_.isEqual(data.object, expected)).toBe(true);
+						$.debug("object changed on reception of data by second.notify" );
+					}
+				},
+				publishOptions : {
+					data : {
+						string: "hello",
+						number: 5,
+						object: {
+							foo: "bar",
+							baz: "qux"
+						}
+					},
+					progress : function(notification) {
+						var data   = notification.data;
+						var topic  = notification.currentTopic;
+						var origin = notification.publishTopic;
+						
+						var msg = "begin notifications w/data on: " + origin;
+						$.info(msg);
+					},
+					done: function(notification) {
+						var data   = notification.data;
+						var topic  = notification.currentTopic;
+						var origin = notification.publishTopic;
+						
+						var msg = "successful notifications w/data on: " + origin;
+						$.info(msg);
+					},
+					fail: function(notification) {
+						var data   = notification.data;
+						var topic  = notification.currentTopic;
+						var origin = notification.publishTopic;
+						
+						var msg = "failed notifications w/data on: " + origin;
+						$.error(msg);
+					},
+					always : function(notification) {
+						var data   = notification.data;
+						var topic  = notification.currentTopic;
+						var origin = notification.publishTopic;
+						
+						var msg = "completed notifications w/data on: " + origin;
+						$.info(msg);
+						var expected = {
+								foo: "bar",
+								baz: "quux"
+						};
+						var obj = fixture.publishOptions.data.object;
+						expect(_.isEqual(obj, expected)).toBe(true);
+						$.info("object updated after notifications w/data on: " + origin);
+					}
+				}
+			};
+			spyOn(fixture.first,  'notify').andCallThrough();
+			spyOn(fixture.second, 'notify').andCallThrough();
+			
+			spyOn(fixture.publishOptions, 'progress').andCallThrough();
+			spyOn(fixture.publishOptions, 'done').andCallThrough();
+			spyOn(fixture.publishOptions, 'fail').andCallThrough();
+			spyOn(fixture.publishOptions, 'always').andCallThrough();
+			
+			$.subscribe(fixture.topic, fixture.first.notify);
+			$.subscribe(fixture.topic, fixture.second.notify);
+		});
+		
+		it("should publish data synchronously to 1st subscriber which mutates the data that then gets passed to 2nd subscriber", function() {
+			$.publishSync(fixture.topic, fixture.publishOptions);
+			
+			expect(fixture.first.notify).toHaveBeenCalled();
+			expect(fixture.second.notify).toHaveBeenCalled();
+			
+			expect(fixture.publishOptions.progress).toHaveBeenCalled();
+			expect(fixture.publishOptions.done).toHaveBeenCalled();
+			expect(fixture.publishOptions.fail).not.toHaveBeenCalled();
+			expect(fixture.publishOptions.always).toHaveBeenCalled();
+		});
+		it("should publish data asynchronously to 1st subscriber which mutates the data that then gets passed to 2nd subscriber", function() {
+			
+			waitsFor(function() {
+				var publication = $.publish( fixture.topic, fixture.publishOptions );
+				return publication !== null;
+			}, "publication should be sent asynchronously", 10);
+			
+			_.delay(function() {
+				runs(function() {
+					expect(fixture.first.notify).toHaveBeenCalled();
+					expect(fixture.second.notify).toHaveBeenCalled();
+					
+					expect(fixture.publishOptions.progress).toHaveBeenCalled();
+					expect(fixture.publishOptions.done).toHaveBeenCalled();
+					expect(fixture.publishOptions.fail).not.toHaveBeenCalled();
+					expect(fixture.publishOptions.always).toHaveBeenCalled();
+				});
+			}, 20);
+		});
+	});
+	
+	describe("when pushing data to 2 different topics", function() {
+		var PubSub, fixture, order;
+		
+		beforeEach(function() {
+			PubSub = TestUtil.resetPubSub();
+			fixture = {
+				topic : "/data/push",
+				notify : function(notification) {
+					var data   = notification.data;
+					var topic  = notification.currentTopic;
+					var origin = notification.publishTopic;
+					
+					var msg = "async notification of topic: " + topic + " from " + origin;
+					$.debug(msg);
+					// ok( true, msg);
+					if (fixture.first.topic === origin ) {
+						var expectedData = fixture.first.data;
+						expect(data.object.id).toBe(expectedData.object.id);
+						$.debug("data originating from " + origin + " should have same id");
+						expect(data.number).toBe(expectedData.number);
+						$.debug("data originating from " + origin + " should have same number");
+						data.number++;
+					} else if (fixture.second.topic === origin ) {
+						var expectedData = fixture.second.data;
+						expect(data.object.id).toBe(expectedData.object.id);
+						$.debug("data originating from " + origin + " should have same id");
+						expect(data.number).toBe(expectedData.number);
+						$.debug("data originating from " + origin + " should have same number");
+						data.number++;
+					}
+				},
+				first : {
+					topic : "/data/push/1",
+					notify : function(notification) {
+						var data   = notification.data;
+						var topic  = notification.currentTopic;
+						var origin = notification.publishTopic;
+						
+						var msg = "1st notification of topic: " + topic;
+						$.debug(msg);
+						expect(data.string).toBe("hello");
+						$.debug("string passed during notification of " + topic );
+						expect(data.number).toBe(fixture.first.data.number);
+						$.debug("number passed during notification of " + topic );
+						expect(_.isEqual(data.object,fixture.first.data.object)).toBe(true);
+						$.debug("object passed during notification of " + topic );
+						data.string = "goodbye";
+						data.object.baz = "quux";
+						
+					},
+					data : {
+						string: "hello",
+						number : 100,
+						object : {
+							id:  1,
+							foo: "bar",
+							baz: "qux"
+						}
+					}
+				},
+				second : {
+					topic : "/data/push/2",
+					notify : function(notification) {
+						var data   = notification.data;
+						var topic  = notification.currentTopic;
+						var origin = notification.publishTopic;
+						
+						var msg = "2nd notification of topic: " + topic;
+						$.debug(msg);
+						expect(data.string).toBe("goodbye");
+						$.debug("string changed during async notification of " + topic );
+						expect(data.number).toBe(fixture.second.data.number);
+						$.debug("number unchanged during async notification of " + topic );
+						expect(_.isEqual(data.object,fixture.two.data.object)).toBe(true);
+						$.debug("object passed during notification of  " + topic );
+						data.string = "guten tag";
+						data.object.baz = "quux 2";
+						
+					},
+					data : {
+						string: "hello",
+						number : 200,
+						object : {
+							id:  2,
+							foo: "bar2",
+							baz: "qux2"
+						}
+					}
+				},
+				publishOptions: {
+					progress : function(notification) {
+						var data   = notification.data;
+						var topic  = notification.currentTopic;
+						var origin = notification.publishTopic;
+						
+						var msg = "begin notifications with data of " + origin;
+						$.info(msg);
+					},
+					done: function(notification) {
+						var data   = notification.data;
+						var topic  = notification.currentTopic;
+						var origin = notification.publishTopic;
+
+						var msg = "successful notifications with data of " + origin;
+						$.info(msg);
+					},
+					fail: function(notification) {
+						var data   = notification.data;
+						var topic  = notification.currentTopic;
+						var origin = notification.publishTopic;
+
+						var msg = "failed notifications with data of " + origin;
+						$.error(msg);
+					},
+					always : function(notification) {
+						var data   = notification.data;
+						var topic  = notification.currentTopic;
+						var origin = notification.publishTopic;
+						var msg = "completed notifications with data of " + origin;
+						$.info(msg);
+						var data = fixture.first.data;
+						expect(data.object.baz).toBe("quux");
+						$.info("object updated after notification for " + origin);
+						expect(data.string).toBe("goodbye");
+						$.info("string updated after notification for " + origin);
+					}
+				}
+			};
+			
+			spyOn(fixture,  'notify').andCallThrough();
+			spyOn(fixture.first,  'notify').andCallThrough();
+			spyOn(fixture.second, 'notify').andCallThrough();
+			
+			fixture.subscription = $.subscribe(fixture.topic, fixture.notify);
+			fixture.first.subscription = $.subscribe(fixture.first.topic, fixture.first.notify);
+			fixture.second.subscription = $.subscribe(fixture.second.topic, fixture.second.notify);
+		
+			spyOn(fixture.publishOptions, 'progress').andCallThrough();
+			spyOn(fixture.publishOptions, 'done').andCallThrough();
+			spyOn(fixture.publishOptions, 'fail').andCallThrough();
+			spyOn(fixture.publishOptions, 'always').andCallThrough();
+		});
+		xit("should publish data synchronously to each subscriber independently", function() {
+			var topic = fixture.first.topic;
+			
+			var options = $.extend({}, fixture.first.data, fixture.publishOptions);
+			fixture.first.publication = $.publishSync( topic, options);
+			
+			expect(fixture.first.notify).toHaveBeenCalled();
+			expect(fixture.notify).toHaveBeenCalled();
+			expect(fixture.second.notify).not.toHaveBeenCalled();
+			
+			expect(fixture.publishOptions.progress).toHaveBeenCalled();
+			expect(fixture.publishOptions.done).toHaveBeenCalled();
+			expect(fixture.publishOptions.fail).not.toHaveBeenCalled();
+			expect(fixture.publishOptions.always).toHaveBeenCalled();
+			
+			topic = fixture.second.topic;
+			options = $.extend({}, fixture.second.data, fixture.publishOptions);
+			fixture.second.publication = $.publishSync( topic, options);
+			
+			expect(fixture.first.notify).not.toHaveBeenCalled();
+			expect(fixture.notify).toHaveBeenCalled();
+			expect(fixture.second.notify).toHaveBeenCalled();
+			
+			expect(fixture.publishOptions.progress).toHaveBeenCalled();
+			expect(fixture.publishOptions.done).toHaveBeenCalled();
+			expect(fixture.publishOptions.fail).not.toHaveBeenCalled();
+			expect(fixture.publishOptions.always).toHaveBeenCalled();
+		});
+	});
+	
+	describe("when continuing notifications", function() {
+		var PubSub, fixture;
+		
+		beforeEach(function() {
+			PubSub = TestUtil.resetPubSub();
+			fixture = {
+				topic : "/continuation/sync",
+				one : {
+					notify : function(notification) {
+						var data   = notification.data;
+						var topic  = notification.currentTopic;
+						var origin = notification.publishTopic;
+						
+						var msg = "1st subscriber called for publication to: " + origin;
+						expect(this).toBeOk(true, msg);
+					}
+				},
+				two : {
+					notify : function(notification) {
+						var data   = notification.data;
+						var topic  = notification.currentTopic;
+						var origin = notification.publishTopic;
+						
+						var msg = "2nd subscriber called for publication to: " + origin;
+						expect(this).toBeOk(true, msg);
+						return true;
+					}
+				},
+				noSubscriberOptions : {
+					progress : function(notification) {
+						var origin = notification.publishTopic;
+						var msg = "begin notifications w/o subscribers of " + origin;
+						expect(this).toBeOk(true, msg);
+					},
+					fail : function(notification) {
+						var origin = notification.publishTopic;
+						var msg = "failed notifications w/o subscribers of " + origin;
+						expect(this).toBeOk(true, msg);
+					},
+					done : function(notification) {
+						var origin = notification.publishTopic;
+						var msg = "done notifications w/o subscribers of " + origin;
+						expect(this).toBeOk(false, msg);
+					},
+					always : function(notification) {
+						var origin = notification.publishTopic;
+						var msg = "completed notifications w/o subscribers of " + origin;
+						expect(this).toBeOk(true, msg);
+					}
+				},
+				subscriberOptions : {
+					progress : function(notification) {
+						var origin = notification.publishTopic;
+						var msg = "begin notification of: " + origin;
+						$.info(msg);
+					},
+					done: function(notification) {
+						var origin = notification.publishTopic;
+						var msg = "successful notification of: " + origin;
+						$.info(msg);
+					},
+					fail: function(notification) {
+						var origin = notification.publishTopic;
+						var msg = "failed notification of: " + origin;
+						$.error(msg);
+					},
+					always : function(notification) {
+						var origin = notification.publishTopic;
+						var msg = "completed notification of: " + origin;
+						$.info(msg);
+					}
+				}
+			};
+		});
+		
+		it("should invoke fail callback for synchronous publish when there are no subscribers", function() {
+			spyOn(fixture.noSubscriberOptions, 'progress').andCallThrough();
+			spyOn(fixture.noSubscriberOptions, 'fail').andCallThrough();
+			spyOn(fixture.noSubscriberOptions, 'done').andCallThrough();
+			spyOn(fixture.noSubscriberOptions, 'always').andCallThrough();
+			
+			var publication = $.publishSync( fixture.topic, fixture.noSubscriberOptions);
+			expect( publication !== null ).toBe(true);
+			expect( publication.state() ).toBe("rejected");
+			
+			expect(fixture.noSubscriberOptions.progress).toHaveBeenCalled();
+			expect(fixture.noSubscriberOptions.fail).toHaveBeenCalled();
+			expect(fixture.noSubscriberOptions.done).not.toHaveBeenCalled();
+			expect(fixture.noSubscriberOptions.always).toHaveBeenCalled();
+		})
+		
+		it("should invoke fail callback for asynchronous publish when there are no subscribers", function() {
+			fixture.topic = "/continuation/async";
+			spyOn(fixture.noSubscriberOptions, 'progress').andCallThrough();
+			spyOn(fixture.noSubscriberOptions, 'fail').andCallThrough();
+			spyOn(fixture.noSubscriberOptions, 'done').andCallThrough();
+			spyOn(fixture.noSubscriberOptions, 'always').andCallThrough();
+			
+			waitsFor(function() {
+				var publication = $.publish( fixture.topic, fixture.noSubscriberOptions );
+				return publication !== null;
+			}, "publication should be sent asynchronously", 10);
+			
+			_.delay(function() {
+				runs(function() {
+					expect( publication !== null ).toBe(true);
+					expect( publication.state() ).toBe("rejected");
+					
+					expect(fixture.noSubscriberOptions.progress).toHaveBeenCalled();
+					expect(fixture.noSubscriberOptions.fail).toHaveBeenCalled();
+					expect(fixture.noSubscriberOptions.done).not.toHaveBeenCalled();
+					expect(fixture.noSubscriberOptions.always).toHaveBeenCalled();
+				});
+			}, 20);
+		})
+		
+		it("should continue for synchronous publish when there are subscribers", function() {
+			spyOn(fixture.one, 'notify').andCallThrough();
+			spyOn(fixture.two, 'notify').andCallThrough();
+			
+			fixture.one.subscription = $.subscribe(fixture.topic, fixture.one.notify);
+			fixture.two.subscription = $.subscribe(fixture.topic, fixture.two.notify);
+			
+			spyOn(fixture.subscriberOptions, 'progress').andCallThrough();
+			spyOn(fixture.subscriberOptions, 'done').andCallThrough();
+			spyOn(fixture.subscriberOptions, 'fail').andCallThrough();
+			spyOn(fixture.subscriberOptions, 'always').andCallThrough();
+			
+			var publication = $.publishSync( fixture.topic, fixture.subscriberOptions);
+			
+			expect(publication !== null).toBe(true);
+			expect(publication.state()).toBe("resolved");
+			
+			expect(fixture.one.notify).toHaveBeenCalled();
+			expect(fixture.two.notify).toHaveBeenCalled();
+			
+			expect(fixture.subscriberOptions.progress).toHaveBeenCalled();
+			expect(fixture.subscriberOptions.done).toHaveBeenCalled();
+			expect(fixture.subscriberOptions.fail).not.toHaveBeenCalled();
+			expect(fixture.subscriberOptions.always).toHaveBeenCalled();
+		});
+		
+		it("should continue for asynchronous publish when there are subscribers", function() {
+			fixture.topic = "/continuation/async";
+			
+			spyOn(fixture.one, 'notify').andCallThrough();
+			spyOn(fixture.two, 'notify').andCallThrough();
+			
+			fixture.one.subscription = $.subscribe(fixture.topic, fixture.one.notify);
+			fixture.two.subscription = $.subscribe(fixture.topic, fixture.two.notify);
+			
+			spyOn(fixture.subscriberOptions, 'progress').andCallThrough();
+			spyOn(fixture.subscriberOptions, 'done').andCallThrough();
+			spyOn(fixture.subscriberOptions, 'fail').andCallThrough();
+			spyOn(fixture.subscriberOptions, 'always').andCallThrough();
+			
+			waitsFor(function() {
+				var publication = $.publish( fixture.topic, fixture.noSubscriberOptions );
+				return publication !== null;
+			}, "publication should be sent asynchronously", 10);
+			
+			_.delay(function() {
+				runs(function() {
+					expect(publication !== null).toBe(true);
+					expect(publication.state()).toBe("resolved");
+					
+					expect(fixture.one.notify).toHaveBeenCalled();
+					expect(fixture.two.notify).toHaveBeenCalled();
+					
+					expect(fixture.subscriberOptions.progress).toHaveBeenCalled();
+					expect(fixture.subscriberOptions.done).toHaveBeenCalled();
+					expect(fixture.subscriberOptions.fail).not.toHaveBeenCalled();
+					expect(fixture.subscriberOptions.always).toHaveBeenCalled();
+				});
+			}, 20);
+		});
+	});
+	
+	describe("when discontinuing notifications", function() {
+		var PubSub, fixture;
+		
+		beforeEach(function() {
+			PubSub = TestUtil.resetPubSub();
+			fixture = {
+				topic : "/discontinuation/sync",
+				one: {
+					notify : function(notification) {
+						var origin = notification.publishTopic;
+						var msg = "continued after returning true for pub on: " + origin;
+						expect(this).toBeOk( true, msg );
+						return false;
+					}
+				},
+				two: {
+					notify : function(notification) {
+						var origin = notification.publishTopic;
+						var msg = "continued after returning false or throwing error for pub on: " + origin;
+						expect(this).toBeOk( false, msg );
+						return false;
+					}
+				},
+				three: {
+					notify : function(notification) {
+						var origin = notification.publishTopic;
+						var msg = "continued after returning true for pub on: " + origin;
+						expect(this).toBeOk( true, msg );
+						throw new Error("stop publication");
+					}
+				},
+				publishOptions : {
+					progress : function(notification) {
+						var origin = notification.publishTopic;
+						var msg = "begun notifications on: " + origin;
+						expect(this).toBeOk(true,msg);
+					},
+					done: function(notification) {
+						var origin = notification.publishTopic;
+						var msg = "successful notifications on: " + origin;
+						expect(this).toBeOk(false,msg);
+					},
+					fail: function(notification) {
+						var origin = notification.publishTopic;
+						var msg = "failed notifications on: " + origin;
+						expect(this).toBeOk(true,msg);
+					},
+					always : function(notification) {
+						var origin = notification.publishTopic;
+						var msg = "completed notifications on: " + origin;
+						expect(this).toBeOk(true,msg);
+					}
+				}
+			}
+		});
+		
+		it("should discontinue sync publication when 1 subscriber returns false", function() {
+			spyOn(fixture.one, 'notify').andCallThrough();
+			spyOn(fixture.two, 'notify').andCallThrough();
+			
+			spyOn(fixture.publishOptions, 'progress').andCallThrough();
+			spyOn(fixture.publishOptions, 'done').andCallThrough();
+			spyOn(fixture.publishOptions, 'fail').andCallThrough();
+			spyOn(fixture.publishOptions, 'always').andCallThrough();
+			
+			
+			$.subscribe( fixture.topic, fixture.one.notify);
+			$.subscribe( fixture.topic, fixture.two.notify);
+			var publication = $.publishSync( fixture.topic, fixture.publishOptions);
+			
+			expect(publication !== null).toBe(true);
+			expect(publication.state()).toBe("rejected");
+			
+			expect(fixture.one.notify).toHaveBeenCalled();
+			expect(fixture.two.notify).not.toHaveBeenCalled();
+			
+			expect(fixture.publishOptions.progress).toHaveBeenCalled();
+			expect(fixture.publishOptions.done).not.toHaveBeenCalled();
+			expect(fixture.publishOptions.fail).toHaveBeenCalled();
+			expect(fixture.publishOptions.always).toHaveBeenCalled();
+		});
+		
+		it("should discontinue sync publication when 1 subscriber throws an exception", function() {
+			spyOn(fixture.three, 'notify').andCallThrough();
+			spyOn(fixture.two, 'notify').andCallThrough();
+			
+			spyOn(fixture.publishOptions, 'progress').andCallThrough();
+			spyOn(fixture.publishOptions, 'done').andCallThrough();
+			spyOn(fixture.publishOptions, 'fail').andCallThrough();
+			spyOn(fixture.publishOptions, 'always').andCallThrough();
+			
+			
+			$.subscribe( fixture.topic, fixture.three.notify);
+			$.subscribe( fixture.topic, fixture.two.notify);
+			var publication = $.publishSync( fixture.topic, fixture.publishOptions);
+			
+			expect(publication !== null).toBe(true);
+			expect(publication.state()).toBe("rejected");
+			
+			expect(fixture.three.notify).toHaveBeenCalled();
+			expect(fixture.two.notify).not.toHaveBeenCalled();
+			
+			expect(fixture.publishOptions.progress).toHaveBeenCalled();
+			expect(fixture.publishOptions.done).not.toHaveBeenCalled();
+			expect(fixture.publishOptions.fail).toHaveBeenCalled();
+			expect(fixture.publishOptions.always).toHaveBeenCalled();
+		});
+		
+		it("should discontinue async publication when 1 subscriber returns false", function() {
+			fixture.topic = "/discontinuation/async";
+			spyOn(fixture.one, 'notify').andCallThrough();
+			spyOn(fixture.two, 'notify').andCallThrough();
+			
+			spyOn(fixture.publishOptions, 'progress').andCallThrough();
+			spyOn(fixture.publishOptions, 'done').andCallThrough();
+			spyOn(fixture.publishOptions, 'fail').andCallThrough();
+			spyOn(fixture.publishOptions, 'always').andCallThrough();
+			
+			
+			$.subscribe( fixture.topic, fixture.one.notify);
+			$.subscribe( fixture.topic, fixture.two.notify);
+			
+			waitsFor(function() {
+				var publication = $.publish( fixture.topic, fixture.publishOptions);
+				return publication !== null;
+			}, "publication should be sent asynchronously", 10);
+			
+			_.delay(function() {
+				runs(function() {
+					expect(publication !== null).toBe(true);
+					expect(publication.state()).toBe("rejected");
+					
+					expect(fixture.one.notify).toHaveBeenCalled();
+					expect(fixture.two.notify).not.toHaveBeenCalled();
+					
+					expect(fixture.publishOptions.progress).toHaveBeenCalled();
+					expect(fixture.publishOptions.done).not.toHaveBeenCalled();
+					expect(fixture.publishOptions.fail).toHaveBeenCalled();
+					expect(fixture.publishOptions.always).toHaveBeenCalled();
+				});
+			}, 20);
+			
+		});
+		
+		it("should discontinue async publication when 1 subscriber throws an exception", function() {
+			fixture.topic = "/discontinuation/async";
+			spyOn(fixture.three, 'notify').andCallThrough();
+			spyOn(fixture.two, 'notify').andCallThrough();
+			
+			spyOn(fixture.publishOptions, 'progress').andCallThrough();
+			spyOn(fixture.publishOptions, 'done').andCallThrough();
+			spyOn(fixture.publishOptions, 'fail').andCallThrough();
+			spyOn(fixture.publishOptions, 'always').andCallThrough();
+			
+			$.subscribe( fixture.topic, fixture.three.notify);
+			$.subscribe( fixture.topic, fixture.two.notify);
+			
+			waitsFor(function() {
+				var publication = $.publish( fixture.topic, fixture.publishOptions);
+				return publication !== null;
+			}, "publication should be sent asynchronously", 10);
+			
+			
+			_.delay(function() {
+				runs(function() {
+					expect(publication !== null).toBe(true);
+					expect(publication.state()).toBe("rejected");
+					
+					expect(fixture.three.notify).toHaveBeenCalled();
+					expect(fixture.two.notify).not.toHaveBeenCalled();
+					
+					expect(fixture.publishOptions.progress).toHaveBeenCalled();
+					expect(fixture.publishOptions.done).not.toHaveBeenCalled();
+					expect(fixture.publishOptions.fail).toHaveBeenCalled();
+					expect(fixture.publishOptions.always).toHaveBeenCalled();
+				});
+			}, 20);
+		});
+	});
+	
 });
