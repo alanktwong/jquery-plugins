@@ -3,7 +3,7 @@ describe("jquery.log4jq", function() {
 	var testTarget = {
 		name: "testTarget",
 		version: "0.0.1",
-		subscribed: true,
+		enabled: true,
 		/*
 		 * Publishes an entry as formatted string onto a topic
 		 * 
@@ -32,15 +32,15 @@ describe("jquery.log4jq", function() {
 			targets : [
 				{
 					name: "alert",
-					subscribed: false
+					enabled: false
 				},
 				{
 					name: "console",
-					subscribed: true
+					enabled: true
 				},
 				{
 					name: "divInsert",
-					subscribed: true,
+					enabled: true,
 					$dom : $("div#console-log")
 				},
 				testTarget
@@ -77,10 +77,10 @@ describe("jquery.log4jq", function() {
 			expect(activeSubscribers.length).toBe(3);
 		});
 		it("should set up 3 active log targets in order", function() {
-			expect(alertTarget.subscribed).toBe(false);
-			expect(consoleTarget.subscribed).toBe(true);
-			expect(divTarget.subscribed).toBe(true);
-			expect(customTarget.subscribed).toBe(true);
+			expect(alertTarget.enabled).toBe(false);
+			expect(consoleTarget.enabled).toBe(true);
+			expect(divTarget.enabled).toBe(true);
+			expect(customTarget.enabled).toBe(true);
 			expect(activeSubscribers[0]).toBe(consoleTarget);
 			expect(activeSubscribers[1]).toBe(divTarget);
 			expect(activeSubscribers[2]).toBe(customTarget);

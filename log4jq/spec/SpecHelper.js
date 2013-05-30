@@ -14,7 +14,7 @@ beforeEach(function() {
 			var targets = logger.subscribers();
 			
 			if (logger && isEnabled === true && targets.length === 3) {
-				if (testTarget.subscribed === true && alertTarget.subscribed === false && consoleTarget.subscribed === true && divTarget.subscribed === true) {
+				if (testTarget.enabled === true && alertTarget.enabled === false && consoleTarget.enabled === true && divTarget.enabled === true) {
 					result = actualLevel === level;
 				}
 			};

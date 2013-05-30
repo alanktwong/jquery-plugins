@@ -109,7 +109,7 @@
 		*/
 		targetDefaults: {
 			name: "",
-			subscribed: false,
+			enabled: false,
 			log: function(entry) {
 				$.noop();
 			},
@@ -340,10 +340,10 @@
 			configure : function(cfg, self) {
 				var  _priority = cfg.priority;
 				self.priority = _priority;
-				if (cfg.subscribed !== 'undefined' && $.type(cfg.subscribed) === 'boolean') {
-					self.subscribed = cfg.subscribed;
+				if (cfg.enabled !== 'undefined' && $.type(cfg.enabled) === 'boolean') {
+					self.enabled = cfg.enabled;
 				} else {
-					self.subscribed = false;
+					self.enabled = false;
 				}
 				var _log4jq = log4jq;
 				_log4jq.targets.alert = self;
@@ -365,9 +365,8 @@
 				if (window.console) {
 					switch(entry.level) {
 						case log4jq.levels.trace:
-							if (console.trace && console.log) {
+							if (console.log) {
 								console.log(msg);
-								console.trace(msg);
 							}
 							break;
 						case log4jq.levels.info:
@@ -383,6 +382,9 @@
 						case log4jq.levels.error:
 							if (console.error) {
 								console.error(msg);
+								if (console.trace) {
+									console.trace(msg);
+								}
 							}
 							break;
 						default:
@@ -395,9 +397,8 @@
 					var firebugConsole = window.firebug.d.console;
 					switch(entry.level) {
 						case log4jq.levels.trace:
-							if (firebugConsole.trace && firebugConsole.log) {
+							if (firebugConsole.log) {
 								firebugConsole.log(msg);
-								firebugConsole.trace(msg);
 							}
 							break;
 						case log4jq.levels.info:
@@ -411,8 +412,11 @@
 							}
 							break;
 						case log4jq.levels.error:
-							if (firebugConsole) {
+							if (firebugConsole.error) {
 								firebugConsole.error(msg);
+								if (firebugConsole.trace) {
+									firebugConsole.trace(msg);
+								}
 							}
 							break;
 						default:
@@ -425,10 +429,10 @@
 			configure : function(cfg, self) {
 				var  _priority = cfg.priority;
 				self.priority = _priority;
-				if (cfg.subscribed !== 'undefined' && $.type(cfg.subscribed) === 'boolean') {
-					self.subscribed = cfg.subscribed;
+				if (cfg.enabled !== 'undefined' && $.type(cfg.enabled) === 'boolean') {
+					self.enabled = cfg.enabled;
 				} else {
-					self.subscribed = false;
+					self.enabled = false;
 				}
 				var _log4jq = log4jq;
 				_log4jq.targets.console = self;
@@ -453,10 +457,10 @@
 			configure : function(cfg, self) {
 				var  _priority = cfg.priority;
 				self.priority = _priority;
-				if (cfg.subscribed !== 'undefined' && $.type(cfg.subscribed) === 'boolean') {
-					self.subscribed = cfg.subscribed;
+				if (cfg.enabled !== 'undefined' && $.type(cfg.enabled) === 'boolean') {
+					self.enabled = cfg.enabled;
 				} else {
-					self.subscribed = false;
+					self.enabled = false;
 				}
 				var _log4jq = log4jq;
 				
@@ -475,15 +479,15 @@
 		targets : [
 			{
 				name : "console",
-				subscribed: true
+				enabled: true
 			},
 			{
 				name : "alert",
-				subscribed: false
+				enabled: false
 			},
 			{
 				name : "divInsert",
-				subscribed: false
+				enabled: false
 			}
 		]
 	};
@@ -545,7 +549,7 @@
 			var active = [];
 			var _log4jq = log4jq;
 			$.each(_log4jq.targets, function(key,target) {
-				if (target && target.subscribed === true) {
+				if (target && target.enabled === true) {
 					active.push(target);
 				}
 			});
@@ -609,10 +613,10 @@
 					target.configure = function(cfg, self) {
 						var  _priority = cfg.priority;
 						self.priority = _priority;
-						if (cfg.subscribed !== 'undefined' && $.type(cfg.subscribed) === 'boolean') {
-							self.subscribed = cfg.subscribed;
+						if (cfg.enabled !== 'undefined' && $.type(cfg.enabled) === 'boolean') {
+							self.enabled = cfg.enabled;
 						} else {
-							self.subscribed = false;
+							self.enabled = false;
 						}
 						var _log4jq = log4jq;
 

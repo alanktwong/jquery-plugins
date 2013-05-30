@@ -17,7 +17,7 @@
 		var customTarget = {
 			name: "custom",
 			version: "0.0.1",
-			subscribed: true,
+			enabled: true,
 			$dom: $("div#console-log"),
 			/*
 			 * Appends an entry as formatted string into DOM
@@ -38,15 +38,15 @@
 			targets : [
 				{
 					name: "alert",
-					subscribed: false
+					enabled: false
 				},
 				{
 					name: "console",
-					subscribed: true
+					enabled: true
 				},
 				{
 					name: "divInsert",
-					subscribed: false
+					enabled: false
 				},
 				customTarget
 			]
