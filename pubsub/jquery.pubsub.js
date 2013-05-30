@@ -291,6 +291,9 @@
 			}
 			return found;
 		},
+		/*
+		 * Does not flatten list of subscriptions in the ancestory of the topic
+		 */
 		getSubscriptions : function(topic /* string */) {
 			// var _self = PubSub;
 			if (!_self.validateTopicName(topic)) {

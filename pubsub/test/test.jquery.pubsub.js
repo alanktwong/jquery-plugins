@@ -20,7 +20,7 @@ var TestUtil = {
 			targets : [
 				{
 					name: "console",
-					subscribed: true
+					enabled: true
 				}
 			]
 		});

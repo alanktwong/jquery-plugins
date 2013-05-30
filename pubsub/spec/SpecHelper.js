@@ -34,6 +34,9 @@ beforeEach(function() {
 			} else if (bool === false) {
 				$.error(message);
 				return !bool;
+			} else {
+				$.info(message);
+				return true;
 			}
 		}
 	});

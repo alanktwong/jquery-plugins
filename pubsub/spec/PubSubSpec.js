@@ -1,50 +1,33 @@
 describe("jquery.pubsub", function() {
 
 	var TestUtil = {
-			getPubSub : function() {
-				if ($.store) {
-					return $.store("PubSub");
-				} else if (window && window.document) {
-					var $document = $(document);
-					return $document.data('PubSub');
-				}
-			},
-			resetPubSub : function() {
-				var PubSub = TestUtil.getPubSub();
-				PubSub.reset();
-				TestUtil.configureLogger();
-				return PubSub;
-			},
-			configureLogger : function() {
-				var log4jq = $.configureLog4jq({
-					enabled: true,
-					level : "debug",
-					targets : [
-						{
-							name: "console",
-							subscribed: true
-						}
-					]
-				});
-				return log4jq;
-			},
-			subscribeApp: function(app, PubSub) {
-				var classSubscription = $.subscribe(app.padma.leia.topic, app.padma.leia.notify);
-				var moduleSubscription = $.subscribe(app.padma.topic, app.padma.notify);
-				var appSubscription = $.subscribe(app.topic, app.notify);
-				
-				$.subscribe(app.anakin.topic, app.anakin.notify);
-				$.subscribe(app.padma.luke.topic, app.padma.luke.notify);
-				
-				equal(1, PubSub.getSubscriptions(app.topic).length, "1 subscription should exist for: " + app.topic);
-				equal(1, PubSub.getSubscriptions(app.padma.topic).length, "1 subscription should exist for: " + app.padma.topic);
-				equal(1, PubSub.getSubscriptions(app.padma.leia.topic).length, "1 subscription should exist for: " + app.padma.leia.topic);
-				
-				equal(1, PubSub.getSubscriptions(app.anakin.topic).length, "1 subscription should exist for: " + app.anakin.topic);
-				equal(1, PubSub.getSubscriptions(app.padma.luke.topic).length, "1 subscription should exist for: " + app.padma.luke.topic);
-				
-				equal(5, _.keys(PubSub.subscriptions).length, "there should be 5 subscriptions total");
+		getPubSub : function() {
+			if ($.store) {
+				return $.store("PubSub");
+			} else if (window && window.document) {
+				var $document = $(document);
+				return $document.data('PubSub');
 			}
+		},
+		resetPubSub : function() {
+			var PubSub = TestUtil.getPubSub();
+			PubSub.reset();
+			TestUtil.configureLogger();
+			return PubSub;
+		},
+		configureLogger : function() {
+			var log4jq = $.configureLog4jq({
+				enabled: true,
+				level : "debug",
+				targets : [
+					{
+						name: "console",
+						enabled: true
+					}
+				]
+			});
+			return log4jq;
+		}
 	};
 
 	describe("when testing the core internal functionality of the pubsub", function() {
@@ -200,16 +183,16 @@ describe("jquery.pubsub", function() {
 		it("should create them with data and context", function() {
 			publication = PubSub.createPublication(topic ,{ data: data, context: context });
 			notification = publication.notification;
-			expect(notification !== null).toBe(true);
+			expect(notification).not.toBeNull();
 			expect(notification.data).toBe(data);
 			expect(notification.publishTopic).toBe(topic);
 			expect(notification.context).toBe(context);
-			expect(notification.timestamp !== null).toBe(true);
+			expect(notification.timestamp).not.toBeNull();
 		});
 		it("should create them with just data", function() {
 			publication = PubSub.createPublication(topic, { data : data });
 			notification = publication.notification;
-			expect(notification.context === null).toBe(true);
+			expect(notification.context).toBeNull();
 		});
 		it("should not create them with w/o options", function() {
 			try {
@@ -221,8 +204,8 @@ describe("jquery.pubsub", function() {
 		it("should create them with empty options", function() {
 			publication = PubSub.createPublication(topic, {});
 			notification = publication.notification;
-			expect(notification.data === null).toBe(true);
-			expect(notification.context === null).toBe(true);
+			expect(notification.data).toBeNull();
+			expect(notification.context).toBeNull();
 		});
 	});
 	
@@ -245,8 +228,8 @@ describe("jquery.pubsub", function() {
 		
 		it("should create them with topic, callback, priority and context", function() {
 			var subscription = PubSub.createSubscription(topic, callback, priority, context);
-			expect(subscription !== null).toBe(true);
-			expect(subscription.timestamp !== null).toBe(true);
+			expect(subscription).not.toBeNull();
+			expect(subscription.timestamp ).not.toBeNull();
 			expect(_.isEqual(subscription.topics,topics)).toBe(true);
 			expect(subscription.callback).toBe(callback);
 			expect(subscription.priority).toBe(priority);
@@ -254,11 +237,11 @@ describe("jquery.pubsub", function() {
 		});
 		it("should create them with topic, callback and priority", function() {
 			var subscription = PubSub.createSubscription(topic, callback, priority);
-			expect(subscription.context === null).toBe(true);
+			expect(subscription.context ).toBeNull();
 		});
 		it("should create them with topic and callback", function() {
 			var subscription = PubSub.createSubscription(topic, callback);
-			expect(subscription.context === null).toBe(true);
+			expect(subscription.context ).toBeNull();
 			expect(subscription.priority).toBe(10);
 			// but this is not the 'official' way to subscribe
 			expect(PubSub.hasSubscriptions(topic)).toBe(false);
@@ -316,25 +299,30 @@ describe("jquery.pubsub", function() {
 		var PubSub, topic, topics;
 		
 		beforeEach(function() {
-			topic = "/app/module/class";
 			PubSub = TestUtil.resetPubSub();
-			topics = PubSub.createTopics(topic);
 		});
 		
 		it("should subscribe correctly to a topic with just a callback", function() {
 			var count = 0;
-			
+			topic = "/subscribe/topic/callbackAlone";
+			topics = PubSub.createTopics(topic);
 			var callbacks = {
 				first: {
 					notify : function(notification) {
-						$.debug("1st subscriber notified");
+						var data   = notification.data;
+						var topic  = notification.currentTopic;
+						var origin = notification.publishTopic;
+						$.debug("1st subscriber notified on: " + origin);
 						expect(count).toBe(0);
 						count++;
 					}
 				},
 				second: {
 					notify : function(notification) {
-						$.debug("1st subscriber notified");
+						var data   = notification.data;
+						var topic  = notification.currentTopic;
+						var origin = notification.publishTopic;
+						$.debug("2nd subscriber notified on: " + origin);
 						expect(count).toBe(1);
 						count++;
 					}
@@ -362,10 +350,15 @@ describe("jquery.pubsub", function() {
 			expect(callbacks.second.notify).toHaveBeenCalled();
 		});
 		it("should subscribe correctly to a topic with a context", function() {
+			topic = "/subscribe/topic/callbackWithContext";
+			topics = PubSub.createTopics(topic);
 			var callbacks = {
 					first: {
 						notify : function(notification) {
-							$.debug("1st subscriber notified");
+							var data   = notification.data;
+							var topic  = notification.currentTopic;
+							var origin = notification.publishTopic;
+							$.debug("1st subscriber notified on: " + origin);
 							expect(count).toBe(0);
 						},
 						context : {}
@@ -383,10 +376,15 @@ describe("jquery.pubsub", function() {
 		});
 		
 		it("should subscribe correctly to topic with a callback and a priority", function() {
+			topic = "/subscribe/topic/callbackWithPriority";
+			topics = PubSub.createTopics(topic);
 			var callbacks = {
 					first: {
 						notify : function(notification) {
-							$.debug("1st subscriber notified");
+							var data   = notification.data;
+							var topic  = notification.currentTopic;
+							var origin = notification.publishTopic;
+							$.debug("1st subscriber notified on: " + origin);
 							expect(count).toBe(0);
 						},
 						priority : 100
@@ -403,10 +401,15 @@ describe("jquery.pubsub", function() {
 			expect(callbacks.first.notify).toHaveBeenCalled();
 		});
 		it("should subscribe correctly to a topic with a callback, a priority and a context", function() {
+			topic = "/subscribe/topic/callbackWithContextAndPriority";
+			topics = PubSub.createTopics(topic);
 			var callbacks = {
 					first: {
 						notify : function(notification) {
-							$.debug("1st subscriber notified");
+							var data   = notification.data;
+							var topic  = notification.currentTopic;
+							var origin = notification.publishTopic;
+							$.debug("1st subscriber notified on: " + origin);
 							expect(count).toBe(0);
 						},
 						priority : 100,
@@ -437,33 +440,43 @@ describe("jquery.pubsub", function() {
 					topic : "/unsubscribe",
 					first:  {
 						notify : function(notification) {
-							var msg = "1st subscriber called";
-							$.debug(msg);
+							var data   = notification.data;
+							var topic  = notification.currentTopic;
+							var origin = notification.publishTopic;
+							var msg = "1st subscriber called on: " + origin;
+							expect(this).toBeOk(true,msg);
 							expect(order).toBe(0);
 							order++;
 						}
 					},
 					second: {
 						notify : function(notification) {
-							var msg = "unsubscribed and should not have been notified";
-							$.error(msg);
-							expect(msg).toBe(false);
+							var data   = notification.data;
+							var topic  = notification.currentTopic;
+							var origin = notification.publishTopic;
+							var msg = "unsubscribed and should not have been notified on: " + origin;
+							expect(this).toBeOk(false,msg);
 							order++;
 						}
 					},
 					third: {
 						notify : function(notification) {
-							var msg = "2nd subscriber called";
-							$.debug(msg);
+							var data   = notification.data;
+							var topic  = notification.currentTopic;
+							var origin = notification.publishTopic;
+							var msg = "2nd subscriber called on: " + origin;
+							expect(this).toBeOk(true,msg);
 							strictEqual( order, 1, msg );
 							order++;
 						}
 					},
 					fourth: {
 						notify : function(notification) {
-							var msg = "unsubscribed and should not have been notified";
-							$.error(msg);
-							expect(msg).toBe(false);
+							var data   = notification.data;
+							var topic  = notification.currentTopic;
+							var origin = notification.publishTopic;
+							var msg = "unsubscribed and should not have been notified on: " + origin;
+							expect(this).toBeOk(false,msg);
 							order++;
 						}
 					}
@@ -502,16 +515,22 @@ describe("jquery.pubsub", function() {
 					topic : "/unsubscribe/all",
 					first:  {
 						notify : function(notification) {
-							var msg = "1st subscriber called";
-							$.debug(msg);
+							var data   = notification.data;
+							var topic  = notification.currentTopic;
+							var origin = notification.publishTopic;
+							var msg = "1st subscriber called on: " + origin;
+							expect(this).toBeOk(true,msg);
 							expect(order).toBe(0);
 							order++;
 						}
 					},
 					second:  {
 						notify : function(notification) {
-							var msg = "2nd subscriber called";
-							$.debug(msg);
+							var data   = notification.data;
+							var topic  = notification.currentTopic;
+							var origin = notification.publishTopic;
+							var msg = "2nd subscriber called on: " + origin;
+							expect(this).toBeOk(true,msg);
 							expect(order).toBe(1);
 							order++;
 						}
@@ -536,23 +555,30 @@ describe("jquery.pubsub", function() {
 	});
 
 	describe("when setting priorities during PubSub", function() {
-		var PubSub, fixture, order;
+		var PubSub, fixture, order, done;
 		
 		beforeEach(function() {
 			order = 1;
+			done = false;
 			PubSub = TestUtil.resetPubSub();
 			fixture = {
 				topic : "/priority/notify",
 				first: {
 					notify : function(notification) {
-						$.debug("the initial subscriber has priority default, it is notified 2nd");
+						var data   = notification.data;
+						var topic  = notification.currentTopic;
+						var origin = notification.publishTopic;
+						$.debug("the initial subscriber has priority default, it is notified 2nd on: " + origin);
 						expect(order).toBe(2);
 						order++;
 					}
 				},
 				second : {
 					notify : function(notification) {
-						$.debug("this subscriber has priority 15; it is notified 4th");
+						var data   = notification.data;
+						var topic  = notification.currentTopic;
+						var origin = notification.publishTopic;
+						$.debug("this subscriber has priority 15; it is notified 4th on: " + origin);
 						expect(order).toBe(4);
 						order++;
 					},
@@ -560,14 +586,20 @@ describe("jquery.pubsub", function() {
 				},
 				third : {
 					notify : function(notification) {
-						$.debug("this subscriber has priority default; it is notified 3rd after the initial subscriber as its timestamp is later");
+						var data   = notification.data;
+						var topic  = notification.currentTopic;
+						var origin = notification.publishTopic;
+						$.debug("this subscriber has priority default; it is notified 3rd on: " +origin+ " after the initial subscriber as its timestamp is later");
 						expect(order).toBe(3);
 						order++;
 					}
 				},
 				fourth : {
 					notify : function(notification) {
-						$.debug("this subscriber greatest priority since it is the lowest number");
+						var data   = notification.data;
+						var topic  = notification.currentTopic;
+						var origin = notification.publishTopic;
+						$.debug("this subscriber has highest priority since it is the lowest number on: " + origin);
 						expect(order).toBe(1);
 						order++;
 					},
@@ -575,7 +607,10 @@ describe("jquery.pubsub", function() {
 				},
 				fifth : {
 					notify : function(notification) {
-						$.debug("this subscriber is dead last because it has a high priority number");
+						var data   = notification.data;
+						var topic  = notification.currentTopic;
+						var origin = notification.publishTopic;
+						$.debug("this subscriber is dead last because it has a highest priority number on " + origin);
 						expect(order).toBe(5);
 						order++;
 					},
@@ -613,23 +648,29 @@ describe("jquery.pubsub", function() {
 						
 						var msg = "completed notifications w/o data on: " + origin;
 						$.info(msg);
+						done = true;
 					}
+				},
+				setUp : function() {
+					spyOn(fixture.first,  'notify').andCallThrough();
+					spyOn(fixture.second, 'notify').andCallThrough();
+					spyOn(fixture.third,  'notify').andCallThrough();
+					spyOn(fixture.fourth, 'notify').andCallThrough();
+					spyOn(fixture.fifth,  'notify').andCallThrough();
+					
+					fixture.first.subscription = $.subscribe(fixture.topic, fixture.first.notify);
+					fixture.second.subscription = $.subscribe(fixture.topic, fixture.second.notify, fixture.second.priority);
+					fixture.third.subscription = $.subscribe(fixture.topic, fixture.third.notify);
+					fixture.fourth.subscription = $.subscribe(fixture.topic, fixture.fourth.notify, fixture.fourth.priority);
+					fixture.fifth.subscription = $.subscribe(fixture.topic, fixture.fifth.notify, fixture.fifth.priority);
 				}
 			};
-			spyOn(fixture.first,  'notify').andCallThrough();
-			spyOn(fixture.second, 'notify').andCallThrough();
-			spyOn(fixture.third,  'notify').andCallThrough();
-			spyOn(fixture.fourth, 'notify').andCallThrough();
-			spyOn(fixture.fifth,  'notify').andCallThrough();
 			
-			fixture.first.subscription = $.subscribe(fixture.topic, fixture.first.notify);
-			fixture.second.subscription = $.subscribe(fixture.topic, fixture.second.notify, fixture.second.priority);
-			fixture.third.subscription = $.subscribe(fixture.topic, fixture.third.notify);
-			fixture.fourth.subscription = $.subscribe(fixture.topic, fixture.fourth.notify, fixture.fourth.priority);
-			fixture.fifth.subscription = $.subscribe(fixture.topic, fixture.fifth.notify, fixture.fifth.priority);
 		});
 		
 		it("should notify in order during synchronous publication", function() {
+			fixture.topic = "/priority/notify/sync";
+			fixture.setUp();
 			var publication = $.publishSync( fixture.topic, fixture.publishOptions );
 			
 			expect(fixture.first.notify).toHaveBeenCalled();
@@ -641,24 +682,28 @@ describe("jquery.pubsub", function() {
 			expect(order).toBe(6);
 		});
 		it("should notify in order during asynchronous publication", function() {
-			
+			var publication = null;
+			runs(function() {
+				fixture.topic = "/priority/notify/async";
+				fixture.setUp();
+				publication = $.publish( fixture.topic, fixture.publishOptions );
+			});
 			waitsFor(function() {
-				var publication = $.publish( fixture.topic, fixture.publishOptions );
-				return publication !== null;
+				return done !== false;
 			}, "publication should be sent asynchronously", 10);
 			
-			_.delay(function() {
-				runs(function() {
-					expect(order).toBeGreaterThan(1);
-					expect(order).toBe(6);
-					
-					expect(fixture.first.notify).toHaveBeenCalled();
-					expect(fixture.second.notify).toHaveBeenCalled();
-					expect(fixture.third.notify).toHaveBeenCalled();
-					expect(fixture.fourth.notify).toHaveBeenCalled();
-					expect(fixture.fifth.notify).toHaveBeenCalled();
-				});
-			}, 20);
+			runs(function() {
+				expect(publication).not.toBeNull();
+				expect(done).toBe(true);
+				expect(order).toBeGreaterThan(1);
+				expect(order).toBe(6);
+				
+				expect(fixture.first.notify).toHaveBeenCalled();
+				expect(fixture.second.notify).toHaveBeenCalled();
+				expect(fixture.third.notify).toHaveBeenCalled();
+				expect(fixture.fourth.notify).toHaveBeenCalled();
+				expect(fixture.fifth.notify).toHaveBeenCalled();
+			});
 		});
 	});
 	
@@ -680,22 +725,31 @@ describe("jquery.pubsub", function() {
 				},
 				callback : function() {},
 				defaultSubscriber : {
-					notify : function(n) {
-						$.debug("default context is the window");
+					notify : function(notification) {
+						var data   = notification.data;
+						var topic  = notification.currentTopic;
+						var origin = notification.publishTopic;
+						$.debug("default context is the window on: " + origin);
 						expect(this).toBe(window);
 					}
 				},
 				contextualSubscriber : {
-					notify : function(n) {
-						$.debug("receives context from subscription");
-						expect(this !== null).toBe(true);
+					notify : function(notification) {
+						var data   = notification.data;
+						var topic  = notification.currentTopic;
+						var origin = notification.publishTopic;
+						$.debug("receives context from subscription on: " + origin);
+						expect(this).not.toBeNull();
 						expect( _.isEqual(this, fixture.contexts.subscriber) ).toBe(true);
 					}
 				},
 				pubSubscriber : {
-					notify : function(n) {
-						$.debug("receives context from publisher");
-						expect(this !== null).toBe(true);
+					notify : function(notification) {
+						var data   = notification.data;
+						var topic  = notification.currentTopic;
+						var origin = notification.publishTopic;
+						$.debug("receives context from publisher on: " + origin);
+						expect(this).not.toBeNull();
 						expect( _.isEqual(this, fixture.contexts.publisher) ).toBe(true);
 					}
 				}
@@ -728,26 +782,29 @@ describe("jquery.pubsub", function() {
 	});
 	
 	describe("when pushing data during publish", function() {
-		var PubSub, fixture, order;
+		var PubSub, fixture, order, done;
 		
 		beforeEach(function() {
+			done = false;
 			PubSub = TestUtil.resetPubSub();
 			fixture = {
 				topic : "/data/push",
 				first : {
 					notify : function(notification) {
 						var data = notification.data;
+						var topic  = notification.currentTopic;
+						var origin = notification.publishTopic;
 						expect( data.string ).toBe("hello")
-						$.debug( "string passed to first.notify" );
+						$.debug( "string passed to first.notify on: " + origin);
 						expect( data.number).toBe(5);
-						$.debug("number passed to first.notify" );
+						$.debug("number passed to first.notify on: " + origin);
 						var expected = {
 								foo: "bar",
 								baz: "qux"
 						};
 						expect(_.isEqual(data.object, expected)).toBe(true);
-						$.debug("object passed to first.notify" );
-						$.debug("first.notify mutating data")
+						$.debug("object passed to first.notify on: " + origin );
+						$.debug("first.notify mutating data on: " + origin)
 						data.string = "goodbye";
 						data.object.baz = "quux";
 					}
@@ -755,16 +812,18 @@ describe("jquery.pubsub", function() {
 				second : {
 					notify : function(notification) {
 						var data = notification.data;
+						var topic  = notification.currentTopic;
+						var origin = notification.publishTopic;
 						expect( data.string ).toBe("goodbye");
-						$.debug( "string changed on reception of data by second.notify" );
+						$.debug( "string changed on reception of data by second.notify on: " + origin );
 						expect( data.number ).toBe(5);
-						$.debug("number changed on reception of data by second.notify" );
+						$.debug("number changed on reception of data by second.notify on: " + origin );
 						var expected = {
 								foo: "bar",
 								baz: "quux"
 						};
 						expect(_.isEqual(data.object, expected)).toBe(true);
-						$.debug("object changed on reception of data by second.notify" );
+						$.debug("object changed on reception of data by second.notify on: " + origin );
 					}
 				},
 				publishOptions : {
@@ -814,22 +873,27 @@ describe("jquery.pubsub", function() {
 						var obj = fixture.publishOptions.data.object;
 						expect(_.isEqual(obj, expected)).toBe(true);
 						$.info("object updated after notifications w/data on: " + origin);
+						done = true;
 					}
+				},
+				setUp : function() {
+					spyOn(fixture.first,  'notify').andCallThrough();
+					spyOn(fixture.second, 'notify').andCallThrough();
+					
+					spyOn(fixture.publishOptions, 'progress').andCallThrough();
+					spyOn(fixture.publishOptions, 'done').andCallThrough();
+					spyOn(fixture.publishOptions, 'fail').andCallThrough();
+					spyOn(fixture.publishOptions, 'always').andCallThrough();
+					
+					$.subscribe(fixture.topic, fixture.first.notify);
+					$.subscribe(fixture.topic, fixture.second.notify);
 				}
 			};
-			spyOn(fixture.first,  'notify').andCallThrough();
-			spyOn(fixture.second, 'notify').andCallThrough();
-			
-			spyOn(fixture.publishOptions, 'progress').andCallThrough();
-			spyOn(fixture.publishOptions, 'done').andCallThrough();
-			spyOn(fixture.publishOptions, 'fail').andCallThrough();
-			spyOn(fixture.publishOptions, 'always').andCallThrough();
-			
-			$.subscribe(fixture.topic, fixture.first.notify);
-			$.subscribe(fixture.topic, fixture.second.notify);
 		});
 		
 		it("should publish data synchronously to 1st subscriber which mutates the data that then gets passed to 2nd subscriber", function() {
+			fixture.topic = "/data/push/sync";
+			fixture.setUp();
 			$.publishSync(fixture.topic, fixture.publishOptions);
 			
 			expect(fixture.first.notify).toHaveBeenCalled();
@@ -841,14 +905,20 @@ describe("jquery.pubsub", function() {
 			expect(fixture.publishOptions.always).toHaveBeenCalled();
 		});
 		it("should publish data asynchronously to 1st subscriber which mutates the data that then gets passed to 2nd subscriber", function() {
-			
+			var publication = null;
+			runs(function() {
+				fixture.topic = "/data/push/async";
+				fixture.setUp();
+				publication = $.publish( fixture.topic, fixture.publishOptions );
+			});
 			waitsFor(function() {
-				var publication = $.publish( fixture.topic, fixture.publishOptions );
-				return publication !== null;
+				return done !== false;
 			}, "publication should be sent asynchronously", 10);
 			
-			_.delay(function() {
+			if (done) {
 				runs(function() {
+					expect(done).toBe(true);
+					expect(publication).not.toBeNull();
 					expect(fixture.first.notify).toHaveBeenCalled();
 					expect(fixture.second.notify).toHaveBeenCalled();
 					
@@ -857,14 +927,15 @@ describe("jquery.pubsub", function() {
 					expect(fixture.publishOptions.fail).not.toHaveBeenCalled();
 					expect(fixture.publishOptions.always).toHaveBeenCalled();
 				});
-			}, 20);
+			}
 		});
 	});
 	
 	describe("when pushing data to 2 different topics", function() {
-		var PubSub, fixture, order;
+		var PubSub, fixture, order, done;
 		
 		beforeEach(function() {
+			done = false;
 			PubSub = TestUtil.resetPubSub();
 			fixture = {
 				topic : "/data/push",
@@ -1034,10 +1105,11 @@ describe("jquery.pubsub", function() {
 	});
 	
 	describe("when continuing notifications", function() {
-		var PubSub, fixture;
+		var PubSub, fixture, done;
 		
 		beforeEach(function() {
 			PubSub = TestUtil.resetPubSub();
+			done = false;
 			fixture = {
 				topic : "/continuation/sync",
 				one : {
@@ -1065,12 +1137,12 @@ describe("jquery.pubsub", function() {
 					progress : function(notification) {
 						var origin = notification.publishTopic;
 						var msg = "begin notifications w/o subscribers of " + origin;
-						expect(this).toBeOk(true, msg);
+						expect(this).toBeOk(msg, msg);
 					},
 					fail : function(notification) {
 						var origin = notification.publishTopic;
 						var msg = "failed notifications w/o subscribers of " + origin;
-						expect(this).toBeOk(true, msg);
+						expect(this).toBeOk(msg, msg);
 					},
 					done : function(notification) {
 						var origin = notification.publishTopic;
@@ -1080,42 +1152,46 @@ describe("jquery.pubsub", function() {
 					always : function(notification) {
 						var origin = notification.publishTopic;
 						var msg = "completed notifications w/o subscribers of " + origin;
-						expect(this).toBeOk(true, msg);
+						expect(this).toBeOk(msg, msg);
+						done = true;
 					}
 				},
 				subscriberOptions : {
 					progress : function(notification) {
 						var origin = notification.publishTopic;
 						var msg = "begin notification of: " + origin;
-						$.info(msg);
+						expect(this).toBeOk(msg,msg);
 					},
 					done: function(notification) {
 						var origin = notification.publishTopic;
 						var msg = "successful notification of: " + origin;
-						$.info(msg);
+						expect(this).toBeOk(msg,msg);
 					},
 					fail: function(notification) {
 						var origin = notification.publishTopic;
 						var msg = "failed notification of: " + origin;
-						$.error(msg);
+						expect(this).toBeOk(false,msg);
 					},
 					always : function(notification) {
 						var origin = notification.publishTopic;
 						var msg = "completed notification of: " + origin;
-						$.info(msg);
+						expect(this).toBeOk(msg,msg);
+						done = true;
 					}
 				}
 			};
 		});
 		
 		it("should invoke fail callback for synchronous publish when there are no subscribers", function() {
+			fixture.topic = "/continuation/sync/noSubscribers";
 			spyOn(fixture.noSubscriberOptions, 'progress').andCallThrough();
 			spyOn(fixture.noSubscriberOptions, 'fail').andCallThrough();
 			spyOn(fixture.noSubscriberOptions, 'done').andCallThrough();
 			spyOn(fixture.noSubscriberOptions, 'always').andCallThrough();
 			
 			var publication = $.publishSync( fixture.topic, fixture.noSubscriberOptions);
-			expect( publication !== null ).toBe(true);
+			expect(done).toBe(true);
+			expect(publication).not.toBeNull();
 			expect( publication.state() ).toBe("rejected");
 			
 			expect(fixture.noSubscriberOptions.progress).toHaveBeenCalled();
@@ -1125,31 +1201,34 @@ describe("jquery.pubsub", function() {
 		})
 		
 		it("should invoke fail callback for asynchronous publish when there are no subscribers", function() {
-			fixture.topic = "/continuation/async";
-			spyOn(fixture.noSubscriberOptions, 'progress').andCallThrough();
-			spyOn(fixture.noSubscriberOptions, 'fail').andCallThrough();
-			spyOn(fixture.noSubscriberOptions, 'done').andCallThrough();
-			spyOn(fixture.noSubscriberOptions, 'always').andCallThrough();
+			var publication = null;
+			runs(function() {
+				fixture.topic = "/continuation/async/noSubscribers";
+				spyOn(fixture.noSubscriberOptions, 'progress').andCallThrough();
+				spyOn(fixture.noSubscriberOptions, 'fail').andCallThrough();
+				spyOn(fixture.noSubscriberOptions, 'done').andCallThrough();
+				spyOn(fixture.noSubscriberOptions, 'always').andCallThrough();
+				publication = $.publish( fixture.topic, fixture.noSubscriberOptions );
+			});
 			
 			waitsFor(function() {
-				var publication = $.publish( fixture.topic, fixture.noSubscriberOptions );
-				return publication !== null;
+				return done !== false;
 			}, "publication should be sent asynchronously", 10);
 			
-			_.delay(function() {
-				runs(function() {
-					expect( publication !== null ).toBe(true);
-					expect( publication.state() ).toBe("rejected");
-					
-					expect(fixture.noSubscriberOptions.progress).toHaveBeenCalled();
-					expect(fixture.noSubscriberOptions.fail).toHaveBeenCalled();
-					expect(fixture.noSubscriberOptions.done).not.toHaveBeenCalled();
-					expect(fixture.noSubscriberOptions.always).toHaveBeenCalled();
-				});
-			}, 20);
+			runs(function() {
+				expect( done ).toBe(true);
+				expect( publication ).not.toBeNull();
+				expect( publication.state() ).toBe("rejected");
+				
+				expect(fixture.noSubscriberOptions.progress).toHaveBeenCalled();
+				expect(fixture.noSubscriberOptions.fail).toHaveBeenCalled();
+				expect(fixture.noSubscriberOptions.done).not.toHaveBeenCalled();
+				expect(fixture.noSubscriberOptions.always).toHaveBeenCalled();
+			});
 		})
 		
 		it("should continue for synchronous publish when there are subscribers", function() {
+			fixture.topic = "/continuation/sync/subscribers";
 			spyOn(fixture.one, 'notify').andCallThrough();
 			spyOn(fixture.two, 'notify').andCallThrough();
 			
@@ -1163,7 +1242,8 @@ describe("jquery.pubsub", function() {
 			
 			var publication = $.publishSync( fixture.topic, fixture.subscriberOptions);
 			
-			expect(publication !== null).toBe(true);
+			expect(done).toBe(true);
+			expect(publication).not.toBeNull();
 			expect(publication.state()).toBe("resolved");
 			
 			expect(fixture.one.notify).toHaveBeenCalled();
@@ -1176,45 +1256,47 @@ describe("jquery.pubsub", function() {
 		});
 		
 		it("should continue for asynchronous publish when there are subscribers", function() {
-			fixture.topic = "/continuation/async";
-			
-			spyOn(fixture.one, 'notify').andCallThrough();
-			spyOn(fixture.two, 'notify').andCallThrough();
-			
-			fixture.one.subscription = $.subscribe(fixture.topic, fixture.one.notify);
-			fixture.two.subscription = $.subscribe(fixture.topic, fixture.two.notify);
-			
-			spyOn(fixture.subscriberOptions, 'progress').andCallThrough();
-			spyOn(fixture.subscriberOptions, 'done').andCallThrough();
-			spyOn(fixture.subscriberOptions, 'fail').andCallThrough();
-			spyOn(fixture.subscriberOptions, 'always').andCallThrough();
-			
+			var publication = null;
+			runs(function() {
+				fixture.topic = "/continuation/async/subscribers";
+				spyOn(fixture.one, 'notify').andCallThrough();
+				spyOn(fixture.two, 'notify').andCallThrough();
+				
+				fixture.one.subscription = $.subscribe(fixture.topic, fixture.one.notify);
+				fixture.two.subscription = $.subscribe(fixture.topic, fixture.two.notify);
+				
+				spyOn(fixture.subscriberOptions, 'progress').andCallThrough();
+				spyOn(fixture.subscriberOptions, 'done').andCallThrough();
+				spyOn(fixture.subscriberOptions, 'fail').andCallThrough();
+				spyOn(fixture.subscriberOptions, 'always').andCallThrough();
+				
+				publication = $.publish( fixture.topic, fixture.subscriberOptions );
+			});
 			waitsFor(function() {
-				var publication = $.publish( fixture.topic, fixture.noSubscriberOptions );
-				return publication !== null;
+				return done !== false;
 			}, "publication should be sent asynchronously", 10);
 			
-			_.delay(function() {
-				runs(function() {
-					expect(publication !== null).toBe(true);
-					expect(publication.state()).toBe("resolved");
-					
-					expect(fixture.one.notify).toHaveBeenCalled();
-					expect(fixture.two.notify).toHaveBeenCalled();
-					
-					expect(fixture.subscriberOptions.progress).toHaveBeenCalled();
-					expect(fixture.subscriberOptions.done).toHaveBeenCalled();
-					expect(fixture.subscriberOptions.fail).not.toHaveBeenCalled();
-					expect(fixture.subscriberOptions.always).toHaveBeenCalled();
-				});
-			}, 20);
+			runs(function() {
+				expect(done).toBe(true);
+				expect(publication).not.toBeNull();
+				expect(publication.state()).toBe("resolved");
+				
+				expect(fixture.one.notify).toHaveBeenCalled();
+				expect(fixture.two.notify).toHaveBeenCalled();
+				
+				expect(fixture.subscriberOptions.progress).toHaveBeenCalled();
+				expect(fixture.subscriberOptions.done).toHaveBeenCalled();
+				expect(fixture.subscriberOptions.fail).not.toHaveBeenCalled();
+				expect(fixture.subscriberOptions.always).toHaveBeenCalled();
+			});
 		});
 	});
 	
 	describe("when discontinuing notifications", function() {
-		var PubSub, fixture;
+		var PubSub, fixture, done;
 		
 		beforeEach(function() {
+			done = false;
 			PubSub = TestUtil.resetPubSub();
 			fixture = {
 				topic : "/discontinuation/sync",
@@ -1246,7 +1328,7 @@ describe("jquery.pubsub", function() {
 					progress : function(notification) {
 						var origin = notification.publishTopic;
 						var msg = "begun notifications on: " + origin;
-						expect(this).toBeOk(true,msg);
+						expect(this).toBeOk(msg,msg);
 					},
 					done: function(notification) {
 						var origin = notification.publishTopic;
@@ -1256,18 +1338,20 @@ describe("jquery.pubsub", function() {
 					fail: function(notification) {
 						var origin = notification.publishTopic;
 						var msg = "failed notifications on: " + origin;
-						expect(this).toBeOk(true,msg);
+						expect(this).toBeOk(msg,msg);
 					},
 					always : function(notification) {
+						done = true;
 						var origin = notification.publishTopic;
 						var msg = "completed notifications on: " + origin;
-						expect(this).toBeOk(true,msg);
+						expect(this).toBeOk(msg,msg);
 					}
 				}
 			}
 		});
 		
 		it("should discontinue sync publication when 1 subscriber returns false", function() {
+			fixture.topic = "/discontinuation/sync/returnFalse";
 			spyOn(fixture.one, 'notify').andCallThrough();
 			spyOn(fixture.two, 'notify').andCallThrough();
 			
@@ -1281,7 +1365,7 @@ describe("jquery.pubsub", function() {
 			$.subscribe( fixture.topic, fixture.two.notify);
 			var publication = $.publishSync( fixture.topic, fixture.publishOptions);
 			
-			expect(publication !== null).toBe(true);
+			expect(publication).not.toBeNull();
 			expect(publication.state()).toBe("rejected");
 			
 			expect(fixture.one.notify).toHaveBeenCalled();
@@ -1294,6 +1378,7 @@ describe("jquery.pubsub", function() {
 		});
 		
 		it("should discontinue sync publication when 1 subscriber throws an exception", function() {
+			fixture.topic = "/discontinuation/sync/throwsException";
 			spyOn(fixture.three, 'notify').andCallThrough();
 			spyOn(fixture.two, 'notify').andCallThrough();
 			
@@ -1302,12 +1387,11 @@ describe("jquery.pubsub", function() {
 			spyOn(fixture.publishOptions, 'fail').andCallThrough();
 			spyOn(fixture.publishOptions, 'always').andCallThrough();
 			
-			
 			$.subscribe( fixture.topic, fixture.three.notify);
 			$.subscribe( fixture.topic, fixture.two.notify);
 			var publication = $.publishSync( fixture.topic, fixture.publishOptions);
 			
-			expect(publication !== null).toBe(true);
+			expect(publication).not.toBeNull();
 			expect(publication.state()).toBe("rejected");
 			
 			expect(fixture.three.notify).toHaveBeenCalled();
@@ -1320,74 +1404,78 @@ describe("jquery.pubsub", function() {
 		});
 		
 		it("should discontinue async publication when 1 subscriber returns false", function() {
-			fixture.topic = "/discontinuation/async";
-			spyOn(fixture.one, 'notify').andCallThrough();
-			spyOn(fixture.two, 'notify').andCallThrough();
+			var publication = null;
 			
-			spyOn(fixture.publishOptions, 'progress').andCallThrough();
-			spyOn(fixture.publishOptions, 'done').andCallThrough();
-			spyOn(fixture.publishOptions, 'fail').andCallThrough();
-			spyOn(fixture.publishOptions, 'always').andCallThrough();
-			
-			
-			$.subscribe( fixture.topic, fixture.one.notify);
-			$.subscribe( fixture.topic, fixture.two.notify);
+			runs(function() {
+				fixture.topic = "/discontinuation/async/returnFalse";
+				
+				spyOn(fixture.one, 'notify').andCallThrough();
+				spyOn(fixture.two, 'notify').andCallThrough();
+				
+				spyOn(fixture.publishOptions, 'progress').andCallThrough();
+				spyOn(fixture.publishOptions, 'done').andCallThrough();
+				spyOn(fixture.publishOptions, 'fail').andCallThrough();
+				spyOn(fixture.publishOptions, 'always').andCallThrough();
+				
+				$.subscribe( fixture.topic, fixture.one.notify);
+				$.subscribe( fixture.topic, fixture.two.notify);
+				
+				publication = $.publish( fixture.topic, fixture.publishOptions);
+			});
 			
 			waitsFor(function() {
-				var publication = $.publish( fixture.topic, fixture.publishOptions);
-				return publication !== null;
-			}, "publication should be sent asynchronously", 10);
-			
-			_.delay(function() {
-				runs(function() {
-					expect(publication !== null).toBe(true);
-					expect(publication.state()).toBe("rejected");
-					
-					expect(fixture.one.notify).toHaveBeenCalled();
-					expect(fixture.two.notify).not.toHaveBeenCalled();
-					
-					expect(fixture.publishOptions.progress).toHaveBeenCalled();
-					expect(fixture.publishOptions.done).not.toHaveBeenCalled();
-					expect(fixture.publishOptions.fail).toHaveBeenCalled();
-					expect(fixture.publishOptions.always).toHaveBeenCalled();
-				});
-			}, 20);
-			
+				return done !== false;
+			}, "async publication should have finished",10);
+
+			runs(function() {
+				expect(done).toBe(true);
+				expect(publication).not.toBeNull();
+				expect(publication.state()).toBe("rejected");
+				
+				expect(fixture.one.notify).toHaveBeenCalled();
+				expect(fixture.two.notify).not.toHaveBeenCalled();
+				
+				expect(fixture.publishOptions.progress).toHaveBeenCalled();
+				expect(fixture.publishOptions.done).not.toHaveBeenCalled();
+				expect(fixture.publishOptions.fail).toHaveBeenCalled();
+				expect(fixture.publishOptions.always).toHaveBeenCalled();
+			});
 		});
 		
 		it("should discontinue async publication when 1 subscriber throws an exception", function() {
-			fixture.topic = "/discontinuation/async";
-			spyOn(fixture.three, 'notify').andCallThrough();
-			spyOn(fixture.two, 'notify').andCallThrough();
+			var publication = null;
 			
-			spyOn(fixture.publishOptions, 'progress').andCallThrough();
-			spyOn(fixture.publishOptions, 'done').andCallThrough();
-			spyOn(fixture.publishOptions, 'fail').andCallThrough();
-			spyOn(fixture.publishOptions, 'always').andCallThrough();
-			
-			$.subscribe( fixture.topic, fixture.three.notify);
-			$.subscribe( fixture.topic, fixture.two.notify);
+			runs(function() {
+				fixture.topic = "/discontinuation/async/throwsException";
+				spyOn(fixture.three, 'notify').andCallThrough();
+				spyOn(fixture.two, 'notify').andCallThrough();
+				
+				spyOn(fixture.publishOptions, 'progress').andCallThrough();
+				spyOn(fixture.publishOptions, 'done').andCallThrough();
+				spyOn(fixture.publishOptions, 'fail').andCallThrough();
+				spyOn(fixture.publishOptions, 'always').andCallThrough();
+				
+				$.subscribe( fixture.topic, fixture.three.notify);
+				$.subscribe( fixture.topic, fixture.two.notify);
+				publication = $.publish( fixture.topic, fixture.publishOptions);
+			});
 			
 			waitsFor(function() {
-				var publication = $.publish( fixture.topic, fixture.publishOptions);
-				return publication !== null;
-			}, "publication should be sent asynchronously", 10);
+				return done !== false;
+			}, "async publication should have finished", 10);
 			
-			
-			_.delay(function() {
-				runs(function() {
-					expect(publication !== null).toBe(true);
-					expect(publication.state()).toBe("rejected");
-					
-					expect(fixture.three.notify).toHaveBeenCalled();
-					expect(fixture.two.notify).not.toHaveBeenCalled();
-					
-					expect(fixture.publishOptions.progress).toHaveBeenCalled();
-					expect(fixture.publishOptions.done).not.toHaveBeenCalled();
-					expect(fixture.publishOptions.fail).toHaveBeenCalled();
-					expect(fixture.publishOptions.always).toHaveBeenCalled();
-				});
-			}, 20);
+			runs(function() {
+				expect(publication).not.toBeNull();
+				expect(publication.state()).toBe("rejected");
+				
+				expect(fixture.three.notify).toHaveBeenCalled();
+				expect(fixture.two.notify).not.toHaveBeenCalled();
+				
+				expect(fixture.publishOptions.progress).toHaveBeenCalled();
+				expect(fixture.publishOptions.done).not.toHaveBeenCalled();
+				expect(fixture.publishOptions.fail).toHaveBeenCalled();
+				expect(fixture.publishOptions.always).toHaveBeenCalled();
+			});
 		});
 	});
 	
