@@ -1479,4 +1479,344 @@ describe("jquery.pubsub", function() {
 		});
 	});
 	
+	describe("when notifications bubble up a topic hierarchy", function() {
+		var PubSub, fixture, done, count;
+		
+		beforeEach(function() {
+			done = false;
+			count = 1;
+			PubSub = TestUtil.resetPubSub();
+			
+			var neverNotified = function(notification) {
+				var data   = notification.data;
+				var topic  = notification.currentTopic;
+				var origin = notification.publishTopic;
+				var msg = "this callback should never be notified on: " + topic + " from: " + origin;
+				expect(this).toBeOk(false,msg);
+			};
+			var exceptionThrown = function(notification) {
+				var data   = notification.data;
+				var topic  = notification.currentTopic;
+				var origin = notification.publishTopic;
+				var msg = "exceptionThrown was notified @ " + topic + " from: " + origin + " where count = " + count;
+				expect(this).toBeOk(true, msg)
+				throw new Error("burp!");
+			};
+			var notificationReject = function(notification) {
+				var data   = notification.data;
+				var topic  = notification.currentTopic;
+				var origin = notification.publishTopic;
+				var msg = "notificationReject was notified @ " + topic + " from: " + origin + " where count = " + count;
+				expect(this).toBeOk(true, msg)
+				notification.reject();
+			};
+			var returnsFalse = function(notification) {
+				var data   = notification.data;
+				var topic  = notification.currentTopic;
+				var origin = notification.publishTopic;
+				var msg = "returnsFalse was notified @ " + topic + " from: " + origin + " where count = " + count;
+				expect(this).toBeOk(true, msg)
+				return false;
+			};
+			
+			fixture = {
+				topic : "/starwars",
+				data : {
+					id : 1,
+					name : "Star Wars hierarchy",
+					isSync : true
+				},
+				notify : function(notification) {
+					var _self = this;
+					var data   = notification.data;
+					var topic  = notification.currentTopic;
+					var origin = notification.publishTopic;
+					
+					var msg = "notification of subscriber @ " + topic;
+					expect(this).toBeOk(true,msg);
+					expect(count).toBe(3);
+					expect(_.isEqual(data, _self.data)).toBe(true);
+					$.debug("same data by reference passed to "  + topic);
+					count++;
+				},
+				padma : {
+					topic : "/starwars/padma",
+					notify : function(notification) {
+						var _self = this;
+						var data   = notification.data;
+						var topic  = notification.currentTopic;
+						var origin = notification.publishTopic;
+						
+						var msg = "notification of subscriber @ " + topic;
+						expect(this).toBeOk(true,msg);
+						expect(count).toBe(2);
+						expect(data.name).toBe("empire strikes back");
+						$.debug("data.name should have mutated when received by: " + topic);
+						count++;
+					},
+					luke : {
+						topic : "/starwars/padma/luke",
+						notify : neverNotified
+					},
+					leia : {
+						topic : "/starwars/padma/leia",
+						notify : function(notification) {
+							var _self = this;
+							var data   = notification.data;
+							var topic  = notification.currentTopic;
+							var origin = notification.publishTopic;
+							var msg = "notification of subscriber @ " + topic;
+							expect(this).toBeOk(true,msg);
+							expect( _.isEqual(data, _self.data) ).toBe(true);
+							$.debug(topic + " should receive data, mutated data.name and count = " + count);
+							data.name = "empire strikes back";
+							expect(count).toBe(1);
+							count++;
+						}
+					}
+				},
+				anakin : {
+					topic : "/starwars/anakin",
+					notify : neverNotified
+				},
+				publishOptions : {
+					progress : function(notification) {
+						var origin = notification.publishTopic;
+						var type = notification.data.isSync ? "synchronous" : "asynchronous";
+						var msg = "progress: " + type + " notifications on: " + origin;
+						expect(this).toBeOk(msg,msg);
+					},
+					done: function(notification) {
+						var origin = notification.publishTopic;
+						var type = notification.data.isSync ? "synchronous" : "asynchronous";
+						var msg = "done: " + type + " notifications on: " + origin;
+						expect(this).toBeOk(msg,msg);
+					},
+					fail: function(notification) {
+						var origin = notification.publishTopic;
+						var type = notification.data.isSync ? "synchronous" : "asynchronous";
+						var msg = "fail: " + type + " notifications on: " + origin;
+						expect(this).toBeOk(msg,msg);
+					},
+					always : function(notification) {
+						var origin = notification.publishTopic;
+						var type = notification.data.isSync ? "synchronous" : "asynchronous";
+						var msg = "always: " + type + " notifications on: " + origin;
+						expect(this).toBeOk(msg,msg);
+						done = true;
+					}
+				},
+				setUp : function() {
+					var _self = this;
+					
+					this.neverNotified = neverNotified;
+					this.exceptionThrown = exceptionThrown;
+					this.notificationReject = notificationReject;
+					this.returnsFalse = returnsFalse;
+				},
+				spyOn : function() {
+					var _self = this;
+					
+					spyOn(_self, 'notify').andCallThrough();
+					spyOn(_self.padma,  'notify').andCallThrough();
+					spyOn(_self.anakin, 'notify').andCallThrough();
+					
+					spyOn(_self.padma.luke, 'notify').andCallThrough();
+					spyOn(_self.padma.leia, 'notify').andCallThrough();
+					
+					spyOn(_self.publishOptions, 'progress').andCallThrough();
+					spyOn(_self.publishOptions, 'done').andCallThrough();
+					spyOn(_self.publishOptions, 'fail').andCallThrough();
+					spyOn(_self.publishOptions, 'always').andCallThrough();
+				},
+				subscribeAll : function() {
+					var _self = this;
+					
+					_self.padma.leia.subscription = $.subscribe(_self.padma.leia.topic, _self, _self.padma.leia.notify);
+					_self.padma.subscription = $.subscribe(_self.padma.topic, _self, _self.padma.notify);
+					_self.subscription = $.subscribe(_self.topic, _self, _self.notify);
+					
+					_self.anakin.subscription = $.subscribe(_self.anakin.topic, _self, _self.anakin.notify);
+					_self.padma.luke.subscription = $.subscribe(_self.padma.luke.topic, _self, _self.padma.luke.notify);
+					
+					expect(PubSub.getSubscriptions(_self.topic).length).toBe(1);
+					expect(PubSub.getSubscriptions(_self.padma.topic).length).toBe(1);
+					expect(PubSub.getSubscriptions(_self.padma.leia.topic).length).toBe(1);
+					
+					expect(PubSub.getSubscriptions(_self.anakin.topic).length).toBe(1);
+					expect(PubSub.getSubscriptions(_self.padma.luke.topic).length).toBe(1);
+					
+					expect(_.keys(PubSub.subscriptions).length).toBe(5);
+				},
+				expectSuccess : function(publication) {
+					var _self = this;
+					expect(publication).not.toBeNull();
+					expect(done).toBe(true);
+
+					expect(_self.notify).toHaveBeenCalled();
+					expect(_self.anakin.notify).not.toHaveBeenCalled();
+					expect(_self.padma.notify).toHaveBeenCalled();
+					expect(_self.padma.leia.notify).toHaveBeenCalled();
+					expect(_self.padma.luke.notify).not.toHaveBeenCalled();
+
+					expect(_self.publishOptions.progress).toHaveBeenCalled();
+					expect(_self.publishOptions.done).toHaveBeenCalled();
+					expect(_self.publishOptions.fail).not.toHaveBeenCalled();
+					expect(_self.publishOptions.always).toHaveBeenCalled();
+
+					expect(count).toBe(4);
+				},
+				expectFail : function(publication) {
+					var _self = this;
+					
+					expect(publication).not.toBeNull();
+					expect(done).toBe(true);
+
+					expect(_self.notify).not.toHaveBeenCalled();
+					expect(_self.anakin.notify).not.toHaveBeenCalled();
+					expect(_self.padma.notify).toHaveBeenCalled();
+					expect(_self.padma.leia.notify).toHaveBeenCalled();
+					expect(_self.padma.luke.notify).not.toHaveBeenCalled();
+
+					expect(_self.publishOptions.progress).toHaveBeenCalled();
+					expect(_self.publishOptions.done).not.toHaveBeenCalled();
+					expect(_self.publishOptions.fail).toHaveBeenCalled();
+					expect(_self.publishOptions.always).toHaveBeenCalled();
+
+					expect(count).toBe(2);
+				}
+			}
+		});
+		
+		it("should notify each subscriber on synchronous publish to a hierarchical topic from the leaf up to the root", function() {
+			var _self = fixture;
+			_self.setUp();
+			_self.spyOn();
+			_self.subscribeAll();
+			
+			var options = $.extend({data : _self.data}, _self.publishOptions);
+			var publication = $.publishSync(_self.padma.leia.topic, options);
+			_self.expectSuccess(publication);
+		});
+		it("should notify each subscriber on asynchronous publish to a hierarchical topic from the leaf up to the root", function() {
+			var _self = fixture;
+			var publication = null;
+			runs(function() {
+				_self.setUp();
+				_self.spyOn();
+				_self.subscribeAll();
+				var options = $.extend({data : _self.data}, _self.publishOptions);
+				publication = $.publish(_self.padma.leia.topic, options);
+			});
+			waitsFor(function() {
+				return done !== false;
+			}, "publication should be sent asynchronously", 10);
+			runs(function() {
+				_self.expectSuccess(publication);
+			});
+		});
+		it("should notify only some subscribers on synchronous publish to a hierarchical topic b/c mid-level subscriber returns false", function() {
+			var _self = fixture;
+			
+			_self.setUp();
+			_self.notify = _self.neverNotified;
+			_self.padma.notify = _self.returnsFalse;
+			_self.spyOn();
+			_self.subscribeAll();
+			
+			var options = $.extend({data : _self.data}, _self.publishOptions);
+			var publication = $.publishSync(_self.padma.leia.topic, options);
+			
+			_self.expectFail(publication);
+		});
+		it("should notify only some subscribers on asynchronous publish to a hierarchical topic b/c mid-level subscriber returns false", function() {
+			var _self = fixture;
+			var publication = null;
+			runs(function() {
+				_self.setUp();
+				_self.notify = _self.neverNotified;
+				_self.padma.notify = _self.returnsFalse;
+				_self.spyOn();
+				_self.subscribeAll();
+
+				var options = $.extend({data : _self.data}, _self.publishOptions);
+				publication = $.publish(_self.padma.leia.topic, options);
+			});
+			waitsFor(function() {
+				return done !== false;
+			}, "publication should be sent asynchronously", 10);
+			runs(function() {
+				_self.expectFail(publication);
+			});
+		});
+		it("should notify only some subscribers on synchronous publish to a hierarchical topic b/c mid-level subscriber throws an exception", function() {
+			var _self = fixture;
+			
+			_self.setUp();
+			_self.notify = _self.neverNotified;
+			_self.padma.notify = _self.exceptionThrown;
+			_self.spyOn();
+			_self.subscribeAll();
+			
+			var options = $.extend({data : _self.data}, _self.publishOptions);
+			var publication = $.publishSync(_self.padma.leia.topic, options);
+			
+			_self.expectFail(publication);
+		});
+		it("should notify only some subscribers on asynchronous publish to a hierarchical topic b/c mid-level subscriber throws an exception", function() {
+			var _self = fixture;
+			var publication = null;
+			runs(function() {
+				_self.setUp();
+				_self.notify = _self.neverNotified;
+				_self.padma.notify = _self.exceptionThrown;
+				_self.spyOn();
+				_self.subscribeAll();
+
+				var options = $.extend({data : _self.data}, _self.publishOptions);
+				publication = $.publishSync(_self.padma.leia.topic, options);
+			});
+			waitsFor(function() {
+				return done !== false;
+			}, "publication should be sent asynchronously", 10);
+			runs(function() {
+				_self.expectFail(publication);
+			});
+		});
+		it("should notify only some subscribers on synchronous publish to a hierarchical topic b/c mid-level subscriber rejects a notification", function() {
+			var _self = fixture;
+			
+			_self.setUp();
+			_self.notify = _self.neverNotified;
+			_self.padma.notify = _self.notificationReject;
+			_self.spyOn();
+			_self.subscribeAll();
+			
+			var options = $.extend({data : _self.data}, _self.publishOptions);
+			var publication = $.publishSync(_self.padma.leia.topic, options);
+			
+			_self.expectFail(publication);
+		});
+		it("should notify only some subscribers on asynchronous publish to a hierarchical topic b/c mid-level subscriber rejects a notification", function() {
+			var _self = fixture;
+			var publication = null;
+			
+			runs(function() {
+				_self.setUp();
+				_self.notify = _self.neverNotified;
+				_self.padma.notify = _self.notificationReject;
+				_self.spyOn();
+				_self.subscribeAll();
+				var options = $.extend({data : _self.data}, _self.publishOptions);
+				publication = $.publishSync(_self.padma.leia.topic, options);
+			});
+			waitsFor(function() {
+				return done !== false;
+			}, "publication should be sent asynchronously", 10);
+			runs(function() {
+				_self.expectFail(publication);
+			});
+		});
+	});
+	
 });
