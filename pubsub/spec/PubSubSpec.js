@@ -30,7 +30,7 @@ describe("jquery.pubsub", function() {
 		}
 	};
 
-	describe("when testing the core internal functionality of the pubsub", function() {
+	describe("when testing the core internal functionality of PubSub", function() {
 		var PubSub;
 		var topic = "/app/module/class";
 		
@@ -65,7 +65,7 @@ describe("jquery.pubsub", function() {
 		});
 	});
 	
-	describe("when testing the utilities of the PubSub", function() {
+	describe("when testing the utilities of PubSub", function() {
 		var PubSub, u;
 		var topic = "/app/module/class";
 		
@@ -554,7 +554,7 @@ describe("jquery.pubsub", function() {
 		
 	});
 
-	describe("when setting priorities during PubSub", function() {
+	describe("when setting priorities for subscriptions", function() {
 		var PubSub, fixture, order, done;
 		
 		beforeEach(function() {
@@ -668,7 +668,7 @@ describe("jquery.pubsub", function() {
 			
 		});
 		
-		it("should notify in order during synchronous publication", function() {
+		it("should notify subscriptions in order during synchronous publication", function() {
 			fixture.topic = "/priority/notify/sync";
 			fixture.setUp();
 			var publication = $.publishSync( fixture.topic, fixture.publishOptions );
@@ -681,7 +681,7 @@ describe("jquery.pubsub", function() {
 			
 			expect(order).toBe(6);
 		});
-		it("should notify in order during asynchronous publication", function() {
+		it("should notify subscriptions in order during asynchronous publication", function() {
 			var publication = null;
 			runs(function() {
 				fixture.topic = "/priority/notify/async";
@@ -707,7 +707,7 @@ describe("jquery.pubsub", function() {
 		});
 	});
 	
-	describe("when setting context during PubSub", function() {
+	describe("when setting context for subscriptions", function() {
 		var PubSub, fixture, order;
 		
 		beforeEach(function() {
@@ -1300,7 +1300,7 @@ describe("jquery.pubsub", function() {
 			PubSub = TestUtil.resetPubSub();
 			fixture = {
 				topic : "/discontinuation/sync",
-				one: {
+				returnsFalse: {
 					notify : function(notification) {
 						var origin = notification.publishTopic;
 						var msg = "continued after returning true for pub on: " + origin;
@@ -1308,7 +1308,7 @@ describe("jquery.pubsub", function() {
 						return false;
 					}
 				},
-				two: {
+				neverNotified: {
 					notify : function(notification) {
 						var origin = notification.publishTopic;
 						var msg = "continued after returning false or throwing error for pub on: " + origin;
@@ -1316,12 +1316,20 @@ describe("jquery.pubsub", function() {
 						return false;
 					}
 				},
-				three: {
+				throwsException: {
 					notify : function(notification) {
 						var origin = notification.publishTopic;
 						var msg = "continued after returning true for pub on: " + origin;
 						expect(this).toBeOk( true, msg );
 						throw new Error("stop publication");
+					}
+				},
+				rejectNotification : {
+					notify : function(notification) {
+						var origin = notification.publishTopic;
+						var msg = "continued after returning true for pub on: " + origin;
+						expect(this).toBeOk( true, msg );
+						notification.reject();
 					}
 				},
 				publishOptions : {
@@ -1351,76 +1359,106 @@ describe("jquery.pubsub", function() {
 		});
 		
 		it("should discontinue sync publication when 1 subscriber returns false", function() {
-			fixture.topic = "/discontinuation/sync/returnFalse";
-			spyOn(fixture.one, 'notify').andCallThrough();
-			spyOn(fixture.two, 'notify').andCallThrough();
+			var _self = fixture;
 			
-			spyOn(fixture.publishOptions, 'progress').andCallThrough();
-			spyOn(fixture.publishOptions, 'done').andCallThrough();
-			spyOn(fixture.publishOptions, 'fail').andCallThrough();
-			spyOn(fixture.publishOptions, 'always').andCallThrough();
+			_self.topic = "/discontinuation/sync/returnFalse";
+			spyOn(_self.returnsFalse, 'notify').andCallThrough();
+			spyOn(_self.neverNotified, 'notify').andCallThrough();
+			
+			spyOn(_self.publishOptions, 'progress').andCallThrough();
+			spyOn(_self.publishOptions, 'done').andCallThrough();
+			spyOn(_self.publishOptions, 'fail').andCallThrough();
+			spyOn(_self.publishOptions, 'always').andCallThrough();
 			
 			
-			$.subscribe( fixture.topic, fixture.one.notify);
-			$.subscribe( fixture.topic, fixture.two.notify);
-			var publication = $.publishSync( fixture.topic, fixture.publishOptions);
+			$.subscribe( _self.topic, _self.returnsFalse.notify);
+			$.subscribe( _self.topic, _self.neverNotified.notify);
+			var publication = $.publishSync( _self.topic, _self.publishOptions);
 			
 			expect(publication).not.toBeNull();
 			expect(publication.state()).toBe("rejected");
 			
-			expect(fixture.one.notify).toHaveBeenCalled();
-			expect(fixture.two.notify).not.toHaveBeenCalled();
+			expect(_self.returnsFalse.notify).toHaveBeenCalled();
+			expect(_self.neverNotified.notify).not.toHaveBeenCalled();
 			
-			expect(fixture.publishOptions.progress).toHaveBeenCalled();
-			expect(fixture.publishOptions.done).not.toHaveBeenCalled();
-			expect(fixture.publishOptions.fail).toHaveBeenCalled();
-			expect(fixture.publishOptions.always).toHaveBeenCalled();
+			expect(_self.publishOptions.progress).toHaveBeenCalled();
+			expect(_self.publishOptions.done).not.toHaveBeenCalled();
+			expect(_self.publishOptions.fail).toHaveBeenCalled();
+			expect(_self.publishOptions.always).toHaveBeenCalled();
 		});
 		
 		it("should discontinue sync publication when 1 subscriber throws an exception", function() {
-			fixture.topic = "/discontinuation/sync/throwsException";
-			spyOn(fixture.three, 'notify').andCallThrough();
-			spyOn(fixture.two, 'notify').andCallThrough();
+			var _self = fixture;
+			_self.topic = "/discontinuation/sync/throwsException";
+			spyOn(_self.throwsException, 'notify').andCallThrough();
+			spyOn(_self.neverNotified, 'notify').andCallThrough();
 			
-			spyOn(fixture.publishOptions, 'progress').andCallThrough();
-			spyOn(fixture.publishOptions, 'done').andCallThrough();
-			spyOn(fixture.publishOptions, 'fail').andCallThrough();
-			spyOn(fixture.publishOptions, 'always').andCallThrough();
+			spyOn(_self.publishOptions, 'progress').andCallThrough();
+			spyOn(_self.publishOptions, 'done').andCallThrough();
+			spyOn(_self.publishOptions, 'fail').andCallThrough();
+			spyOn(_self.publishOptions, 'always').andCallThrough();
 			
-			$.subscribe( fixture.topic, fixture.three.notify);
-			$.subscribe( fixture.topic, fixture.two.notify);
-			var publication = $.publishSync( fixture.topic, fixture.publishOptions);
+			$.subscribe( _self.topic, _self.throwsException.notify);
+			$.subscribe( _self.topic, _self.neverNotified.notify);
+			var publication = $.publishSync( _self.topic, _self.publishOptions);
 			
 			expect(publication).not.toBeNull();
 			expect(publication.state()).toBe("rejected");
 			
-			expect(fixture.three.notify).toHaveBeenCalled();
-			expect(fixture.two.notify).not.toHaveBeenCalled();
+			expect(_self.throwsException.notify).toHaveBeenCalled();
+			expect(_self.neverNotified.notify).not.toHaveBeenCalled();
 			
-			expect(fixture.publishOptions.progress).toHaveBeenCalled();
-			expect(fixture.publishOptions.done).not.toHaveBeenCalled();
-			expect(fixture.publishOptions.fail).toHaveBeenCalled();
-			expect(fixture.publishOptions.always).toHaveBeenCalled();
+			expect(_self.publishOptions.progress).toHaveBeenCalled();
+			expect(_self.publishOptions.done).not.toHaveBeenCalled();
+			expect(_self.publishOptions.fail).toHaveBeenCalled();
+			expect(_self.publishOptions.always).toHaveBeenCalled();
 		});
 		
+		it("should discontinue sync publication when 1 subscriber rejects the notification", function() {
+			var _self = fixture;
+			_self.topic = "/discontinuation/sync/rejectNotification";
+			spyOn(_self.rejectNotification, 'notify').andCallThrough();
+			spyOn(_self.neverNotified, 'notify').andCallThrough();
+			
+			spyOn(_self.publishOptions, 'progress').andCallThrough();
+			spyOn(_self.publishOptions, 'done').andCallThrough();
+			spyOn(_self.publishOptions, 'fail').andCallThrough();
+			spyOn(_self.publishOptions, 'always').andCallThrough();
+			
+			$.subscribe( _self.topic, _self.rejectNotification.notify);
+			$.subscribe( _self.topic, _self.neverNotified.notify);
+			var publication = $.publishSync( _self.topic, _self.publishOptions);
+			
+			expect(publication).not.toBeNull();
+			expect(publication.state()).toBe("rejected");
+			
+			expect(_self.rejectNotification.notify).toHaveBeenCalled();
+			expect(_self.neverNotified.notify).not.toHaveBeenCalled();
+			
+			expect(_self.publishOptions.progress).toHaveBeenCalled();
+			expect(_self.publishOptions.done).not.toHaveBeenCalled();
+			expect(_self.publishOptions.fail).toHaveBeenCalled();
+			expect(_self.publishOptions.always).toHaveBeenCalled();
+		});
 		it("should discontinue async publication when 1 subscriber returns false", function() {
+			var _self = fixture;
 			var publication = null;
 			
 			runs(function() {
-				fixture.topic = "/discontinuation/async/returnFalse";
+				_self.topic = "/discontinuation/async/returnFalse";
 				
-				spyOn(fixture.one, 'notify').andCallThrough();
-				spyOn(fixture.two, 'notify').andCallThrough();
+				spyOn(_self.returnsFalse, 'notify').andCallThrough();
+				spyOn(_self.neverNotified, 'notify').andCallThrough();
 				
-				spyOn(fixture.publishOptions, 'progress').andCallThrough();
-				spyOn(fixture.publishOptions, 'done').andCallThrough();
-				spyOn(fixture.publishOptions, 'fail').andCallThrough();
-				spyOn(fixture.publishOptions, 'always').andCallThrough();
+				spyOn(_self.publishOptions, 'progress').andCallThrough();
+				spyOn(_self.publishOptions, 'done').andCallThrough();
+				spyOn(_self.publishOptions, 'fail').andCallThrough();
+				spyOn(_self.publishOptions, 'always').andCallThrough();
 				
-				$.subscribe( fixture.topic, fixture.one.notify);
-				$.subscribe( fixture.topic, fixture.two.notify);
+				$.subscribe( _self.topic, _self.returnsFalse.notify);
+				$.subscribe( _self.topic, _self.neverNotified.notify);
 				
-				publication = $.publish( fixture.topic, fixture.publishOptions);
+				publication = $.publish( _self.topic, _self.publishOptions);
 			});
 			
 			waitsFor(function() {
@@ -1432,32 +1470,33 @@ describe("jquery.pubsub", function() {
 				expect(publication).not.toBeNull();
 				expect(publication.state()).toBe("rejected");
 				
-				expect(fixture.one.notify).toHaveBeenCalled();
-				expect(fixture.two.notify).not.toHaveBeenCalled();
+				expect(_self.returnsFalse.notify).toHaveBeenCalled();
+				expect(_self.neverNotified.notify).not.toHaveBeenCalled();
 				
-				expect(fixture.publishOptions.progress).toHaveBeenCalled();
-				expect(fixture.publishOptions.done).not.toHaveBeenCalled();
-				expect(fixture.publishOptions.fail).toHaveBeenCalled();
-				expect(fixture.publishOptions.always).toHaveBeenCalled();
+				expect(_self.publishOptions.progress).toHaveBeenCalled();
+				expect(_self.publishOptions.done).not.toHaveBeenCalled();
+				expect(_self.publishOptions.fail).toHaveBeenCalled();
+				expect(_self.publishOptions.always).toHaveBeenCalled();
 			});
 		});
-		
+
 		it("should discontinue async publication when 1 subscriber throws an exception", function() {
+			var _self = fixture;
 			var publication = null;
 			
 			runs(function() {
-				fixture.topic = "/discontinuation/async/throwsException";
-				spyOn(fixture.three, 'notify').andCallThrough();
-				spyOn(fixture.two, 'notify').andCallThrough();
+				_self.topic = "/discontinuation/async/throwsException";
+				spyOn(_self.throwsException, 'notify').andCallThrough();
+				spyOn(_self.neverNotified, 'notify').andCallThrough();
 				
-				spyOn(fixture.publishOptions, 'progress').andCallThrough();
-				spyOn(fixture.publishOptions, 'done').andCallThrough();
-				spyOn(fixture.publishOptions, 'fail').andCallThrough();
-				spyOn(fixture.publishOptions, 'always').andCallThrough();
+				spyOn(_self.publishOptions, 'progress').andCallThrough();
+				spyOn(_self.publishOptions, 'done').andCallThrough();
+				spyOn(_self.publishOptions, 'fail').andCallThrough();
+				spyOn(_self.publishOptions, 'always').andCallThrough();
 				
-				$.subscribe( fixture.topic, fixture.three.notify);
-				$.subscribe( fixture.topic, fixture.two.notify);
-				publication = $.publish( fixture.topic, fixture.publishOptions);
+				$.subscribe( _self.topic, _self.throwsException.notify);
+				$.subscribe( _self.topic, _self.neverNotified.notify);
+				publication = $.publish( _self.topic, _self.publishOptions);
 			});
 			
 			waitsFor(function() {
@@ -1468,18 +1507,52 @@ describe("jquery.pubsub", function() {
 				expect(publication).not.toBeNull();
 				expect(publication.state()).toBe("rejected");
 				
-				expect(fixture.three.notify).toHaveBeenCalled();
-				expect(fixture.two.notify).not.toHaveBeenCalled();
+				expect(_self.throwsException.notify).toHaveBeenCalled();
+				expect(_self.neverNotified.notify).not.toHaveBeenCalled();
 				
-				expect(fixture.publishOptions.progress).toHaveBeenCalled();
-				expect(fixture.publishOptions.done).not.toHaveBeenCalled();
-				expect(fixture.publishOptions.fail).toHaveBeenCalled();
-				expect(fixture.publishOptions.always).toHaveBeenCalled();
+				expect(_self.publishOptions.progress).toHaveBeenCalled();
+				expect(_self.publishOptions.done).not.toHaveBeenCalled();
+				expect(_self.publishOptions.fail).toHaveBeenCalled();
+				expect(_self.publishOptions.always).toHaveBeenCalled();
+			});
+		});
+		
+		it("should discontinue async publication when 1 subscriber rejects the notification", function() {
+			var _self = fixture;
+			var publication = null;
+			runs(function() {
+				_self.topic = "/discontinuation/async/rejectNotification";
+				spyOn(_self.rejectNotification, 'notify').andCallThrough();
+				spyOn(_self.neverNotified, 'notify').andCallThrough();
+
+				spyOn(_self.publishOptions, 'progress').andCallThrough();
+				spyOn(_self.publishOptions, 'done').andCallThrough();
+				spyOn(_self.publishOptions, 'fail').andCallThrough();
+				spyOn(_self.publishOptions, 'always').andCallThrough();
+
+				$.subscribe( _self.topic, _self.rejectNotification.notify);
+				$.subscribe( _self.topic, _self.neverNotified.notify);
+				publication = $.publish( _self.topic, _self.publishOptions);
+			});
+			waitsFor(function() {
+				return done !== false;
+			}, "async publication should have finished",10);
+			runs(function(){
+				expect(publication).not.toBeNull();
+				expect(publication.state()).toBe("rejected");
+
+				expect(_self.rejectNotification.notify).toHaveBeenCalled();
+				expect(_self.neverNotified.notify).not.toHaveBeenCalled();
+
+				expect(_self.publishOptions.progress).toHaveBeenCalled();
+				expect(_self.publishOptions.done).not.toHaveBeenCalled();
+				expect(_self.publishOptions.fail).toHaveBeenCalled();
+				expect(_self.publishOptions.always).toHaveBeenCalled();
 			});
 		});
 	});
 	
-	describe("when notifications bubble up a topic hierarchy", function() {
+	describe("when notifications bubble up a hierarchical topic", function() {
 		var PubSub, fixture, done, count;
 		
 		beforeEach(function() {
