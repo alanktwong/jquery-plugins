@@ -337,6 +337,7 @@ describe("jquery.pubsub", function() {
 			callbacks.first.subscription = $.subscribe(topic, callbacks.first.notify);
 			expect(PubSub.hasSubscriptions(topic)).toBe(true);
 			expect(PubSub.getSubscriptions(topic).length).toBe(1);
+			
 			expect(callbacks.first.subscription).toBeSubscribedCorrectly(topic, null, callbacks.first.notify, null, topics);
 
 			callbacks.second.subscription = $.subscribe(topic, callbacks.second.notify);
@@ -585,14 +586,14 @@ describe("jquery.pubsub", function() {
 			
 			var subscribers = [];
 			// remove even numbered subscriptions
-			subscribers = $.unsubscribe( fixture.topic, fixture.second.subscription );
-			subscribers = $.unsubscribe( fixture.topic, fixture.fourth.subscription );
+			subscribers = $.unsubscribe( fixture.topic, fixture.second.subscription.id );
+			subscribers = $.unsubscribe( fixture.topic, fixture.fourth.subscription.id );
 			expect(PubSub.getSubscriptions(fixture.topic).length).toBe(2);
 			
 			try {
 				subscribers = $.unsubscribe( fixture.topic, function() {});
 			} catch ( err ) {
-				expect( err.message ).toBe("You must provide the subscription generated for the callback to remove it.");
+				expect( err.message ).toBe("You must provide the subscription id generated for the callback to remove it.");
 			}
 			$.publishSync( fixture.topic );
 			expect(fixture.first.notify).toHaveBeenCalled();
