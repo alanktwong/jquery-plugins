@@ -11,22 +11,6 @@
  * 
  */
 ;(function( $, undefined ) {
-	
-
-	
-	/*
-	 * Encapsulate state of pubsub event bus in following object.
-	 * The structure of the {@code subscriptions} cache will look like:
-	 * {  "/topic/1" : [
-	 *                   {priority: 10, callback: fn, context: null},
-	 *                   {priority: 12, callback: fn2, context: ctx}
-	 *                 ],
-	 *    "/topic/2" : [
-	 *                   {priority: 10, callback: fn3, context: ctx1},
-	 *                   {priority: 12, callback: fn4, context: ctx2}
-	 *                 ]
-	 * }
-	 */
 	var PubSub = {
 		slice : Array.slice,
 		version : "1.0.0.SNAPSHOT",
@@ -289,7 +273,7 @@
 			return found;
 		},
 		/*
-		 * Does not flatten list of subscriptions in the ancestory of the topic
+		 * Can flatten list of subscriptions in the ancestory of the topic
 		 */
 		getSubscriptions : function(topic /* string */, all /* boolean */) {
 			// var _self = PubSub;
@@ -440,50 +424,25 @@
 		return Util.bind(_callSubscriberWithImmediateExceptions, self);
 	}
 	
-	function _deliverMessage( publication ){
-		var _self = PubSub;
-		var notification  = publication.notification;
-		var currentTopic  = notification.currentTopic;
-		
-		var callSubscriber = _createCallSubscriber();
-		
-		var continuePropagating = ( publication.state() === "pending" );
-		if ( !_self.subscriptions.hasOwnProperty( currentTopic ) ) {
-			return continuePropagating;
-		}
-		var subscribers = _self.getSubscriptions(currentTopic);
-		if (continuePropagating) {
-			for (var i = 0; i < subscribers.length; i++) {
-				var subscription = subscribers[i];
-				notification.context = _createContext(subscription,notification);
-				var continuePropagating  = callSubscriber(subscription.callback, notification);
-				if (continuePropagating === false || !notification.isPropagation()) {
-					notification.reject();
-					break;
-				}
-			}
-		}
-		return continuePropagating;
-	}
-
 	function createDeliveryFunction(publication){
 		var deliver = function(_publication) {
 			var _self = PubSub;
 			
 			var _notification = _publication.notification;
-			var allSubscribers = _self.getSubscriptions(_notification.publishTopic, true);
+			var _subscribers = _self.getSubscriptions(_notification.publishTopic, true);
 			
-			var topics = _self.createTopics(_notification.publishTopic);
 			_publication.progress(_notification);
-			
 			// deliver notification to each level by using topic bubbling.
-			// i.e. deliver by going up the hierarchy through each topic
+			// i.e. deliver by going up the hierarchy through each topic and
+			// at each topic level, notify in order
 			if (_publication.state() === "pending") {
-				for (var i = 0; i < topics.length; i++) {
-					var topic = topics[i];
-					_notification.currentTopic = topic;
-					var continuePropagating = _deliverMessage( _publication );
-					if (continuePropagating === false || !_notification.isPropagation() ) {
+				var callSubscriber = _createCallSubscriber();
+				for (var i = 0; i < _subscribers.length; i++) {
+					var _subscription = _subscribers[i];
+					_notification.currentTopic = _subscription.topic;
+					_notification.context = _createContext(_subscription,_notification);
+					var continuePropagating  = callSubscriber(_subscription.callback, _notification);
+					if (continuePropagating === false || !_notification.isPropagation()) {
 						_notification.reject();
 						break;
 					}
