@@ -10,8 +10,8 @@
 	-->
 	
 	<script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.4.3/underscore-min.js"></script>
-	<script type="text/javascript" src="../../jquery.pubsub.js"></script>
-	<script type="text/javascript" src="../../../log4jq/jquery.log4jq.js"></script>
+	<script type="text/javascript" src="../jquery.pubsub.js"></script>
+	<script type="text/javascript" src="../../log4jq/jquery.log4jq.js"></script>
 <script>
 $(document).ready(function() {
 	var logger = $.configureLog4jq({
@@ -20,77 +20,126 @@ $(document).ready(function() {
 		targets : [
 			{
 				name: "console",
-				subscribed: true
+				enabled: true
 			}
 		]
 	});
-	var log = function(msg) {
-		$.debug(msg);
-	};
 	
-	
-	var topic = "/priority/example";
+	var callbacks = {
+		topic : "/priority/example",
+		one : {
+			notify : function(notification) {
+				var data = notification.data;
+				var msg = (notification.isSynchronous() ? "sync" : "async");
+				msg = msg + " notification of highest priority: " + notification.publishTopic + " -> " + notification.currentTopic;
+				msg = msg + ( (data.foo === "oops") ? ("... received oops and returning false:" + data.foo) : ("... received:" + data.foo) )
+				if (notification.isSynchronous()) {
+					$( "#receiver2", "#sync").append( "<p>" + msg + "</p>" );
+				} else {
+					$( "#receiver2", "#async").append( "<p>" + msg + "</p>" );
+				}
+				$.debug(msg);
+				if ( data.foo === "oops" ) {
+					return false;
+				}
+			}
+		},
+		two : {
+			notify : function(notification) {
+				var data = notification.data;
+				var msg = (notification.isSynchronous() ? "sync" : "async");
+				msg = msg + " notification of 2nd highest priority: " + notification.publishTopic + " -> " + notification.currentTopic;
+				msg = msg + "... received: " + data.foo;
+				if (notification.isSynchronous()) {
+					$( "#receiver1", "#sync").append( "<p>" + msg + "</p>" );
+				} else {
+					$( "#receiver1", "#async").append( "<p>" + msg + "</p>" );
+				}
+				$.debug(msg);
+			}
+		},
+		three : {
+			topic : "/priority",
+			notify : function(notification) {
+				var data = notification.data;
+				var msg = (notification.isSynchronous() ? "sync" : "async");
+				msg = msg + " notification of default priority: " + notification.publishTopic + " -> " + notification.currentTopic;
+				msg = msg + "... received: " + data.foo;
+				if (notification.isSynchronous()) {
+					$( "#parent", "#sync").append( "<p>" + msg + "</p>" );
+				} else {
+					$( "#parent", "#async").append( "<p>" + msg + "</p>" );
+				}
+			}
+		},
+		options : {
+			progress: function(notification) {
+				var msg = (notification.isSynchronous() ? "sync" : "async") + " progress: " + notification.publishTopic + " -> " + notification.currentTopic;
+				$.info(msg);
+			},
+			done: function(notification) {
+				var msg = (notification.isSynchronous() ? "sync" : "async") + " done: " + notification.publishTopic + " -> " + notification.currentTopic;
+				$.info(msg);
+			},
+			fail: function(notification) {
+				var msg = (notification.isSynchronous() ? "sync" : "async") + " fail: " + notification.publishTopic + " -> " + notification.currentTopic;
+				$.info(msg);
+			},
+			always: function(notification) {
+				var msg = (notification.isSynchronous() ? "sync" : "async") + " fail: " + notification.publishTopic + " -> " + notification.currentTopic;
+				$.info(msg);
+			}
+		}
+	}
 	// we can subscribe to a topic with a priority
-	$.subscribe( topic, function( n ) {
-		var data = n.data;
-		$( "#receiver2" ).append( "\n 2nd highest priority: " + data.foo + "\n" );
-	}, 2 );
+	$.subscribe( callbacks.topic, callbacks.two.notify, 2 );
 
 	// we can use the highest priority possibly
 	// keep other subscriptions from firing.
-	$.subscribe( topic, function( n ) {
-		var data = n.data;
-		$( "#receiver" ).append( "\n highest priority:" + data.foo + "\n" );
-		if ( data.foo === "oops" ) {
-			$( "#oops" ).append( "\n received oops:" + data.foo + "\n" );
-			return false;
-		}
-	}, 1 );
+	$.subscribe( callbacks.topic, callbacks.one.notify, 1 );
 
 	// the default priority is '10'.
-	$.subscribe( topic, function( n ) {
-		var data = n.data;
-		$( "#receiver3" ).append( "\n default priority is 10: " + data.foo+ "\n" );
-	});
-	var createHandlers = function(topic) {
-		return {
-			progress: function() {
-				log("begin " + topic);
-			},
-			done: function() {
-				log("done " + topic);
-			},
-			fail: function() {
-				log("fail " + topic);
-			},
-			always: function() {
-				log("always " + topic);
-			}
-		};
+	$.subscribe( callbacks.three.topic, callbacks.three.notify);
+	
+	var publishSync = function(evt) {
+		var options = $.extend({data : {foo: "bar" }}, callbacks.options);
+		$.publishSync( callbacks.topic, options );
+		options = $.extend({data : {foo: "oops"}}, callbacks.options);
+		$.publishSync( callbacks.topic, options );
 	};
 	
-	var sync = true;
-	if (sync) {
-		$.publishSync( topic, $.extend({data : {foo: "bar" }}, createHandlers("pub of 'bar'")) );
-		$.publishSync( topic, $.extend({data : {foo: "oops"}}, createHandlers("pub of 'oops'")) );
-	} else {
-		$.publish( topic, $.extend({data : {foo: "bar" }}, createHandlers("pub of 'bar'")) );
-		$.publish( topic, $.extend({data : {foo: "oops"}}, createHandlers("pub of 'oops'")) );
-	}
+	var publishAsync = function(evt) {
+		var options = $.extend({data : {foo: "bar" }}, callbacks.options);
+		$.publish( callbacks.topic, options );
+		options = $.extend({data : {foo: "oops"}}, callbacks.options);
+		$.publish( callbacks.topic, options );
+	};
+	
+	var $noteSync = $('#syncClick','#note').click(publishSync);
+	var $noteAsync = $('#asyncClick','#note').click(publishAsync);
+	
+	$noteSync.click();
+	$noteAsync.click();
 });
 </script>
 </head>
 <body>
 	<h3>jQuery PubSub: Priority Usage</h3>
 	<div id="note">
-		<p>Only synchronous part of demo works for co-publishing</p>
-		<p>Asynchronous part of demo does not work for co-publishing</p>
+		<p id="syncClick">Synchronous part of demo works for co-publishing</p>
+		<p id="asyncClick">Asynchronous part of demo works for co-publishing</p>
 	</div>
-	<div id="console-log" style="font-size: 14px;">
-		<p id="receiver"></p>
-		<p id="receiver2"></p>
-		<p id="receiver3"></p>
-		<p id="oops"></p>
+	<div id="notify" style="font-size: 14px;">
+		<div id="sync">
+			<p id="parent"></p>
+			<p id="receiver2"></p>
+			<p id="receiver1"></p>
+		</div>
+		<div id="async">
+			<p id="parent"></p>
+			<p id="receiver2"></p>
+			<p id="receiver1"></p>
+		</div>
 	</div>
 </body>
 

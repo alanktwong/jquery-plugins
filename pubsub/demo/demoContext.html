@@ -9,8 +9,8 @@
 	-->
 	
 	<script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.4.3/underscore-min.js"></script>
-	<script type="text/javascript" src="../../jquery.pubsub.js"></script>
-	<script type="text/javascript" src="../../../log4jq/jquery.log4jq.js"></script>
+	<script type="text/javascript" src="../jquery.pubsub.js"></script>
+	<script type="text/javascript" src="../../log4jq/jquery.log4jq.js"></script>
 <script>
 $(document).ready(function() {
 	var logger = $.configureLog4jq({
@@ -19,55 +19,71 @@ $(document).ready(function() {
 		targets : [
 			{
 				name: "console",
-				subscribed: true
+				enabled: true
 			}
 		]
 	});
-	var log = function(msg) {
-		$.debug(msg);
-	};
 	
-	
-	var topic = "/data/context/example"
-	// set up subscription with context specified for the callback function
-	$.subscribe( topic, $( "p#receiver" ), function( n ) {
-			var msg = n.data.exampleText
-			this.text( msg );
-			log(msg);
-		}
-	);
-	
-	var createHandlers = function(topic) {
-		return {
-			progress: function() {
-				log("begin " + topic);
-			},
-			done: function() {
-				log("done " + topic);
-			},
-			fail: function() {
-				log("fail " + topic);
-			},
-			always: function() {
-				log("always " + topic);
+	var callbacks = {
+		topic : "/data/context/example",
+		notify : function(notification) {
+			var data = notification.data;
+			var msg = (notification.isSynchronous() ? "sync" : "async");
+			msg = msg + " notification of subscriber: " + notification.publishTopic + " -> " + notification.currentTopic;
+			msg = "\n " + data.exampleText;
+			$.debug(msg);
+			if (notification.isSynchronous()) {
+				$(this).find('#sync').find("#receiver").append( "<p> sync:" + msg + "</p>" );
+			} else {
+				$(this).find('#async').find("#receiver").append( "<p> async:" + msg + "</p>" );
 			}
-		};
-	};
-
-	var sync = true;
-	if (sync) {
-		$.publishSync( topic, $.extend({data : {exampleText: "if you see on page: foo bar baz, then it works" }}, createHandlers(topic)));
-	} else {
-		$.publish( topic, $.extend({data : {exampleText: "if you see on page: foo bar baz, then it works" }}, createHandlers(topic)));
+		},
+		context : $( "#notify" ),
+		options : {
+			data : {
+				exampleText: "if you see on page: foo bar baz, then it works"
+			},
+			progress: function(notification) {
+				var msg = (notification.isSynchronous() ? "sync" : "async") + " progress: " + notification.publishTopic + " -> " + notification.currentTopic;
+				$.info(msg);
+			},
+			done: function(notification) {
+				var msg = (notification.isSynchronous() ? "sync" : "async") + " done: " + notification.publishTopic + " -> " + notification.currentTopic;
+				$.info(msg);
+			},
+			fail: function(notification) {
+				var msg = (notification.isSynchronous() ? "sync" : "async") + " fail: " + notification.publishTopic + " -> " + notification.currentTopic;
+				$.info(msg);
+			},
+			always: function(notification) {
+				var msg = (notification.isSynchronous() ? "sync" : "async") + " fail: " + notification.publishTopic + " -> " + notification.currentTopic;
+				$.info(msg);
+			}
+		}
 	}
+	$.subscribe( callbacks.topic, callbacks.context, callbacks.notify);
+	
+	$.publishSync( callbacks.topic, callbacks.options);
+	$.publish( callbacks.topic, callbacks.options);
+	
 });
 </script>
 </head>
 <body>
 	<h3>jQuery PubSub: Context Usage</h3>
-	<div id="console-log" style="font-size: 14px;">
-		<p id="receiver"></p>
-		<p id="receiver2"></p>
+	<div id="note">
+		<p id="syncClick">Synchronous part of demo works for co-publishing</p>
+		<p id="asyncClick">Asynchronous part of demo works for co-publishing</p>
+	</div>
+	<div id="notify" style="font-size: 14px;">
+		<div id="sync">
+			<p id="parent"></p>
+			<p id="receiver"></p>
+		</div>
+		<div id="async">
+			<p id="parent"></p>
+			<p id="receiver"></p>
+		</div>
 	</div>
 </body>
 

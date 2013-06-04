@@ -10,8 +10,8 @@
 	-->
 	
 	<script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.4.3/underscore-min.js"></script>
-	<script type="text/javascript" src="../../jquery.pubsub.js"></script>
-	<script type="text/javascript" src="../../../log4jq/jquery.log4jq.js"></script>
+	<script type="text/javascript" src="../jquery.pubsub.js"></script>
+	<script type="text/javascript" src="../../log4jq/jquery.log4jq.js"></script>
 <script>
 $(document).ready(function() {
 	var logger = $.configureLog4jq({
@@ -20,74 +20,125 @@ $(document).ready(function() {
 		targets : [
 			{
 				name: "console",
-				subscribed: true
+				enabled: true
 			}
 		]
 	});
-	var log = function(msg) {
-		$.debug(msg);
-	};
 	
-	
-	var topic1 = "/dataexample/1";
-	var topic2 = "/dataexample/2";
-	// data can be expected as an object literal / hash
-	$.subscribe( topic1, function( n ) {
-		var msg =   topic1 + " : " + n.data.foo  ;
-		$( "#receiver",'#console-log' ).append( msg );
-		log(msg);
-	});
-
-	// or individual parameters.
-	$.subscribe( topic2, function( n ) {
-		var msg =  topic2 + " : " + n.data.param1 + n.data.param2 ;
-		$( "#receiver2", '#console-log' ).append(msg);
-		log(msg);
-	});
-
-	var createHandlers = function(topic) {
-		return {
-			progress: function() {
-				log("begin " + topic);
-			},
-			done: function() {
-				log("done " + topic);
-			},
-			fail: function() {
-				log("fail " + topic);
-			},
-			always: function() {
-				log("always " + topic);
+	var callbacks = {
+		topic : "/dataexample",
+		notify : function(notification) {
+			var data = notification.data;
+			var msg = (notification.isSynchronous() ? "sync" : "async");
+			msg = msg + " notification of parent subscriber: " + notification.publishTopic + " -> " + notification.currentTopic;
+			msg = msg + " ... received: " + JSON.stringify(data);
+			$.debug(msg);
+			if (notification.isSynchronous()) {
+				$( "#parent", '#sync' ).append( "<p>" + msg + "</p>" );
+			} else {
+				$( "#parent", '#async' ).append( "<p>" + msg + "</p>" );
 			}
-		};
+		},
+		one : {
+			topic : "/dataexample/1",
+			notify : function(notification) {
+				var data = notification.data;
+				var msg = (notification.isSynchronous() ? "sync" : "async");
+				msg = msg + " notification of 1st subscriber: " + notification.publishTopic + " -> " + notification.currentTopic;
+				msg = msg + " ... received: " + JSON.stringify(data);
+				$.debug(msg);
+				if (notification.isSynchronous()) {
+					$( "#receiver1", "#sync").append( "<p>" + msg + "</p>" );
+				} else {
+					$( "#receiver1", "#async").append( "<p>" + msg + "</p>" );
+				}
+			},
+			data : {
+				foo: "bar"
+			}
+		},
+		two : {
+			topic : "/dataexample/2",
+			notify : function(notification) {
+				var data = notification.data;
+				var msg = (notification.isSynchronous() ? "sync" : "async");
+				msg = msg + " notification of 2nd subscriber: " + notification.publishTopic + " -> " + notification.currentTopic;
+				msg = msg + " ... received: " + JSON.stringify(data);
+				$.debug(msg);
+				if (notification.isSynchronous()) {
+					$( "#receiver2", "#sync").append( "<p>" + msg + "</p>" );
+				} else {
+					$( "#receiver2", "#async").append( "<p>" + msg + "</p>" );
+				}
+			},
+			data : {
+				param1 : "bar",
+				param2 : "baz"
+			}
+		},
+		options : {
+			progress: function(notification) {
+				var msg = (notification.isSynchronous() ? "sync" : "async") + " progress: " + notification.publishTopic + " -> " + notification.currentTopic;
+				$.info(msg);
+			},
+			done: function(notification) {
+				var msg = (notification.isSynchronous() ? "sync" : "async") + " done: " + notification.publishTopic + " -> " + notification.currentTopic;
+				$.info(msg);
+			},
+			fail: function(notification) {
+				var msg = (notification.isSynchronous() ? "sync" : "async") + " fail: " + notification.publishTopic + " -> " + notification.currentTopic;
+				$.info(msg);
+			},
+			always: function(notification) {
+				var msg = (notification.isSynchronous() ? "sync" : "async") + " fail: " + notification.publishTopic + " -> " + notification.currentTopic;
+				$.info(msg);
+			}
+		}
+	}
+	
+	$.subscribe( callbacks.topic, callbacks.notify);
+	$.subscribe( callbacks.one.topic, callbacks.one.notify);
+	$.subscribe( callbacks.two.topic, callbacks.two.notify);
+	
+	var publishSync = function(evt) {
+		var options = $.extend(callbacks.options, {data : callbacks.one.data});
+		$.publishSync( callbacks.one.topic, options);
+		options = $.extend(callbacks.options, {data : callbacks.two.data});
+		$.publishSync( callbacks.two.topic, options);
 	};
 	
-	var $note = $('#note').click(function(evt) {
-		var sync = true;
-		if (sync) {
-			$.publishSync( topic1, $.extend({data : {foo: "bar" }}, createHandlers(topic1)));
-			$.publishSync( topic2, $.extend({data :  {param1 : "bar", param2: "baz"}}, createHandlers(topic2)));
-		} else {
-			$.publish( topic1, $.extend({data : {foo: "bar" }}, createHandlers(topic1)));
-			_.delay(function() {},10);
-			$.publish( topic2, $.extend({data : {param1 : "bar", param2: "baz"}}, createHandlers(topic2)));
-		}
-	});
-	$note.click();
+	var publishAsync = function(evt) {
+		var options = $.extend(callbacks.options, {data : callbacks.one.data});
+		$.publish( callbacks.one.topic, options);
+		options = $.extend(callbacks.options, {data : callbacks.two.data});
+		$.publish( callbacks.two.topic, options);
+	};
+	
+	var $noteSync = $('#syncClick','#note').click(publishSync);
+	var $noteAsync = $('#asyncClick','#note').click(publishAsync);
+	
+	$noteSync.click();
+	$noteAsync.click();
 });
 </script>
 </head>
 <body>
 	<h3>jQuery PubSub: Data Usage</h3>
 	<div id="note">
-		<p>Only synchronous part of demo works for co-publishing</p>
-		<p>Asynchronous part of demo does not work for co-publishing</p>
+		<p id="syncClick">Synchronous part of demo works for co-publishing</p>
+		<p id="asyncClick">Asynchronous part of demo works for co-publishing</p>
 	</div>
-	<div id="console-log" style="font-size: 14px;">
-		<p id="receiver"></p>
-		<p id="receiver2"></p>
-		<p id="receiver3"></p>
-		<p id="receiver4"></p>
+	<div id="notify" style="font-size: 14px;">
+		<div id="sync">
+			<p id="parent"></p>
+			<p id="receiver2"></p>
+			<p id="receiver1"></p>
+		</div>
+		<div id="async">
+			<p id="parent"></p>
+			<p id="receiver2"></p>
+			<p id="receiver1"></p>
+		</div>
 	</div>
 </body>
 

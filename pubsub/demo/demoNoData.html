@@ -10,8 +10,8 @@
 	-->
 	
 	<script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.4.3/underscore-min.js"></script>
-	<script type="text/javascript" src="../../jquery.pubsub.js"></script>
-	<script type="text/javascript" src="../../../log4jq/jquery.log4jq.js"></script>
+	<script type="text/javascript" src="../jquery.pubsub.js"></script>
+	<script type="text/javascript" src="../../log4jq/jquery.log4jq.js"></script>
 <script>
 $(document).ready(function() {
 	var logger = $.configureLog4jq({
@@ -20,53 +20,78 @@ $(document).ready(function() {
 		targets : [
 			{
 				name: "console",
-				subscribed: true
+				enabled: true
 			}
 		]
 	});
 	
-	var log = function(msg) {
-		$.debug(msg);
-	};
-	
-	var topic = "/example/nodata";
-	$.subscribe( topic, function(n) {
-		var msg = "1st subscription called";
-		$( "#receiver").append( "<p>" + msg + "</p>" );
-		log(msg);
-	});
-
-	// there can be more than one subscriber for a topic
-	$.subscribe( topic, function(n) {
-		var msg = "2nd subscription called";
-		$( "#receiver").append( "<p>" + msg + "</p>" );
-		log(msg);
-	});
-
-	var createHandlers = function(topic) {
-		return {
-			progress: function() {
-				log("begin " + topic);
-			},
-			done: function() {
-				log("done " + topic);
-			},
-			fail: function() {
-				log("fail " + topic);
-			},
-			always: function() {
-				log("always " + topic);
+	var callbacks = {
+		topic : "/example",
+		notify : function(notification) {
+			var msg = (notification.isSynchronous() ? "sync" : "async");
+			msg = msg + " notification of parent subscriber: " + notification.publishTopic + " -> " + notification.currentTopic;
+			$.debug(msg);
+			if (notification.isSynchronous()) {
+				$( "#parent", "#sync" ).append( "<p>" + msg + "</p>" );
+			} else {
+				$( "#parent", "#async" ).append( "<p>" + msg + "</p>" );
 			}
-		};
+		},
+		nodata : {
+			topic : "/example/nodata",
+			one : {
+				notify : function(notification) {
+					var msg = (notification.isSynchronous() ? "sync" : "async");
+					msg = msg + " notification of 1st subscriber: " + notification.publishTopic + " -> " + notification.currentTopic;
+					$.debug(msg);
+					if (notification.isSynchronous()) {
+						$( "#receiver1", "#sync" ).append( "<p>" + msg + "</p>" );
+					} else {
+						$( "#receiver1", "#async" ).append( "<p>" + msg + "</p>" );
+					}
+				}
+			},
+			two : {
+				notify : function(notification) {
+					var msg = (notification.isSynchronous() ? "sync" : "async");
+					msg = msg + " notification of 2nd subscriber: " + notification.publishTopic + " -> " + notification.currentTopic;
+					$.debug(msg);
+					if (notification.isSynchronous()) {
+						$( "#receiver2", "#sync").append( "<p>" + msg + "</p>" );
+					} else {
+						$( "#receiver2", "#async").append( "<p>" + msg + "</p>" );
+					}
+				}
+			}
+		},
+		options : {
+			progress: function(notification) {
+				var msg = (notification.isSynchronous() ? "sync" : "async") + " progress: " + notification.publishTopic + " -> " + notification.currentTopic;
+				$.info(msg);
+			},
+			done: function(notification) {
+				var msg = (notification.isSynchronous() ? "sync" : "async") + " done: " + notification.publishTopic + " -> " + notification.currentTopic;
+				$.info(msg);
+			},
+			fail: function(notification) {
+				var msg = (notification.isSynchronous() ? "sync" : "async") + " fail: " + notification.publishTopic + " -> " + notification.currentTopic;
+				$.info(msg);
+			},
+			always: function(notification) {
+				var msg = (notification.isSynchronous() ? "sync" : "async") + " fail: " + notification.publishTopic + " -> " + notification.currentTopic;
+				$.info(msg);
+			}
+		}
 	};
 	
+	
+	$.subscribe( callbacks.topic, callbacks.notify);
+	$.subscribe( callbacks.nodata.topic, callbacks.nodata.one.notify);
+	$.subscribe( callbacks.nodata.topic, callbacks.nodata.two.notify);
+
 	// the subscriptions are triggered through a publish call on the topic
-	var sync = true;
-	if (sync) {
-		$.publishSync(topic, createHandlers(topic));
-	} else {
-		$.publish(topic, createHandlers(topic));
-	}
+	$.publishSync(callbacks.nodata.topic, callbacks.options);
+	$.publish(callbacks.nodata.topic, callbacks.options);
 });
 </script>
 </head>
@@ -74,10 +99,19 @@ $(document).ready(function() {
 	<h3>jQuery PubSub: NoData Usage</h3>
 	<div id="note">
 		<p>Only synchronous part of demo works for co-publishing</p>
-		<p>Asynchronous part of demo does not work for co-publishing</p>
+		<p>Asynchronous part of demo does work for co-publishing</p>
 	</div>
-	<div id="console-log" style="font-size: 14px;">
-		<p id="receiver"></p>
+	<div id="notify" style="font-size: 14px;">
+		<div id="sync">
+			<p id="parent"></p>
+			<p id="receiver2"></p>
+			<p id="receiver1"></p>
+		</div>
+		<div id="async">
+			<p id="parent"></p>
+			<p id="receiver2"></p>
+			<p id="receiver1"></p>
+		</div>
 	</div>
 </body>
 
