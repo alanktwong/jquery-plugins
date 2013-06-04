@@ -101,6 +101,43 @@
 		publishSync : function(topic /* string */, options /* object */ ) {
 			return _self.publishImpl( topic, options, true );
 		},
+		publishImpl : function( topic /* string */, options /* object */, sync /* boolean */ ){
+			var _self = PubSub;
+			var publication = null;
+			if (!_self.validateTopicName(topic)) {
+				throw new Error( "You must provide a valid topic name to publish." );
+			}
+			options = options || {};
+			
+			publication = _self.createPublication( topic, options, sync );
+			
+			var hasSubscribers = _self.hasSubscriptions(topic);
+			if ( !hasSubscribers ){
+				var _notification = publication.notification;
+				_notification.reject();
+				publication.progress(_notification);
+				publication.fail(_notification);
+				publication.always(_notification);
+			} else {
+				var deliver = createDeliveryFunction(publication);
+				if (Util.isFunction(deliver)) {
+					if ( sync === true ){
+						deliver();
+					} else {
+						Util.delay(deliver,0);
+					}
+				} else {
+					throw new Error("should have created delivery function");
+				}
+			}
+			
+			return {
+				id : publication.id,
+				topic : publication.topic,
+				timestamp : publication.timestamp,
+				state : publication.state
+			};
+		},
 		/**
 		 * Remove a subscription.
 		 * 
@@ -146,38 +183,6 @@
 		reset : function() {
 			//var _self = PubSub;
 			_self.subscriptions = {};
-		},
-		publishImpl : function( topic /* string */, options /* object */, sync /* boolean */ ){
-			var _self = PubSub;
-			var publication = null;
-			if (!_self.validateTopicName(topic)) {
-				throw new Error( "You must provide a valid topic name to publish." );
-			}
-			options = options || {};
-			
-			publication = _self.createPublication( topic, options, sync );
-			
-			var hasSubscribers = _self.hasSubscriptions(topic);
-			if ( !hasSubscribers ){
-				var _notification = publication.notification;
-				_notification.reject();
-				publication.progress(_notification);
-				publication.fail(_notification);
-				publication.always(_notification);
-			} else {
-				var deliver = createDeliveryFunction(publication);
-				if (Util.isFunction(deliver)) {
-					if ( sync === true ){
-						deliver();
-					} else {
-						Util.delay(deliver,0);
-					}
-				} else {
-					throw new Error("should have created delivery function");
-				}
-			}
-			
-			return publication;
 		},
 		validateTopicName : function(name /*string */) {
 			//var _self = PubSub;
@@ -225,36 +230,33 @@
 			fail : function(notification) {},
 			always : function(notification) {}
 		},
-		createPublication : function(topic /* string */, publication /* object */, sync /* boolean */ ) {
+		createPublication : function(topic /* string */, options /* object */, sync /* boolean */ ) {
 			//var _self = PubSub;
 			if (!_self.validateTopicName(topic)) {
 				throw new Error( "You must provide a valid topic name to create a Notification." );
 			}
-			if (!Util.isObject(publication)) {
+			if (!Util.isObject(options)) {
 				throw new Error( "You must provide options to create a Notification." );
 			}
-			publication.topic = topic;
-
-			publication.data     = Util.isObject(publication.data)       ? publication.data    : null;
-			publication.context  = Util.isObject(publication.context)    ? publication.context : null;
-			
 			var createCallback = function(callback, safe, context) {
 				var cb = Util.isFunction(callback) ? callback : safe;
 				cb = Util.bind(cb, context);
 				return cb;
 			};
+			var deferredContext = options.context;
+			var publication = $.extend({}, {
+				topic :    topic,
+				sync :     sync,
+				data :     Util.isObject(options.data)       ? options.data    : null,
+				context :  Util.isObject(options.context)    ? options.context : null,
+				progress : createCallback(options.progress, _self.defaultPublicationOptions.progress, deferredContext),
+				done :     createCallback(options.done,     _self.defaultPublicationOptions.done,     deferredContext),
+				fail :     createCallback(options.fail,     _self.defaultPublicationOptions.fail,     deferredContext),
+				always :   createCallback(options.always,   _self.defaultPublicationOptions.always,   deferredContext)
+			});
 			
-			var deferredContext = publication.context;
-			var callbacks = {
-				progress : createCallback(publication.progress, _self.defaultPublicationOptions.progress, deferredContext),
-				done :     createCallback(publication.done,     _self.defaultPublicationOptions.done,     deferredContext),
-				fail :     createCallback(publication.fail,     _self.defaultPublicationOptions.fail,     deferredContext),
-				always :   createCallback(publication.always,   _self.defaultPublicationOptions.always,   deferredContext)
-			};
-			
-			publication.notification = new Notification(topic, publication.data, publication.context, sync);
-			publication.state = publication.notification.state;
-			publication = $.extend({}, publication, callbacks);
+			var notification = new Notification(publication);
+			publication.notification = notification;
 			return publication;
 		},
 		/**
@@ -328,16 +330,33 @@
 	
 	var _self = PubSub;
 	
-	function Notification(topic /* string */, data /* object */, context /* object */, sync /* boolean */ ) {
-		this.id = Util.generateGUID();
-		this.publishTopic = topic;
-		this.currentTopic = topic;
-		this.data    = Util.isObject(data)    ? data : null;
-		this.context = Util.isObject(context) ? context : null;
+	function Notification(publication /* object */) {
+		var _id = Util.generateGUID();
+		this.id = function() {
+			return _id;
+		}
+		var _publishTopic = publication.topic;
+		this.publishTopic = function() {
+			return _publishTopic;
+		}
+		var _currentTopic = publication.topic;
+		this.currentTopic = function() {
+			return _currentTopic;
+		}
+		var _data    = Util.isObject(publication.data)    ? publication.data : null;
+		this.data = function() {
+			return _data;
+		}
+		
+		var _context = Util.isObject(publication.context) ? publication.context : null;
+		this.context = function() {
+			return _context;
+		}
+		
 		this.message = null;
 		
 		var _publishPropagated = true;
-		var _sync = (sync === true);
+		var _sync = (publication.sync === true);
 		var _state = "pending";
 		
 		this.isSynchronous = function() {
@@ -352,10 +371,6 @@
 			_state = "rejected";
 		};
 		
-		this.resolve = function() {
-			_state = "resolved"
-		}
-		
 		this.state = function() {
 			return _state;
 		};
@@ -363,7 +378,22 @@
 		this.isPropagation = function() {
 			return _publishPropagated === true;
 		}
-		_addTimeStamp(this);
+		
+		_addTimeStamp(publication);
+		var _timestamp = publication.timestamp;
+		this.timestamp = function() {
+			return _timestamp;
+		}
+		
+		var mutatedPublication = $.extend(publication, {
+			id : _id,
+			publishTopic : _publishTopic,
+			currentTopic : _currentTopic,
+			state : this.state,
+			resolve : function() {
+				_state = "resolved";
+			}
+		});
 	}
 	
 	function Subscription( topic /*string */, callback /* function */, priority /* integer */, context /* object */ ) {
@@ -402,21 +432,22 @@
 
 	function _createContext(subscription, notification) {
 		var context = null;
-		if (subscription.context !== null && notification.context !== null) {
-			context = $.extend({}, notification.context, subscription.context);
+		if (subscription.context !== null && notification.context() !== null) {
+			context = $.extend({}, notification.context(), subscription.context);
 		} else if (subscription.context !== null) {
-			context = subscription.context
+			context = subscription.context;
 		} else if (notification.context !== null) {
-			context = notification.context
+			context = notification.context();
 		}
 		return context;
 	}
 	
 	function _createCallSubscriber() {
-		var _callSubscriberWithImmediateExceptions = function(subscriber, notification) {
+		var _callSubscriberWithImmediateExceptions = function(subscriber, publication) {
+			var notification = publication.notification;
 			var ret = true;
 			try {
-				ret = subscriber.apply(notification.context, [notification]);
+				ret = subscriber.apply(publication.context, [notification]);
 			} catch( ex ){
 				ret = false;
 				notification.reject(ex.message);
@@ -431,7 +462,7 @@
 			var _self = PubSub;
 			
 			var _notification = _publication.notification;
-			var _subscribers = _self.getSubscriptions(_notification.publishTopic, true);
+			var _subscribers = _self.getSubscriptions(_publication.publishTopic, true);
 			
 			_publication.progress(_notification);
 			// deliver notification to each level by using topic bubbling.
@@ -441,9 +472,9 @@
 				var callSubscriber = _createCallSubscriber();
 				for (var i = 0; i < _subscribers.length; i++) {
 					var _subscription = _subscribers[i];
-					_notification.currentTopic = _subscription.topic;
-					_notification.context = _createContext(_subscription,_notification);
-					var continuePropagating  = callSubscriber(_subscription.callback, _notification);
+					_publication.currentTopic = _subscription.topic;
+					_publication.context = _createContext(_subscription,_notification);
+					var continuePropagating  = callSubscriber(_subscription.callback, _publication);
 					if (continuePropagating === false || !_notification.isPropagation()) {
 						_notification.reject();
 						break;
@@ -451,7 +482,7 @@
 				}
 			}
 			if (_publication.state() !== "rejected") {
-				_notification.resolve();
+				_publication.resolve();
 			}
 			if (_publication.state() === "resolved") {
 				_publication.done(_notification);

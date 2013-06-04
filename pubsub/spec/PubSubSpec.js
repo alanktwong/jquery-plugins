@@ -176,42 +176,84 @@ describe("jquery.pubsub", function() {
 		});
 	});
 	
-	describe("when creating publications", function() {
-		var PubSub, publication, notification;
-		var topic = "/app/module/class";
-		var data = { id : 1, date: new Date(), name: "name" };
-		var context = {};
+	describe("when creating Publications", function() {
+		var PubSub, fixture;
 		
 		beforeEach(function() {
 			PubSub = TestUtil.resetPubSub();
+			fixture = {
+				topic : "/app/module/class",
+				data : { id : 1, date: new Date(), name: "name" },
+				context : {}
+			}
 		});
 		
 		it("should create them with data and context", function() {
-			publication = PubSub.createPublication(topic ,{ data: data, context: context });
-			notification = publication.notification;
+			var publication = PubSub.createPublication(fixture.topic ,{ data: fixture.data, context: fixture.context });
+			var notification = publication.notification;
+
+			expect(publication).not.toBeNull();
 			expect(notification).not.toBeNull();
-			expect(notification.data).toBe(data);
-			expect(notification.publishTopic).toBe(topic);
-			expect(notification.context).toBe(context);
-			expect(notification.timestamp).not.toBeNull();
+			
+			expect(publication.id).not.toBeNull();
+			expect(publication.id).toBe(notification.id());
+			expect(publication.timestamp).not.toBeNull();
+			expect(publication.timestamp).toBe(notification.timestamp());
+			expect(publication.state() === "pending").toBe(true);
+			
+			expect(_.isFunction(publication.progress)).toBe(true);
+			expect(_.isFunction(publication.done)).toBe(true);
+			expect(_.isFunction(publication.fail)).toBe(true);
+			expect(_.isFunction(publication.always)).toBe(true);
+			expect(_.isFunction(publication.resolve)).toBe(true);
+			
+			expect(publication.data).toBe(notification.data());
+			expect(publication.context).toBe(notification.context());
+			expect(publication.publishTopic).toBe(notification.publishTopic());
+			expect(publication.currentTopic).toBe(notification.currentTopic());
+			
+			expect(notification.id()).not.toBeNull();
+			expect(notification.timestamp()).not.toBeNull();
+			
+			expect(notification.state() === "pending").toBe(true);
+			expect(notification.isSynchronous()).toBe(false);
+			expect(notification.isPropagation()).toBe(true);
+			expect(_.isFunction(notification.reject)).toBe(true);
+			
+			expect(notification.data()).toBe(fixture.data);
+			expect(notification.context()).toBe(fixture.context);
+			expect(notification.publishTopic()).toBe(fixture.topic);
+			expect(notification.currentTopic()).toBe(fixture.topic);
 		});
 		it("should create them with just data", function() {
-			publication = PubSub.createPublication(topic, { data : data });
-			notification = publication.notification;
-			expect(notification.context).toBeNull();
+			var publication = PubSub.createPublication(fixture.topic, { data : fixture.data });
+			var notification = publication.notification;
+
+			expect(publication).not.toBeNull();
+			expect(notification).not.toBeNull();
+			
+			expect(notification.data()).toBe(fixture.data);
+			expect(notification.context()).toBeNull();
+			expect(publication.data).toBe(notification.data());
+			expect(publication.context).toBeNull();
 		});
 		it("should not create them with w/o options", function() {
 			try {
-				publication = PubSub.createPublication(topic)
+				var publication = PubSub.createPublication(fixture.topic)
 			} catch( err ) {
 				expect(err.message).toBe("You must provide options to create a Notification.");
 			}
 		});
 		it("should create them with empty options", function() {
-			publication = PubSub.createPublication(topic, {});
-			notification = publication.notification;
-			expect(notification.data).toBeNull();
-			expect(notification.context).toBeNull();
+			var publication = PubSub.createPublication(fixture.topic, {});
+			var notification = publication.notification;
+			expect(publication).not.toBeNull();
+			expect(notification).not.toBeNull();
+			
+			expect(notification.data()).toBeNull();
+			expect(notification.context()).toBeNull();
+			expect(publication.data).toBeNull();
+			expect(publication.context).toBeNull();
 		});
 	});
 	
@@ -331,26 +373,20 @@ describe("jquery.pubsub", function() {
 			var callbacks = {
 				first: {
 					notify : function(notification) {
-						var data   = notification.data;
-						var topic  = notification.currentTopic;
-						var origin = notification.publishTopic;
-						$.debug("1st subscriber receives " + TestUtil.getType(notification) + " on: " + notification.publishTopic);
+						$.debug("1st subscriber receives " + TestUtil.getType(notification) + " on: " + notification.publishTopic());
 						expect(count).toBe(0);
 						count++;
 					}
 				},
 				second: {
 					notify : function(notification) {
-						var data   = notification.data;
-						var topic  = notification.currentTopic;
-						var origin = notification.publishTopic;
-						$.debug("2nd subscriber receives " + TestUtil.getType(notification) + " on: " + notification.publishTopic);
+						$.debug("2nd subscriber receives " + TestUtil.getType(notification) + " on: " + notification.publishTopic());
 						expect(count).toBe(1);
 						count++;
 					}
 				}
 			};
-			spyOn(callbacks.first, 'notify').andCallThrough();
+			spyOn(callbacks.first,  'notify').andCallThrough();
 			spyOn(callbacks.second, 'notify').andCallThrough();
 			
 			callbacks.first.subscription = $.subscribe(topic, callbacks.first.notify);
@@ -900,39 +936,40 @@ describe("jquery.pubsub", function() {
 				topic : "/data/push",
 				first : {
 					notify : function(notification) {
-						var data = notification.data;
-						var topic  = notification.currentTopic;
-						var origin = notification.publishTopic;
+						var data   = notification.data();
+						var msg = TestUtil.getType(notification) + " of: " + notification.currentTopic() + " from: " + notification.publishTopic();
+						expect(this).toBeOk(true,msg);
+						
 						expect( data.string ).toBe("hello")
-						$.debug( "string passed to first.notify on: " + origin);
+						$.debug( "string passed to first.notify on: " + notification.publishTopic());
 						expect( data.number).toBe(5);
-						$.debug("number passed to first.notify on: " + origin);
+						$.debug("number passed to first.notify on: " + notification.publishTopic());
 						var expected = {
 								foo: "bar",
 								baz: "qux"
 						};
 						expect(_.isEqual(data.object, expected)).toBe(true);
-						$.debug("object passed to first.notify on: " + origin );
-						$.debug("first.notify mutating data on: " + origin)
+						$.debug("object passed to first.notify on: " + notification.publishTopic() );
+						$.debug("first.notify mutating data on: " + notification.publishTopic())
 						data.string = "goodbye";
 						data.object.baz = "quux";
 					}
 				},
 				second : {
 					notify : function(notification) {
-						var data = notification.data;
-						var topic  = notification.currentTopic;
-						var origin = notification.publishTopic;
+						var data   = notification.data();
+						var msg = TestUtil.getType(notification) + " of: " + notification.currentTopic() + " from: " + notification.publishTopic();
+						expect(this).toBeOk(true,msg);
 						expect( data.string ).toBe("goodbye");
-						$.debug( "string changed on reception of data by second.notify on: " + origin );
+						$.debug( "string changed on reception of data by second.notify on: " + notification.publishTopic() );
 						expect( data.number ).toBe(5);
-						$.debug("number changed on reception of data by second.notify on: " + origin );
+						$.debug("number changed on reception of data by second.notify on: " + notification.publishTopic() );
 						var expected = {
 								foo: "bar",
 								baz: "quux"
 						};
 						expect(_.isEqual(data.object, expected)).toBe(true);
-						$.debug("object changed on reception of data by second.notify on: " + origin );
+						$.debug("object changed on reception of data by second.notify on: " + notification.publishTopic() );
 					}
 				},
 				publishOptions : {
@@ -945,43 +982,28 @@ describe("jquery.pubsub", function() {
 						}
 					},
 					progress : function(notification) {
-						var data   = notification.data;
-						var topic  = notification.currentTopic;
-						var origin = notification.publishTopic;
-						
-						var msg = "begin notifications w/data on: " + origin;
-						$.info(msg);
+						var msg = "progress:" + TestUtil.getType(notification) + " of: " + notification.currentTopic() + " from: " + notification.publishTopic();
+						expect(this).toBeOk(msg,msg);
 					},
 					done: function(notification) {
-						var data   = notification.data;
-						var topic  = notification.currentTopic;
-						var origin = notification.publishTopic;
-						
-						var msg = "successful notifications w/data on: " + origin;
-						$.info(msg);
+						var msg = "done:" + TestUtil.getType(notification) + " of: " + notification.currentTopic() + " from: " + notification.publishTopic();
+						expect(this).toBeOk(msg,msg);
 					},
 					fail: function(notification) {
-						var data   = notification.data;
-						var topic  = notification.currentTopic;
-						var origin = notification.publishTopic;
-						
-						var msg = "failed notifications w/data on: " + origin;
-						$.error(msg);
+						var msg = "fail:" + TestUtil.getType(notification) + " of: " + notification.currentTopic() + " from: " + notification.publishTopic();
+						expect(this).toBeOk(msg,msg);
 					},
 					always : function(notification) {
-						var data   = notification.data;
-						var topic  = notification.currentTopic;
-						var origin = notification.publishTopic;
-						
-						var msg = "completed notifications w/data on: " + origin;
-						$.info(msg);
+						var data   = notification.data();
+						var msg = "always:" + TestUtil.getType(notification) + " of: " + notification.currentTopic() + " from: " + notification.publishTopic();
+						expect(this).toBeOk(msg,msg);
 						var expected = {
 								foo: "bar",
 								baz: "quux"
 						};
 						var obj = fixture.publishOptions.data.object;
 						expect(_.isEqual(obj, expected)).toBe(true);
-						$.info("object updated after notifications w/data on: " + origin);
+						$.info("object updated after notifications w/data on: " + notification.publishTopic());
 						done = true;
 					}
 				},
@@ -1051,22 +1073,22 @@ describe("jquery.pubsub", function() {
 				topic : "/data/push",
 				notify : function(notification) {
 					var self = fixture;
-					var data   = notification.data;
-					var msg = "notification of topic: " + notification.currentTopic + " from " + notification.publishTopic;
+					var data   = notification.data();
+					var msg = "notification of topic: " + notification.currentTopic() + " from " + notification.publishTopic();
 					expect(this).toBeOk(true,msg);
-					if (self.first.topic === notification.publishTopic ) {
+					if (self.first.topic === notification.publishTopic() ) {
 						var expectedData = self.first.options.data;
 						expect(data.object.id).toBe(expectedData.object.id);
-						$.debug("data originating from " + notification.publishTopic + " should have same id");
+						$.debug("data originating from " + notification.publishTopic() + " should have same id");
 						expect(data.number).toBe(expectedData.number);
-						$.debug("data originating from " + notification.publishTopic + " should have same number");
+						$.debug("data originating from " + notification.publishTopic() + " should have same number");
 						data.number++;
-					} else if (self.second.topic === notification.publishTopic ) {
+					} else if (self.second.topic === notification.publishTopic() ) {
 						var expectedData = self.second.options.data;
 						expect(data.object.id).toBe(expectedData.object.id);
-						$.debug("data originating from " + notification.publishTopic + " should have same id");
+						$.debug("data originating from " + notification.publishTopic() + " should have same id");
 						expect(data.number).toBe(expectedData.number);
-						$.debug("data originating from " + notification.publishTopic + " should have same number");
+						$.debug("data originating from " + notification.publishTopic() + " should have same number");
 						data.number++;
 					}
 				},
@@ -1074,16 +1096,16 @@ describe("jquery.pubsub", function() {
 					topic : "/data/push/1",
 					notify : function(notification) {
 						var self = fixture;
-						var data   = notification.data;
+						var data   = notification.data();
 						var options = self.first.options;
-						var msg = "notification of topic: " + notification.currentTopic + " from " + notification.publishTopic;
+						var msg = "notification of topic: " + notification.currentTopic() + " from " + notification.publishTopic();
 						expect(this).toBeOk(true,msg);
 						expect(data.string).toBe(options.data.string);
-						$.debug("string passed during notification of " + notification.currentTopic );
+						$.debug("string passed during notification of " + notification.currentTopic() );
 						expect(data.number).toBe(options.data.number);
-						$.debug("number passed during notification of " + notification.currentTopic );
+						$.debug("number passed during notification of " + notification.currentTopic() );
 						expect(_.isEqual(data.object, options.data.object)).toBe(true);
-						$.debug("object passed during notification of " + notification.currentTopic );
+						$.debug("object passed during notification of " + notification.currentTopic() );
 						data.string = "goodbye";
 						data.object.baz = "quux";
 					},
@@ -1098,19 +1120,19 @@ describe("jquery.pubsub", function() {
 							}
 						},
 						progress : function(notification) {
-							var msg = "progress: " + notification.publishTopic + " -> " + notification.currentTopic;
+							var msg = "progress: " + notification.publishTopic() + " -> " + notification.currentTopic();
 							expect(this).toBeOk(msg,msg);
 						},
 						done: function(notification) {
-							var msg = "done: " + notification.publishTopic + " -> " + notification.currentTopic;
+							var msg = "done: " + notification.publishTopic() + " -> " + notification.currentTopic();
 							expect(this).toBeOk(msg,msg);
 						},
 						fail: function(notification) {
-							var msg = "fail: " + notification.publishTopic + " -> " + notification.currentTopic;
+							var msg = "fail: " + notification.publishTopic() + " -> " + notification.currentTopic();
 							expect(this).toBeOk(msg,msg);
 						},
 						always : function(notification) {
-							var msg = "always: " + notification.publishTopic + " -> " + notification.currentTopic;
+							var msg = "always: " + notification.publishTopic() + " -> " + notification.currentTopic();
 							expect(this).toBeOk(msg,msg);
 							firstDone = true;
 						}
@@ -1120,17 +1142,17 @@ describe("jquery.pubsub", function() {
 					topic : "/data/push/2",
 					notify : function(notification) {
 						var self = fixture;
-						var data   = notification.data;
+						var data   = notification.data();
 						var options = self.second.options;
 
-						var msg = "notification of topic: " + notification.currentTopic + " from " + notification.publishTopic;
+						var msg = "notification of topic: " + notification.currentTopic() + " from " + notification.publishTopic();
 						expect(this).toBeOk(true,msg);
 						expect(data.string).toBe(options.data.string);
-						$.debug("string changed during notification of " + notification.currentTopic );
+						$.debug("string changed during notification of " + notification.currentTopic() );
 						expect(data.number).toBe(options.data.number);
-						$.debug("number unchanged during notification of " + notification.currentTopic );
+						$.debug("number unchanged during notification of " + notification.currentTopic() );
 						expect(_.isEqual(data.object,options.data.object)).toBe(true);
-						$.debug("object passed during notification of  " + notification.currentTopic  );
+						$.debug("object passed during notification of  " + notification.currentTopic() );
 						data.string = "guten tag";
 						data.object.baz = "wasser";
 					},
@@ -1145,19 +1167,19 @@ describe("jquery.pubsub", function() {
 							}
 						},
 						progress : function(notification) {
-							var msg = "progress: " + notification.publishTopic + " -> " + notification.currentTopic;
+							var msg = "progress: " + notification.publishTopic() + " -> " + notification.currentTopic();
 							expect(this).toBeOk(msg,msg);
 						},
 						done: function(notification) {
-							var msg = "done: " + notification.publishTopic + " -> " + notification.currentTopic;
+							var msg = "done: " + notification.publishTopic() + " -> " + notification.currentTopic();
 							expect(this).toBeOk(msg,msg);
 						},
 						fail: function(notification) {
-							var msg = "fail: " + notification.publishTopic + " -> " + notification.currentTopic;
+							var msg = "fail: " + notification.publishTopic() + " -> " + notification.currentTopic();
 							expect(this).toBeOk(msg,msg);
 						},
 						always : function(notification) {
-							var msg = "always: " + notification.publishTopic + " -> " + notification.currentTopic;
+							var msg = "always: " + notification.publishTopic() + " -> " + notification.currentTopic();
 							expect(this).toBeOk(msg,msg);
 							secondDone = true;
 						}
@@ -1709,32 +1731,32 @@ describe("jquery.pubsub", function() {
 			PubSub = TestUtil.resetPubSub();
 			
 			var neverNotified = function(notification) {
-				var data   = notification.data;
-				var topic  = notification.currentTopic;
-				var origin = notification.publishTopic;
+				var data   = notification.data();
+				var topic  = notification.currentTopic();
+				var origin = notification.publishTopic();
 				var msg = "this callback should never be notified on: " + topic + " from: " + origin;
 				expect(this).toBeOk(false,msg);
 			};
 			var exceptionThrown = function(notification) {
-				var data   = notification.data;
-				var topic  = notification.currentTopic;
-				var origin = notification.publishTopic;
+				var data   = notification.data();
+				var topic  = notification.currentTopic();
+				var origin = notification.publishTopic();
 				var msg = "exceptionThrown was notified @ " + topic + " from: " + origin + " where count = " + count;
 				expect(this).toBeOk(true, msg)
 				throw new Error("burp!");
 			};
 			var notificationReject = function(notification) {
-				var data   = notification.data;
-				var topic  = notification.currentTopic;
-				var origin = notification.publishTopic;
+				var data   = notification.data();
+				var topic  = notification.currentTopic();
+				var origin = notification.publishTopic();
 				var msg = "notificationReject was notified @ " + topic + " from: " + origin + " where count = " + count;
 				expect(this).toBeOk(true, msg)
 				notification.reject();
 			};
 			var returnsFalse = function(notification) {
-				var data   = notification.data;
-				var topic  = notification.currentTopic;
-				var origin = notification.publishTopic;
+				var data   = notification.data();
+				var topic  = notification.currentTopic();
+				var origin = notification.publishTopic();
 				var msg = "returnsFalse was notified @ " + topic + " from: " + origin + " where count = " + count;
 				expect(this).toBeOk(true, msg)
 				return false;
@@ -1749,9 +1771,9 @@ describe("jquery.pubsub", function() {
 				},
 				notify : function(notification) {
 					var _self = this;
-					var data   = notification.data;
-					var topic  = notification.currentTopic;
-					var origin = notification.publishTopic;
+					var data   = notification.data();
+					var topic  = notification.currentTopic();
+					var origin = notification.publishTopic();
 					
 					var msg = TestUtil.getType(notification) + " of subscriber @ " + topic;
 					expect(this).toBeOk(true,msg);
@@ -1764,9 +1786,9 @@ describe("jquery.pubsub", function() {
 					topic : "/starwars/padma",
 					notify : function(notification) {
 						var _self = this;
-						var data   = notification.data;
-						var topic  = notification.currentTopic;
-						var origin = notification.publishTopic;
+						var data   = notification.data();
+						var topic  = notification.currentTopic();
+						var origin = notification.publishTopic();
 						
 						var msg = TestUtil.getType(notification) + " of subscriber @ " + topic;
 						expect(this).toBeOk(true,msg);
@@ -1783,9 +1805,9 @@ describe("jquery.pubsub", function() {
 						topic : "/starwars/padma/leia",
 						notify : function(notification) {
 							var _self = this;
-							var data   = notification.data;
-							var topic  = notification.currentTopic;
-							var origin = notification.publishTopic;
+							var data   = notification.data();
+							var topic  = notification.currentTopic();
+							var origin = notification.publishTopic();
 							var msg = TestUtil.getType(notification) + " of subscriber @ " + topic;
 							expect(this).toBeOk(true,msg);
 							expect( _.isEqual(data, _self.data) ).toBe(true);
@@ -1802,22 +1824,22 @@ describe("jquery.pubsub", function() {
 				},
 				publishOptions : {
 					progress : function(notification) {
-						var origin = notification.publishTopic;
+						var origin = notification.publishTopic();
 						var msg = "progress: " +TestUtil.getType(notification)+ " with data on: " + origin;
 						expect(this).toBeOk(msg,msg);
 					},
 					done: function(notification) {
-						var origin = notification.publishTopic;
+						var origin = notification.publishTopic();
 						var msg = "done: " +TestUtil.getType(notification)+ " with data on: " + origin;
 						expect(this).toBeOk(msg,msg);
 					},
 					fail: function(notification) {
-						var origin = notification.publishTopic;
+						var origin = notification.publishTopic();
 						var msg = "fail: " +TestUtil.getType(notification)+ " with data on: " + origin;
 						expect(this).toBeOk(msg,msg);
 					},
 					always : function(notification) {
-						var origin = notification.publishTopic;
+						var origin = notification.publishTopic();
 						var msg = "always: " +TestUtil.getType(notification)+ " with data on: " + origin;
 						expect(this).toBeOk(msg,msg);
 						done = true;
