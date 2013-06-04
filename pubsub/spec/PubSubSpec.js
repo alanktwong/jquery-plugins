@@ -61,6 +61,9 @@ describe("jquery.pubsub", function() {
 		it("should validate topic names a la Unix directories", function() {
 			expect(PubSub.validateTopicName(topic)).toBe(true);
 		});
+		it("should validate topic names with trailing slashs", function() {
+			expect(PubSub.validateTopicName(topic + "/")).toBe(false);
+		});
 		it("should infer ancestor chain of topic names", function() {
 			expect(PubSub.validateTopicName(topic)).toBe(true);
 			var topics = PubSub.createTopics(topic);
@@ -220,7 +223,8 @@ describe("jquery.pubsub", function() {
 		
 
 		var callback = function(notification) {
-			$.noop();
+			var msg = "callback was notified @ " + notification.currentTopic + " from: " + notification.publishTopic;
+			$.debug(msg);
 		};
 		var priority = 100;
 		
@@ -256,7 +260,8 @@ describe("jquery.pubsub", function() {
 		
 
 		var callback = function(notification) {
-			$.noop();
+			var msg = "callback was notified @ " + notification.currentTopic + " from: " + notification.publishTopic;
+			$.debug(msg);
 		};
 		
 		beforeEach(function() {
@@ -273,6 +278,20 @@ describe("jquery.pubsub", function() {
 		it("should throw an error on subscribing with bad topic name", function() {
 			try {
 				$.subscribe( undefined, callback );
+			} catch( err ) {
+				expect(err.message).toBe("You must provide a valid topic name to create a Subscription.");
+			}
+		});
+		it("should throw an error on subscribing to a topic with trailing slash", function() {
+			try {
+				$.subscribe( "/fake/topic/", callback );
+			} catch( err ) {
+				expect(err.message).toBe("You must provide a valid topic name to create a Subscription.");
+			}
+		});
+		it("should throw an error on subscribing to a topic without a beginning slash", function() {
+			try {
+				$.subscribe( "fake/topic", callback );
 			} catch( err ) {
 				expect(err.message).toBe("You must provide a valid topic name to create a Subscription.");
 			}

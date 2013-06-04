@@ -148,7 +148,7 @@
 			_self.subscriptions = {};
 		},
 		publishImpl : function( topic /* string */, options /* object */, sync /* boolean */ ){
-			// var _self = PubSub;
+			var _self = PubSub;
 			var publication = null;
 			if (!_self.validateTopicName(topic)) {
 				throw new Error( "You must provide a valid topic name to publish." );
@@ -182,11 +182,13 @@
 		validateTopicName : function(name /*string */) {
 			//var _self = PubSub;
 			var result = false;
-			if (Util.isString(name) && name[0] === _self.TOPIC_SEPARATOR) {
-				result = new RegExp("\\S").test(name);
-				if (result) {
-					var temp = name.replace(new RegExp(_self.TOPIC_SEPARATOR, "g"),"");
-					result = new RegExp("\\w", "g").test(temp);
+			if (Util.isString(name) && name.startsWith(_self.TOPIC_SEPARATOR)) {
+				if (!name.endsWith(_self.TOPIC_SEPARATOR)) {
+					result = new RegExp("\\S").test(name);
+					if (result) {
+						var temp = name.replace(new RegExp(_self.TOPIC_SEPARATOR, "g"),"");
+						result = new RegExp("\\w", "g").test(temp);
+					}
 				}
 			}
 			return result;
