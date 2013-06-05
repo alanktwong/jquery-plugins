@@ -1,118 +1,236 @@
-<!DOCTYPE HTML>
+<!DOCTYPE html>
 <html lang="en-US">
-<head>
-	<meta charset="UTF-8">
-	<title>jQuery Publish/Subscribe: No Data Demo Page</title>
+	<head>
+		<meta charset="utf-8">
+		<title>jQuery Publish/Subscribe: No Data Demo Page</title>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<meta name="description" content="">
+		<meta name="author" content="">
 
-	<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.4/jquery.js"></script>
-	<!--
-	<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.0/jquery.js"></script>
-	-->
-	
-	<script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.4.3/underscore-min.js"></script>
-	<script type="text/javascript" src="../jquery.pubsub.js"></script>
-	<script type="text/javascript" src="../../log4jq/jquery.log4jq.js"></script>
-<script>
-$(document).ready(function() {
-	var logger = $.configureLog4jq({
-		enabled: true,
-		level : "debug",
-		targets : [
-			{
-				name: "console",
-				enabled: true
+		<!-- Le styles -->
+		<link href="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/css/bootstrap-combined.min.css" rel="stylesheet">
+		<style type="text/css">
+			body {
+				padding-top: 60px;
+				padding-bottom: 40px;
 			}
-		]
-	});
-	
-	var callbacks = {
-		topic : "/example",
-		notify : function(notification) {
-			var msg = (notification.isSynchronous() ? "sync" : "async");
-			msg = msg + " notification of parent subscriber: " + notification.publishTopic + " -> " + notification.currentTopic;
-			$.debug(msg);
-			if (notification.isSynchronous()) {
-				$( "#parent", "#sync" ).append( "<p>" + msg + "</p>" );
-			} else {
-				$( "#parent", "#async" ).append( "<p>" + msg + "</p>" );
+			.sidebar-nav {
+				padding: 9px 0;
 			}
-		},
-		nodata : {
-			topic : "/example/nodata",
-			one : {
-				notify : function(notification) {
-					var msg = (notification.isSynchronous() ? "sync" : "async");
-					msg = msg + " notification of 1st subscriber: " + notification.publishTopic + " -> " + notification.currentTopic;
-					$.debug(msg);
-					if (notification.isSynchronous()) {
-						$( "#receiver1", "#sync" ).append( "<p>" + msg + "</p>" );
-					} else {
-						$( "#receiver1", "#async" ).append( "<p>" + msg + "</p>" );
-					}
-				}
-			},
-			two : {
-				notify : function(notification) {
-					var msg = (notification.isSynchronous() ? "sync" : "async");
-					msg = msg + " notification of 2nd subscriber: " + notification.publishTopic + " -> " + notification.currentTopic;
-					$.debug(msg);
-					if (notification.isSynchronous()) {
-						$( "#receiver2", "#sync").append( "<p>" + msg + "</p>" );
-					} else {
-						$( "#receiver2", "#async").append( "<p>" + msg + "</p>" );
-					}
+
+			@media (max-width: 980px) {
+				/* Enable use of floated navbar text */
+				.navbar-text.pull-right {
+					float: none;
+					padding-left: 5px;
+					padding-right: 5px;
 				}
 			}
-		},
-		options : {
-			progress: function(notification) {
-				var msg = (notification.isSynchronous() ? "sync" : "async") + " progress: " + notification.publishTopic + " -> " + notification.currentTopic;
-				$.info(msg);
-			},
-			done: function(notification) {
-				var msg = (notification.isSynchronous() ? "sync" : "async") + " done: " + notification.publishTopic + " -> " + notification.currentTopic;
-				$.info(msg);
-			},
-			fail: function(notification) {
-				var msg = (notification.isSynchronous() ? "sync" : "async") + " fail: " + notification.publishTopic + " -> " + notification.currentTopic;
-				$.info(msg);
-			},
-			always: function(notification) {
-				var msg = (notification.isSynchronous() ? "sync" : "async") + " fail: " + notification.publishTopic + " -> " + notification.currentTopic;
-				$.info(msg);
-			}
-		}
-	};
-	
-	
-	$.subscribe( callbacks.topic, callbacks.notify);
-	$.subscribe( callbacks.nodata.topic, callbacks.nodata.one.notify);
-	$.subscribe( callbacks.nodata.topic, callbacks.nodata.two.notify);
+		</style>
+		<!--
+		<link href="../assets/css/bootstrap-responsive.css" rel="stylesheet">
+		-->
 
-	// the subscriptions are triggered through a publish call on the topic
-	$.publishSync(callbacks.nodata.topic, callbacks.options);
-	$.publish(callbacks.nodata.topic, callbacks.options);
-});
-</script>
-</head>
-<body>
-	<h3>jQuery PubSub: NoData Usage</h3>
-	<div id="note">
-		<p>Only synchronous part of demo works for co-publishing</p>
-		<p>Asynchronous part of demo does work for co-publishing</p>
-	</div>
-	<div id="notify" style="font-size: 14px;">
-		<div id="sync">
-			<p id="parent"></p>
-			<p id="receiver2"></p>
-			<p id="receiver1"></p>
-		</div>
-		<div id="async">
-			<p id="parent"></p>
-			<p id="receiver2"></p>
-			<p id="receiver1"></p>
-		</div>
-	</div>
-</body>
+		<!-- HTML5 shim, for IE6-8 support of HTML5 elements -->
+		<!--[if lt IE 9]>
+			<script src="../assets/js/html5shiv.js"></script>
+		<![endif]-->
 
+		<!-- Fav and touch icons -->
+		<link rel="apple-touch-icon-precomposed" sizes="144x144" href="http://twitter.github.io/bootstrap/assets/ico/apple-touch-icon-144-precomposed.png">
+		<link rel="apple-touch-icon-precomposed" sizes="114x114" href="http://twitter.github.io/bootstrap/assets/ico/apple-touch-icon-114-precomposed.png">
+		<link rel="apple-touch-icon-precomposed" sizes="72x72" href="http://twitter.github.io/bootstrap/assets/ico/apple-touch-icon-72-precomposed.png">
+		<link rel="apple-touch-icon-precomposed" href="http://twitter.github.io/bootstrap/assets/ico/apple-touch-icon-57-precomposed.png">
+		<link rel="shortcut icon" href="http://twitter.github.io/bootstrap/assets/ico/favicon.png">
+	</head>
+
+	<body>
+
+		<div class="navbar navbar-inverse navbar-fixed-top">
+			<div class="navbar-inner">
+				<div class="container-fluid">
+					<button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+						<span class="icon-bar"></span>
+						<span class="icon-bar"></span>
+						<span class="icon-bar"></span>
+					</button>
+					<a class="brand" href="#">PubSub Demo</a>
+					<div class="nav-collapse collapse">
+						<p class="navbar-text pull-right">
+							Logged in as <a href="#" class="navbar-link">Username</a>
+						</p>
+						<ul class="nav">
+							<li class="active"><a href="#">Home</a></li>
+							<li><a href="#about">About</a></li>
+							<li><a href="#contact">Contact</a></li>
+						</ul>
+					</div><!--/.nav-collapse -->
+				</div>
+			</div>
+		</div>
+
+		<div class="container-fluid">
+			<div class="row-fluid">
+				<div class="span3">
+					<div class="well sidebar-nav">
+						<ul class="nav nav-list">
+							<li class="nav-header">Sidebar</li>
+							<li class="active"><a href="#">Link</a></li>
+							<li><a href="#">Link</a></li>
+							<li><a href="#">Link</a></li>
+							<li><a href="#">Link</a></li>
+							<li class="nav-header">Sidebar</li>
+							<li><a href="#">Link</a></li>
+							<li><a href="#">Link</a></li>
+							<li><a href="#">Link</a></li>
+							<li><a href="#">Link</a></li>
+							<li><a href="#">Link</a></li>
+							<li><a href="#">Link</a></li>
+							<li class="nav-header">Sidebar</li>
+							<li><a href="#">Link</a></li>
+							<li><a href="#">Link</a></li>
+							<li><a href="#">Link</a></li>
+						</ul>
+					</div><!--/.well -->
+				</div><!--/span-->
+				<div class="span9">
+					<div class="hero-unit">
+						<h1>jQuery PubSub: NoData Usage</h1>
+						<p>Uses jQuery plugins: PubSub, Log4jq, Twitter Bootstrap and UnderscoreJS</p>
+						<ul id="note">
+							<li><button id="syncClick" class="btn btn-link" type="button">Synchronous publish</button> to 2 different topics</li>
+							<li><button id="asyncClick" class="btn btn-link" type="button">Asynchronous publish</button> to 2 different topics</li>
+						</ul>
+						<p><a href="#" class="btn btn-primary btn-large">Learn more &raquo;</a></p>
+					</div>
+					<div id="notify" class="row-fluid">
+						<div id="sync" class="span6">
+							<h2>Sync Results</h2>
+							<small>
+								<p id="parent"></p>
+								<p id="receiver2"></p>
+								<p id="receiver1"></p>
+							</small>
+						</div><!--/span-->
+						<div id="async" class="span6">
+							<h2>Async Results</h2>
+							<small>
+								<p id="parent"></p>
+								<p id="receiver2"></p>
+								<p id="receiver1"></p>
+							</small>
+						</div><!--/span-->
+					</div><!--/row-->
+				</div><!--/span-->
+			</div><!--/row-->
+
+			<hr>
+
+			<footer>
+				<p>&copy; Alan Wong 2013</p>
+			</footer>
+
+		</div><!--/.fluid-container-->
+
+		<!-- Le javascript
+		================================================== -->
+		<!-- Placed at the end of the document so the pages load faster -->
+		<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.js"></script>
+
+		<script type="text/javascript" src="../../log4jq/jquery.log4jq.js"></script>
+		<script type="text/javascript" src="../jquery.pubsub.js"></script>
+		<script src="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/js/bootstrap.min.js"></script>
+		
+		<script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.4.3/underscore-min.js"></script>
+		<script type="text/javascript">
+		$(document).ready(function() {
+			var logger = $.configureLog4jq({
+				enabled: true,
+				level : "debug",
+				targets : [
+					{
+						name: "console",
+						enabled: true
+					}
+				]
+			});
+			
+			var callbacks = {
+				topic : "/example",
+				notify : function(notification) {
+					var msg = (notification.isSynchronous() ? "sync" : "async");
+					msg = msg + " notification of parent subscriber: " + notification.publishTopic() + " -> " + notification.currentTopic();
+					$.debug(msg);
+					if (notification.isSynchronous()) {
+						$( "#parent", "#sync" ).append( "<p>" + msg + "</p>" );
+					} else {
+						$( "#parent", "#async" ).append( "<p>" + msg + "</p>" );
+					}
+				},
+				nodata : {
+					topic : "/example/nodata",
+					one : {
+						notify : function(notification) {
+							var msg = (notification.isSynchronous() ? "sync" : "async");
+							msg = msg + " notification of 1st subscriber: " + notification.publishTopic() + " -> " + notification.currentTopic();
+							$.debug(msg);
+							if (notification.isSynchronous()) {
+								$( "#receiver1", "#sync" ).append( "<p>" + msg + "</p>" );
+							} else {
+								$( "#receiver1", "#async" ).append( "<p>" + msg + "</p>" );
+							}
+						}
+					},
+					two : {
+						notify : function(notification) {
+							var msg = (notification.isSynchronous() ? "sync" : "async");
+							msg = msg + " notification of 2nd subscriber: " + notification.publishTopic() + " -> " + notification.currentTopic();
+							$.debug(msg);
+							if (notification.isSynchronous()) {
+								$( "#receiver2", "#sync").append( "<p>" + msg + "</p>" );
+							} else {
+								$( "#receiver2", "#async").append( "<p>" + msg + "</p>" );
+							}
+						}
+					}
+				},
+				options : {
+					progress: function(notification) {
+						var msg = (notification.isSynchronous() ? "sync" : "async") + " progress: " + notification.publishTopic() + " -> " + notification.currentTopic();
+						$.info(msg);
+					},
+					done: function(notification) {
+						var msg = (notification.isSynchronous() ? "sync" : "async") + " done: " + notification.publishTopic() + " -> " + notification.currentTopic();
+						$.info(msg);
+					},
+					fail: function(notification) {
+						var msg = (notification.isSynchronous() ? "sync" : "async") + " fail: " + notification.publishTopic() + " -> " + notification.currentTopic();
+						$.info(msg);
+					},
+					always: function(notification) {
+						var msg = (notification.isSynchronous() ? "sync" : "async") + " fail: " + notification.publishTopic() + " -> " + notification.currentTopic();
+						$.info(msg);
+					}
+				}
+			};
+			
+			$.subscribe( callbacks.topic, callbacks.notify);
+			$.subscribe( callbacks.nodata.topic, callbacks.nodata.one.notify);
+			$.subscribe( callbacks.nodata.topic, callbacks.nodata.two.notify);
+			var publishSync = function(evt) {
+				$.publishSync(callbacks.nodata.topic, callbacks.options);
+			};
+			
+			var publishAsync = function(evt) {
+				$.publish(callbacks.nodata.topic, callbacks.options);
+			};
+			
+			var $noteSync = $('#syncClick','#note').click(publishSync);
+			var $noteAsync = $('#asyncClick','#note').click(publishAsync);
+		
+			$noteSync.click();
+			$noteAsync.click();
+		});
+		</script>
+	</body>
 </html>
