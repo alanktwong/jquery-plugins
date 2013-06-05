@@ -15,7 +15,7 @@ beforeEach(function() {
 			
 			if (logger && isEnabled === true && targets.length === 3) {
 				if (testTarget.enabled === true && alertTarget.enabled === false && consoleTarget.enabled === true && divTarget.enabled === true) {
-					result = actualLevel === level;
+					result = (actualLevel === level);
 				}
 			};
 			

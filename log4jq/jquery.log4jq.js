@@ -49,6 +49,28 @@
 			}
 			return year+"-"+month+"-"+date+" "+hours+":"+minutes+":"+seconds+"."+msecs;
 		},
+		isBoolean : function(input) {
+			var _log4jq = this;
+			return !_log4jq.isUndefined(input) && $.type(input) === 'boolean';
+		},
+		isString : function(input) {
+			var _log4jq = this;
+			return !_log4jq.isUndefined(input)  && $.type(input) === 'string';
+		},
+		isFunction : function(input) {
+			var _log4jq = this;
+			return !_log4jq.isUndefined(input)  && $.type(input) === 'function';
+		},
+		isObject : function(input) {
+			var _log4jq = this;
+			return !_log4jq.isUndefined(input)  && $.type(input) === 'object';
+		},
+		isUndefined : function(input) {
+			return (input === undefined);
+		},
+		isNotNull : function(input) {
+			return (input !== undefined && input !== null);
+		},
 		/*
 		Default log entry structure.
 		*/
@@ -56,7 +78,8 @@
 			timestamp: null,
 			message: "",
 			format: function(args) {
-				var _ctx = this.context && $.type(this.context) === "object" && !$.isWindow(this.context) ? this.context : null;
+				var _log4jq = log4jq;
+				var _ctx = _log4jq.isObject(this.context)&& !$.isWindow(this.context) ? this.context : null;
 				var _json = this.json;
 				var _message = this.message;
 				var msg = [];
@@ -77,16 +100,17 @@
 						msg.push("[ERROR]");
 					}
 				}
-				if (_ctx !== null && _ctx.name && $.type(_ctx.name) === "string") {
+				
+				if (_log4jq.isNotNull(_ctx) && _log4jq.isString(_ctx.name)) {
 					msg.push("[" + _ctx.name + "]");
 				}
 				
 				msg.push("[" + log4jq.formatTimestamp(this.timestamp) + "]");
 				
-				if ($.type(_message) === 'string' && $.trim(_message).length > 0) {
+				if (_log4jq.isString(_message) && $.trim(_message).length > 0) {
 					msg.push("[" + $.trim(_message) + "]");
-				} 
-				if (_json && $.type(_json) === 'object') {
+				}
+				if (_log4jq.isObject(_json)) {
 					msg.push("\n" + JSON.stringify(_json));
 				}
 				return msg.join("");
@@ -144,15 +168,15 @@
 			if (_log4jq.enabled()) {
 				var t, target, _msg, _json;
 				
-				if (message && $.type(message) === "string") {
+				if (_log4jq.isString(message)) {
 					_msg = message;
-				} else if (message && $.type(message) === "object") {
+				} else if (_log4jq.isObject(message)) {
 					_json = message;
 				}
 				if (object) {
-					if ($.type(object) === "string") {
+					if (_log4jq.isString(object)) {
 						_msg = object
-					} else if ($.type(object) === "object") {
+					} else if (_log4jq.isObject(object)) {
 						_json = object
 					}
 				} 
@@ -180,7 +204,7 @@
 			var _log4jq = this;
 			var publishTargets = _log4jq.findActiveTargets();
 			$.each(publishTargets, function(i,target) {
-				if (target && $.type(target) === 'object' && target.log && $.type(target.log) === 'function') {
+				if (_log4jq.isObject(target) && target.log && _log4jq.isFunction(target.log)) {
 					target.log.apply(context,[logEntry]);
 				};
 			});
@@ -222,7 +246,8 @@
 		*/
 		isExcluded : function(entry) {
 			var excluded = false;
-			if(log4jq._level && entry.level !== undefined) {
+			
+			if(log4jq._level && !log4jq.isUndefined(entry.level)) {
 				excluded = log4jq._level > entry.level;
 			}
 			return excluded;
@@ -340,7 +365,8 @@
 			configure : function(cfg, self) {
 				var  _priority = cfg.priority;
 				self.priority = _priority;
-				if (cfg.enabled !== 'undefined' && $.type(cfg.enabled) === 'boolean') {
+				
+				if (log4jq.isBoolean(cfg.enabled)) {
 					self.enabled = cfg.enabled;
 				} else {
 					self.enabled = false;
@@ -429,7 +455,7 @@
 			configure : function(cfg, self) {
 				var  _priority = cfg.priority;
 				self.priority = _priority;
-				if (cfg.enabled !== 'undefined' && $.type(cfg.enabled) === 'boolean') {
+				if (log4jq.isBoolean(cfg.enabled)) {
 					self.enabled = cfg.enabled;
 				} else {
 					self.enabled = false;
@@ -457,7 +483,7 @@
 			configure : function(cfg, self) {
 				var  _priority = cfg.priority;
 				self.priority = _priority;
-				if (cfg.enabled !== 'undefined' && $.type(cfg.enabled) === 'boolean') {
+				if (log4jq.isBoolean(cfg.enabled)) {
 					self.enabled = cfg.enabled;
 				} else {
 					self.enabled = false;
@@ -507,7 +533,8 @@
 		*/
 		findLevel : function(string) {
 			var _log4jq = log4jq;
-			if (string !== undefined && string !== null) {
+			
+			if (_log4jq.isNotNull(string) && _log4jq.isString(string)) {
 				// sets level as a string
 				var levels = _log4jq.levels;
 				var levelInt = _log4jq.levels.debug;
@@ -581,19 +608,13 @@
 		 */
 		self.reset();
 		
-		if (cfg.enabled && $.type(cfg.enabled) === 'boolean') {
+		if (self.isBoolean(cfg.enabled)) {
 			self.enabled(cfg.enabled);
 		} else {
 			self.enabled(_defaultConfiguration.enabled);
 		}
 		
-		if (cfg.sync && $.type(cfg.sync) === 'boolean') {
-			self.sync = cfg.sync;
-		} else {
-			self.sync = _defaultConfiguration.sync;
-		}
-		
-		if (cfg.level && $.type(cfg.level) === 'string' ) {
+		if (self.isString(cfg.level)) {
 			self.findLevel(cfg.level);
 		} else {
 			self.findLevel(_defaultConfiguration.level);
@@ -609,11 +630,11 @@
 				// we're dealing with a custom target;
 				target = $.extend({}, log4jq.targetDefaults, cfgTarget);
 				
-				if ($.type(target) === 'object' && target.log && $.type(target.log) === 'function') {
+				if (log4jq.isObject(target) && target.log && log4jq.isFunction(target.log)) {
 					target.configure = function(cfg, self) {
 						var  _priority = cfg.priority;
 						self.priority = _priority;
-						if (cfg.enabled !== 'undefined' && $.type(cfg.enabled) === 'boolean') {
+						if (log4jq.isBoolean(cfg.enabled)) {
 							self.enabled = cfg.enabled;
 						} else {
 							self.enabled = false;

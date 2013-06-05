@@ -25,9 +25,10 @@ describe("jquery.log4jq", function() {
 		}
 	};
 
-	var configure = function(level) {
+	var configure = function(level, enabled) {
+		var isEnabled = enabled !== false;
 		return $.configureLog4jq({
-			enabled: true,
+			enabled: isEnabled,
 			level : level,
 			targets : [
 				{
@@ -36,11 +37,11 @@ describe("jquery.log4jq", function() {
 				},
 				{
 					name: "console",
-					enabled: true
+					enabled: isEnabled
 				},
 				{
 					name: "divInsert",
-					enabled: true,
+					enabled: isEnabled,
 					$dom : $("div#console-log")
 				},
 				testTarget
@@ -71,12 +72,17 @@ describe("jquery.log4jq", function() {
 		});
 
 		it("should enable the logger at DEBUG", function() {
+			expect(logger.enabled()).toBe(true);
 			expect(logger).toBeLoggingAt(level);
 		});
 		it("should set up 3 active log targets", function() {
+			expect(logger.enabled()).toBe(true);
+			expect(logger).toBeLoggingAt(level);
 			expect(activeSubscribers.length).toBe(3);
 		});
 		it("should set up 3 active log targets in order", function() {
+			expect(logger.enabled()).toBe(true);
+			expect(logger).toBeLoggingAt(level);
 			expect(alertTarget.enabled).toBe(false);
 			expect(consoleTarget.enabled).toBe(true);
 			expect(divTarget.enabled).toBe(true);
@@ -84,6 +90,20 @@ describe("jquery.log4jq", function() {
 			expect(activeSubscribers[0]).toBe(consoleTarget);
 			expect(activeSubscribers[1]).toBe(divTarget);
 			expect(activeSubscribers[2]).toBe(customTarget);
+		});
+		it("should be able to toggle the configuration of log4jq", function() {
+			var log4jq = configure(level,true);
+			expect(log4jq).toBeLoggingAt(level);
+			
+			log4jq = configure(level,false);
+			expect(log4jq.enabled()).toBe(false);
+			expect(alertTarget.enabled).toBe(false);
+			expect(consoleTarget.enabled).toBe(false);
+			expect(divTarget.enabled).toBe(false);
+			expect(customTarget.enabled).toBe(true);
+
+			log4jq = configure(level,true);
+			expect(log4jq).toBeLoggingAt(level);
 		});
 	});
 
@@ -93,11 +113,12 @@ describe("jquery.log4jq", function() {
 		
 		beforeEach(function() {
 			plan = { planId : "alan", foo : function() { var bar }, baz : "quus" }; 
-			logger = configure(level);
+			logger = configure(level,true);
 			testTarget = logger.findTarget("testTarget");
 		});
 		
 		it("should enable the logger at TRACE", function() {
+			expect(logger.enabled()).toBe(true);
 			expect(logger).toBeLoggingAt(level);
 		});
 		
