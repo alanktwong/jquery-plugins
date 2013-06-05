@@ -8,7 +8,7 @@
  * It also depends on jquery.pubsub & jquery.cookie.
  * 
  * @author awong
- */ 
+ */
 ;(function( $, undefined ) {
 	var log4jq = {
 		// Private enabled flag.
