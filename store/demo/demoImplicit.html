@@ -1,52 +1,150 @@
-<!DOCTYPE HTML>
+<!DOCTYPE html>
 <html lang="en-US">
-<head>
-<meta charset="UTF-8">
-<title>jQuery Store: Implicit Demo Page</title>
+	<head>
+		<meta charset="utf-8">
+		<title>jQuery Store: Implicit Demo Page</title>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<meta name="description" content="">
+		<meta name="author" content="">
 
-<script type="text/javascript"  src="http://www.google.com/jsapi"></script>
-<script type="text/javascript">
-  google.load("jquery", "1.7.1", {uncompressed: true});
-</script>
+		<!-- Le styles -->
+		<link href="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/css/bootstrap-combined.min.css" rel="stylesheet">
+		<style type="text/css">
+			body {
+				padding-top: 20px;
+				padding-bottom: 40px;
+			}
 
-<script type="text/javascript" src="../jquery.store.js"></script>
+			/* Custom container */
+			.container-narrow {
+				margin: 0 auto;
+				max-width: 700px;
+			}
+			.container-narrow > hr {
+				margin: 30px 0;
+			}
 
-<script>
-$(document).ready(function() {
-	// with $.store you pick a resource id. and then
-	// store an object
-	$.store( "store-example-1", { foo: "bar" } );
+			/* Main marketing message and sign up button */
+			.jumbotron {
+				margin: 60px 0;
+				text-align: center;
+			}
+			.jumbotron h1 {
+				font-size: 72px;
+				line-height: 1;
+			}
+			.jumbotron .btn {
+				font-size: 21px;
+				padding: 14px 24px;
+			}
 
-	// or any type of data you'd like
-	$.store( "store-example-2", "baz" );
-	$.store.memory( "store/example/3", { memory: "def"} );
+			/* Supporting marketing content */
+			.marketing {
+				margin: 60px 0;
+			}
+			.marketing p + h4 {
+				margin-top: 28px;
+			}
+		</style>
 
-	// retrieve the data later via the key
-	var storeExample1 = $.store( "store-example-1" );
-	var storeExample2 = $.store( "store-example-2" );
-	var storeExample3 = $.store( "store/example/3" );
-	// you can dump all the stored value into a single hash
-	var storeExample = $.store();
+		<!-- HTML5 shim, for IE6-8 support of HTML5 elements -->
+		<!--[if lt IE 9]>
+			<script src="../assets/js/html5shiv.js"></script>
+		<![endif]-->
 
-	// $.store will take care of serializing/deserializing
-	// the data, as well as choosing the best persistance
-	// technology available on the client browser.
-	$( "p#receiver1" ).append( "\nRetrieved from store-example-1: " +  storeExample1.foo ) // bar
-	$( "p#receiver2" ).append( "\nRetrieved from store-example-2: " + storeExample2 ) // baz
-	$( "p#receiver3" ).append( "\nRetrieved from all the stores: " + JSON.stringify(storeExample) ) // bar
-	$( "p#receiver4" ).append( "\nRetrieved from all the stores: " + storeExample["store-example-1"].foo ) // bar
-	$( "p#receiver5" ).append( "\nRetrieved from all the stores: " + storeExample["store-example-2"] ); // baz
-});
-</script>
-</head>
-<body>
-	<div id="console-log" style="font-size: 14px;">
-		<p id="receiver1"></p>
-		<p id="receiver2"></p>
-		<p id="receiver3"></p>
-		<p id="receiver4"></p>
-		<p id="receiver5"></p>
-	</div>
-</body>
+		<!-- Fav and touch icons -->
+		<link rel="apple-touch-icon-precomposed" sizes="144x144" href="../assets/ico/apple-touch-icon-144-precomposed.png">
+		<link rel="apple-touch-icon-precomposed" sizes="114x114" href="../assets/ico/apple-touch-icon-114-precomposed.png">
+		<link rel="apple-touch-icon-precomposed" sizes="72x72" href="../assets/ico/apple-touch-icon-72-precomposed.png">
+		<link rel="apple-touch-icon-precomposed" href="../assets/ico/apple-touch-icon-57-precomposed.png">
+		<link rel="shortcut icon" href="../assets/ico/favicon.png">
+	</head>
 
+	<body>
+
+		<div class="container-narrow">
+
+			<div class="masthead">
+				<ul class="nav nav-pills pull-right">
+					<li class="active"><a href="#">Home</a></li>
+					<li><a href="#">About</a></li>
+					<li><a href="#">Contact</a></li>
+				</ul>
+				<h3 class="muted">jQuery Store</h3>
+			</div>
+
+			<hr>
+
+			<div class="jumbotron">
+				<h1>Demo</h1>
+				<p class="lead">Uses jQuery plugins: Store, Twitter Bootstrap and UnderscoreJS</p>
+				<a class="btn btn-large btn-success" href="#">Sign up today</a>
+			</div>
+
+			<hr>
+
+			<div class="row-fluid marketing">
+				<div class="span12">
+					<h4>jQuery Store: Implicit Usage</h4>
+					<p id="receiver">Results should appear below</p>
+					<div id="console-log" style="font-size: 14px;">
+						<p id="receiver1"></p>
+						<p id="receiver2"></p>
+						<p id="receiver3"></p>
+						<p id="receiver4"></p>
+						<p id="receiver5"></p>
+					</div>
+				</div>
+
+			</div>
+
+			<hr>
+
+			<div class="footer">
+				<p>&copy; Alan Wong 2013</p>
+			</div>
+
+		</div> <!-- /container -->
+
+		<!-- Le javascript
+		================================================== -->
+		<!-- Placed at the end of the document so the pages load faster -->
+		<script type="text/javascript"	src="http://www.google.com/jsapi"></script>
+		<script type="text/javascript">
+			google.load("jquery", "1.7.1", {uncompressed: true});
+		</script>
+		
+		<script type="text/javascript" src="../log4jq/jquery.log4jq.js"></script>
+		<script type="text/javascript" src="../jquery.store.js"></script>
+		<script src="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/js/bootstrap.min.js"></script>
+		
+		<script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.4.3/underscore-min.js"></script>
+		<script type="text/javascript">
+		$(document).ready(function() {
+			// with $.store you pick a resource id. and then
+			// store an object
+			$.store( "store-example-1", { foo: "bar" } );
+
+			// or any type of data you'd like
+			$.store( "store-example-2", "baz" );
+			$.store.memory( "store/example/3", { memory: "def"} );
+
+			// retrieve the data later via the key
+			var storeExample1 = $.store( "store-example-1" );
+			var storeExample2 = $.store( "store-example-2" );
+			var storeExample3 = $.store( "store/example/3" );
+			// you can dump all the stored value into a single hash
+			var storeExample = $.store();
+
+			// $.store will take care of serializing/deserializing
+			// the data, as well as choosing the best persistance
+			// technology available on the client browser.
+			$( "p#receiver1" ).append( "\nRetrieved from store-example-1: " +  storeExample1.foo ) // bar
+			$( "p#receiver2" ).append( "\nRetrieved from store-example-2: " + storeExample2 ) // baz
+			$( "p#receiver3" ).append( "\nRetrieved from all the stores: " + JSON.stringify(storeExample) ) // bar
+			$( "p#receiver4" ).append( "\nRetrieved from all the stores: " + storeExample["store-example-1"].foo ) // bar
+			$( "p#receiver5" ).append( "\nRetrieved from all the stores: " + storeExample["store-example-2"] ); // baz
+		});
+		</script>
+	</body>
 </html>
