@@ -1,5 +1,31 @@
 module( "jquery.store testing" );
 
+test( "$.store.addType", function() {
+	expect( 11 );
+	var testStore;
+	var store = function( key, value ) {
+			return testStore.apply( this, arguments );
+		};
+	$.store.addType( "custom", store );
+	equal( $.store.types.custom, store, "custom store added" );
+
+	testStore = function( key, value ) {
+		equal( key, "foo", "getter key" );
+		equal( value, undefined, "getter value" );
+		return "bar";
+	};
+	equal( $.store.custom( "foo" ), "bar", "getter" );
+	testStore = function( key, value ) {
+		equal( key, "foo", "setter key" );
+		equal( value, "baz", "setter value" );
+		return value;
+	};
+	equal( $.store.custom( "foo", "baz" ), "baz", "setter" );
+	equal( $.store( "foo", "baz", { type: "custom" } ), "baz",
+		"setter via options" );
+	var storageTypes = _.keys($.store.types);
+	equal( storageTypes.length, 4);
+});
 
 
 if ( "localStorage" in $.store.types ) {
@@ -56,13 +82,20 @@ if ( "localStorage" in $.store.types ) {
 	test( "localStorage multi-page", function() {
 		expect( 1 );
 		var iframe = $( "#other-page" )[0];
+		
 		var otherJqueryStore = (iframe.contentWindow || iframe.contentDocument.defaultView).$;
-		$.store.localStorage( "foo", "bar" );
-		otherJqueryStore.store.localStorage( "baz", "qux" );
-		deepEqual( $.store.localStorage(), {
-			foo: "bar",
-			baz: "qux"
-		}, "both exist in current page" );
+		
+		// Chrome not permitting access to the iFrame
+		if (otherJqueryStore !== undefined && otherJqueryStore !== null) {
+			$.store.localStorage( "foo", "bar" );
+			otherJqueryStore.store.localStorage( "baz", "qux" );
+			deepEqual( $.store.localStorage(), {
+				foo: "bar",
+				baz: "qux"
+			}, "both exist in current page" );
+		} else {
+			equal(1,0,"iframe cannot be accessed");
+		}
 	});
 }
 
@@ -129,13 +162,20 @@ if ( "sessionStorage" in $.store.types ) {
 	test( "sessionStorage multi-page", function() {
 		expect( 1 );
 		var iframe = $( "#other-page" )[0];
+
 		var otherJqueryStore = (iframe.contentWindow || iframe.contentDocument.defaultView).$;
-		$.store.sessionStorage( "foo", "bar" );
-		otherJqueryStore.store.sessionStorage( "baz", "qux" );
-		deepEqual( $.store.sessionStorage(), {
-			foo: "bar",
-			baz: "qux"
-		}, "both exist in current page" );
+
+		// Chrome not permitting access to the iFrame
+		if (otherJqueryStore !== undefined && otherJqueryStore !== null) {
+			$.store.sessionStorage( "foo", "bar" );
+			otherJqueryStore.store.sessionStorage( "baz", "qux" );
+			deepEqual( $.store.sessionStorage(), {
+				foo: "bar",
+				baz: "qux"
+			}, "both exist in current page" );
+		} else {
+			equal(1,0,"iframe cannot be accessed");
+		}
 	});
 }
 
@@ -280,3 +320,55 @@ if ( "userData" in $.store.types ) {
 		}, "both exist in current page" );
 	});
 }
+
+module( "$.store.memory", {
+	setup: function() {
+		for( var key in $.store.memory() ) {
+			$.store.memory( key, null );
+		}
+	}
+});
+
+test( "memory", function() {
+	expect( 9 );
+	deepEqual( $.store.memory(), {}, "empty store" );
+	equal( $.store.memory( "foo" ), undefined, "get; miss" );
+	equal( $.store.memory( "foo", "bar" ), "bar", "set" );
+	equal( $.store.memory( "foo" ), "bar", "get" );
+	deepEqual( $.store.memory( "baz", { qux: "quux" } ),
+		{ qux: "quux" }, "set object" );
+	deepEqual( $.store.memory( "baz" ), { qux: "quux" }, "get object" );
+	deepEqual( $.store.memory(),
+		{ foo: "bar", baz: { qux: "quux" } }, "get all" );
+	equal( $.store.memory( "foo", null ), null, "delete" );
+	equal( $.store.memory( "foo" ), undefined, "deleted" );
+});
+
+asyncTest( "memory expiration", function() {
+	expect( 5 );
+	$.store.memory( "forever", "not really", { expires: 100 } );
+	$.store.memory( "forever", "and ever" );
+	$.store.memory( "expiring1", "i disappear",
+		{ expires: 500 } );
+	$.store.memory( "expiring2", "i disappear too",
+		{ expires: 1000 } );
+	deepEqual( $.store.memory(), {
+		forever: "and ever",
+		expiring1: "i disappear",
+		expiring2: "i disappear too"
+	}, "all values exist" );
+	setTimeout(function() {
+		deepEqual( $.store.memory(), {
+			forever: "and ever",
+			expiring2: "i disappear too"
+		}, "500 expired, others exist" );
+		equal( $.store.memory( "expiring1" ), undefined,
+			"500 expired" );
+		equal( $.store.memory( "expiring2" ), "i disappear too",
+		"1000 still valid" );
+	}, 750 );
+	setTimeout(function() {
+		deepEqual( $.store.memory(), { forever: "and ever" }, "both expired" );
+		start();
+	}, 1250 );
+});
