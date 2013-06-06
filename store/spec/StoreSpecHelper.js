@@ -42,6 +42,19 @@ beforeEach(function() {
 				$.warn("lacks global storage");
 			}
 			return result;
+		},
+		toBeEmptyCache : function() {
+			var self = this.actual;
+			return _.isEqual(self,{})
+		},
+		toBeCacheMiss : function() {
+			var self = this.actual;
+			return self === undefined;
+		},
+		toBeDeepEquals : function(expected) {
+			var self = this.actual;
+			return _.isEqual(self,expected)
 		}
+		
 	});
 });

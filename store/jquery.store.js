@@ -64,27 +64,28 @@
 		}
 		return store.types[ type ]( key, value, options || {} );
 	};
+	
+	store = $.extend(store, {
+		types : {},
+		type : null,
+		version : "1.0.0.SNAPSHOT",
+		key : "Store",
+		addType : function( type, storage ) {
+			if ( !store.type ) {
+				store.type = type;
+			}
 
-	store.types = {};
-	store.type = null;
-	store.version = "1.0.0.SNAPSHOT";
-	store.key = "Store";
-
-	store.addType = function( type, storage ) {
-		if ( !store.type ) {
-			store.type = type;
+			store.types[ type ] = storage;
+			store[ type ] = function( key, value, options ) {
+				options = options || {};
+				options.type = type;
+				return store( key, value, options );
+			};
+		},
+		error : function() {
+			return "jQuery.store quota exceeded";
 		}
-
-		store.types[ type ] = storage;
-		store[ type ] = function( key, value, options ) {
-			options = options || {};
-			options.type = type;
-			return store( key, value, options );
-		};
-	};
-	store.error = function() {
-		return "jQuery.store quota exceeded";
-	};
+	});
 
 	var rprefix = /^__jQuery.store__/;
 
@@ -350,5 +351,11 @@
 	}() );
 
 	$.store = store;
+	if ($.store) {
+		$.store(store.key, store);
+	} else if (window && window.document) {
+		var $document = $(document);
+		$document.data(store.key, store);
+	}
 
 }( jQuery ) );
