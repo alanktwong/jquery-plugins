@@ -184,17 +184,27 @@
 			//var _self = PubSub;
 			_self.subscriptions = {};
 		},
+		/**
+		 * A valid topic name is like a Unix filename (e.g. "/app/module/class")
+		 */
 		validateTopicName : function(name /*string */) {
-			//var _self = PubSub;
-			var result = false;
-			if (Util.isString(name) && name.startsWith(_self.TOPIC_SEPARATOR)) {
-				if (!name.endsWith(_self.TOPIC_SEPARATOR)) {
-					result = new RegExp("\\S").test(name);
-					if (result) {
-						var temp = name.replace(new RegExp(_self.TOPIC_SEPARATOR, "g"),"");
-						result = new RegExp("\\w", "g").test(temp);
-					}
-				}
+			// must be a string
+			var result = Util.isString(name);
+			// must begin with a slash
+			result = result && (name.startsWith(_self.TOPIC_SEPARATOR));
+			// must have no trailing slashes
+			result = result && !(name.endsWith(_self.TOPIC_SEPARATOR));
+			// must have no double slashes
+			result = result && !(new RegExp("\/\/").test(name));
+			// must have no white space
+			result = result && (new RegExp("\\S").test(name));
+			// every "node" in the topic name should be a word
+			if (result) {
+				var temp = name.replace(new RegExp(_self.TOPIC_SEPARATOR, "g"),"");
+				// disallows non-word characters
+				result = result && !(new RegExp("\\W", "g").test(temp));
+				// only permits word characters
+				result = result && (new RegExp("\\w", "g").test(temp));
 			}
 			return result;
 		},

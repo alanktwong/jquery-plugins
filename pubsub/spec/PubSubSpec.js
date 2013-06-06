@@ -29,11 +29,13 @@ describe("jquery.pubsub", function() {
 			return log4jq;
 		},
 		getType : function(notification) {
-			return (notification.isSynchronous() ? "synchronous" : "asynchronous") + " notification";
+			var msg = (notification.isSynchronous() ? "synchronous" : "asynchronous");
+			msg = msg + " notification @ " + notification.currentTopic() + " from " + notification.publishTopic();
+			return msg;
 		}
 	};
 
-	describe("when testing the core internal functionality of PubSub", function() {
+	describe("when validating topic names", function() {
 		var PubSub;
 		var topic = "/app/module/class";
 		
@@ -41,28 +43,35 @@ describe("jquery.pubsub", function() {
 			PubSub = TestUtil.resetPubSub();
 		});
 		
-		it("should validate topic names with spaces", function() {
-			expect(PubSub.validateTopicName("bad topic name")).toBe(false);
-		});
-		it("should validate topic names that are not strings", function() {
+		it("should invalidate topic names that are not strings", function() {
 			expect(PubSub.validateTopicName({})).toBe(false);
 		});
-		it("should validate topic names that are null", function() {
+		it("should invalidate topic names that are undefined", function() {
 			expect(PubSub.validateTopicName(undefined)).toBe(false);
+		});
+		it("should invalidate topic names that are null", function() {
 			expect(PubSub.validateTopicName(null)).toBe(false);
 		});
-		it("should validate topic names that do not have all alphanumeric characters", function() {
-			expect(PubSub.validateTopicName("app.name")).toBe(false);
-		});
-		it("should validate topic names that do not begin with a slash a la Unix directories", function() {
-			expect(PubSub.validateTopicName("appName")).toBe(false);
-			expect(PubSub.validateTopicName(topic)).toBe(true);
+		it("should invalidate topic names with spaces", function() {
+			expect(PubSub.validateTopicName("bad topic name")).toBe(false);
 		});
 		it("should validate topic names a la Unix directories", function() {
 			expect(PubSub.validateTopicName(topic)).toBe(true);
 		});
-		it("should validate topic names with trailing slashs", function() {
+		it("should invalidate topic names with a beginning slash", function() {
+			expect(PubSub.validateTopicName("appName")).toBe(false);
+		});
+		it("should validate topic names with a trailing slash", function() {
 			expect(PubSub.validateTopicName(topic + "/")).toBe(false);
+		});
+		it("should invalidate topic names with double slashes", function() {
+			var result = PubSub.validateTopicName("/" + topic);
+			expect(result).not.toBe(true);
+			var result = PubSub.validateTopicName("/app//module/class");
+			expect(result).not.toBe(true);
+		});
+		it("should invalidate topic names that do not have all alphanumeric characters", function() {
+			expect(PubSub.validateTopicName("/app.name")).toBe(false);
 		});
 		it("should infer ancestor chain of topic names", function() {
 			expect(PubSub.validateTopicName(topic)).toBe(true);
@@ -300,9 +309,8 @@ describe("jquery.pubsub", function() {
 	describe("when handling errors for public API", function() {
 		var PubSub;
 		
-
 		var callback = function(notification) {
-			var msg = "callback was notified @ " + notification.currentTopic + " from: " + notification.publishTopic;
+			var msg = "callback was notified @ " + notification.currentTopic() + " from: " + notification.publishTopic();
 			$.debug(msg);
 		};
 		
@@ -1274,6 +1282,103 @@ describe("jquery.pubsub", function() {
 		});
 	});
 	
+	describe("when there are dangling leaf subscriptions", function() {
+		var PubSub, fixture, done;
+		
+		beforeEach(function() {
+			PubSub = TestUtil.resetPubSub();
+			done = false;
+			fixture = {};
+			fixture = $.extend(fixture, {
+				topic : "/dangling",
+				notify : function(notification) {
+					var msg = TestUtil.getType(notification);
+					expect(this).toBeOk(true,msg);
+				},
+				leaf : {
+					topic : "/dangling/leaf"
+				},
+				options : {
+					progress : function(notification) {
+						var msg = "progress: " + TestUtil.getType(notification);
+						expect(this).toBeOk(msg, msg);
+					},
+					fail : function(notification) {
+						var msg = "progress: " + TestUtil.getType(notification);
+						expect(this).toBeOk(msg, msg);
+					},
+					done : function(notification) {
+						var msg = "done: " + TestUtil.getType(notification);
+						expect(this).toBeOk(false, msg);
+					},
+					always : function(notification) {
+						var msg = "always: " + TestUtil.getType(notification);
+						expect(this).toBeOk(msg, msg);
+						done = true;
+					}
+				},
+				spyOn : function() {
+					var self = fixture;
+					spyOn(self.options, 'progress').andCallThrough();
+					spyOn(self.options, 'fail').andCallThrough();
+					spyOn(self.options, 'done').andCallThrough();
+					spyOn(self.options, 'always').andCallThrough();
+					
+					spyOn(self, 'notify').andCallThrough();
+				},
+				subscribeAll : function() {
+					var self = fixture;
+					$.subscribe(self.topic, self.notify);
+					
+				}
+			});
+		});
+		
+		it("should be able to publish synchronously to dangling leafs", function() {
+			var self = fixture;
+			self.spyOn();
+			self.subscribeAll();
+			
+			$.publishSync(self.leaf.topic, self.options);
+			
+			expect(done).toBe(true);
+			
+			expect(self.options.progress).toHaveBeenCalled();
+			expect(self.options.fail).not.toHaveBeenCalled();
+			expect(self.options.done).toHaveBeenCalled();
+			expect(self.options.always).toHaveBeenCalled();
+			
+			expect(self.notify).toHaveBeenCalled();
+			
+			expect(false).toBe(true);
+		});
+		it("should be able to publish asynchronously to dangling leafs", function() {
+			var self = fixture;
+			runs(function() {
+				self.spyOn();
+				self.subscribeAll();
+				$.publishSync(self.leaf.topic, self.options);
+			});
+			
+			waitsFor(function() {
+				return done !== false;
+			}, "publication should be sent asynchronously", 10);
+			
+			runs(function() {
+				expect(done).toBe(true);
+				
+				expect(self.options.progress).toHaveBeenCalled();
+				expect(self.options.fail).not.toHaveBeenCalled();
+				expect(self.options.done).toHaveBeenCalled();
+				expect(self.options.always).toHaveBeenCalled();
+				
+				expect(self.notify).toHaveBeenCalled();
+				
+				expect(false).toBe(true);
+			});
+		});
+	});
+	
 	describe("when continuing notifications", function() {
 		var PubSub, fixture, done;
 		
@@ -1284,67 +1389,57 @@ describe("jquery.pubsub", function() {
 				topic : "/continuation/sync",
 				one : {
 					notify : function(notification) {
-						var data   = notification.data;
-						var topic  = notification.currentTopic;
-						var origin = notification.publishTopic;
+						var data   = notification.data();
+						var topic  = notification.currentTopic();
 						
-						var msg = "1st subscriber called for publication to: " + origin;
+						var msg = "1st subscriber called for publication to: " + notification.publishTopic();
 						expect(this).toBeOk(true, msg);
 					}
 				},
 				two : {
 					notify : function(notification) {
-						var data   = notification.data;
-						var topic  = notification.currentTopic;
-						var origin = notification.publishTopic;
+						var data   = notification.data();
+						var topic  = notification.currentTopic();
 						
-						var msg = "2nd subscriber called for publication to: " + origin;
+						var msg = "2nd subscriber called for publication to: " + notification.publishTopic();
 						expect(this).toBeOk(true, msg);
 						return true;
 					}
 				},
 				noSubscriberOptions : {
 					progress : function(notification) {
-						var origin = notification.publishTopic;
-						var msg = "begin notifications w/o subscribers of " + origin;
+						var msg = "begin notifications w/o subscribers of " + notification.publishTopic();
 						expect(this).toBeOk(msg, msg);
 					},
 					fail : function(notification) {
-						var origin = notification.publishTopic;
-						var msg = "failed notifications w/o subscribers of " + origin;
+						var msg = "failed notifications w/o subscribers of " + notification.publishTopic();
 						expect(this).toBeOk(msg, msg);
 					},
 					done : function(notification) {
-						var origin = notification.publishTopic;
-						var msg = "done notifications w/o subscribers of " + origin;
+						var msg = "done notifications w/o subscribers of " + notification.publishTopic();
 						expect(this).toBeOk(false, msg);
 					},
 					always : function(notification) {
-						var origin = notification.publishTopic;
-						var msg = "completed notifications w/o subscribers of " + origin;
+						var msg = "completed notifications w/o subscribers of " + notification.publishTopic();
 						expect(this).toBeOk(msg, msg);
 						done = true;
 					}
 				},
 				subscriberOptions : {
 					progress : function(notification) {
-						var origin = notification.publishTopic;
-						var msg = "begin notification of: " + origin;
+						var msg = "begin notification of: " + notification.publishTopic();
 						expect(this).toBeOk(msg,msg);
 					},
 					done: function(notification) {
-						var origin = notification.publishTopic;
-						var msg = "successful notification of: " + origin;
+						var msg = "successful notification of: " + notification.publishTopic();
 						expect(this).toBeOk(msg,msg);
 					},
 					fail: function(notification) {
-						var origin = notification.publishTopic;
-						var msg = "failed notification of: " + origin;
+						var msg = "failed notification of: " + notification.publishTopic();
 						expect(this).toBeOk(false,msg);
 					},
 					always : function(notification) {
-						var origin = notification.publishTopic;
-						var msg = "completed notification of: " + origin;
+						var msg = "completed notification of: " + notification.publishTopic();
 						expect(this).toBeOk(msg,msg);
 						done = true;
 					}
