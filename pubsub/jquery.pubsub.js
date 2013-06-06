@@ -191,9 +191,9 @@
 			// must be a string
 			var result = Util.isString(name);
 			// must begin with a slash
-			result = result && (name.startsWith(_self.TOPIC_SEPARATOR));
+			result = result && (new RegExp("^\/").test(name));
 			// must have no trailing slashes
-			result = result && !(name.endsWith(_self.TOPIC_SEPARATOR));
+			result = result && !(new RegExp("\/$").test(name));
 			// must have no double slashes
 			result = result && !(new RegExp("\/\/").test(name));
 			// must have no white space
@@ -223,7 +223,7 @@
 			}
 			var nodes = _self.createNodes(topic);
 			var topics = $.map(nodes, function(node, i) {
-				var temp = _self.slice(nodes);
+				var temp = nodes.slice(0);
 				temp = temp.slice(0, i + 1);
 				var ancestor = temp.join(_self.TOPIC_SEPARATOR);
 				return _self.TOPIC_SEPARATOR + ancestor;
