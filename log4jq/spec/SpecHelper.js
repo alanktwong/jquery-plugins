@@ -69,6 +69,12 @@ beforeEach(function() {
 						var logEntry   = testTarget.get();
 						var logMessage = logEntry.format();
 						
+						if (!logMessage.contains) {
+							String.prototype.contains = function(that) {
+								return this.indexOf(that) >= 0;
+							}
+						}
+						
 						var isLevel = logMessage.contains("[" + level.toUpperCase() +"]");
 						var isName = logMessage.contains(moduleSvc.name);
 						var isMessage = logMessage.contains(moduleSvc.message);
