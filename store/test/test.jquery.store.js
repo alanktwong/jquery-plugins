@@ -1,31 +1,5 @@
 module( "jquery.store testing" );
 
-test( "$.store.addType", function() {
-	expect( 11 );
-	var testStore;
-	var store = function( key, value ) {
-			return testStore.apply( this, arguments );
-		};
-	$.store.addType( "custom", store );
-	equal( $.store.types.custom, store, "custom store added" );
-
-	testStore = function( key, value ) {
-		equal( key, "foo", "getter key" );
-		equal( value, undefined, "getter value" );
-		return "bar";
-	};
-	equal( $.store.custom( "foo" ), "bar", "getter" );
-	testStore = function( key, value ) {
-		equal( key, "foo", "setter key" );
-		equal( value, "baz", "setter value" );
-		return value;
-	};
-	equal( $.store.custom( "foo", "baz" ), "baz", "setter" );
-	equal( $.store( "foo", "baz", { type: "custom" } ), "baz",
-		"setter via options" );
-	var storageTypes = _.keys($.store.types);
-	equal( storageTypes.length, 4);
-});
 
 
 if ( "localStorage" in $.store.types ) {
