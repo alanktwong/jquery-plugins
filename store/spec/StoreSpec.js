@@ -105,21 +105,46 @@ describe("jquery.store", function() {
 				fixture.reset();
 				return fixture;
 			},
-			createMultiPageFixture : function(clear,store) {
+			createMultiPageFixture : function(clear,store, type) {
 				var fixture = {
 						reset : clear,
 						store : store,
+						type : type,
 						data : {
 							foo: "bar",
 							baz: "qux"
 						},
 						getOtherPageStore : function() {
+							var otherStore = null;
 							var iframe = $( "#other-page" )[0];
-							var contentWindow = iframe.contentWindow;
-							var contentDocument = iframe.contentDocument;
-							
-							var $getOtherPageStore = (contentWindow.$ || contentDocument.defaultView.$);
-							return $getOtherPageStore;
+							try {
+								if (iframe && iframe.contentWindow && iframe.contentDocument && iframe.contentDocument.defaultView) {
+									var contentWindow       = iframe.contentWindow;
+									var contentDocumentView = iframe.contentDocument.defaultView;
+									var $other = (contentWindow.$ || contentDocumentView.$);
+									if (_.has($other,"store")) {
+										var other = $other["store"];
+										if (_.has(other, fixture.type)) {
+											otherStore = other[fixture.type];
+										}
+									} else {
+										$.error("cannot access $getOtherPageStore.store." + fixture.type);
+									}
+								}
+							} catch (err) {
+								$.error(err.message);
+							}
+							return otherStore;
+						},
+						testIFrame : function() {
+							var otherPageStore = fixture.getOtherPageStore();
+							if (!_.isUndefined(otherPageStore) && !_.isNull(otherPageStore)) {
+								fixture.store(fixture.foo, fixture.bar);
+								otherPageStore(fixture.baz, fixture.qux);
+								expect(fixture.store()).toBeDeepEquals(fixture.data);
+							} else {
+								expect("iframe cannot be accessed").toBe("iframe can be accessed");
+							}
 						}
 				};
 				fixture = $.extend(fixture, TestUtil.keys);
@@ -342,22 +367,12 @@ describe("jquery.store", function() {
 			
 			beforeEach(function() {
 				Store = TestUtil.resetStore();
-				fixture = TestUtil.createMultiPageFixture(TestUtil.clear.local, $.store.localStorage);
+				fixture = TestUtil.createMultiPageFixture(TestUtil.clear.local, $.store.localStorage, "localStorage");
 			});
 			
 			it("should access store from other page", function() {
-				var $otherPageStore = fixture.getOtherPageStore();
-				if (!_.isUndefined($otherPageStore) && !_.isNull($otherPageStore)) {
-					fixture.store(fixture.foo, fixture.bar);
-					$otherPageStore.store.localStorage(fixture.baz, fixture.qux);
-					
-					expect(fixture.store()).toBe(fixture.data);
-				} else {
-					$.error("ifroam cannot be accessed");
-					expect(1).toBe(0);
-				}
+				fixture.testIFrame();
 			});
-			
 		});
 	}
 	
@@ -419,6 +434,18 @@ describe("jquery.store", function() {
 					fixture.assertions.second();
 					done();
 				}, 110);
+			});
+		});
+		describe("when using multiple pages for session storage ($.store.sessionStorage)", function() {
+			var Store, fixture;
+			
+			beforeEach(function() {
+				Store = TestUtil.resetStore();
+				fixture = TestUtil.createMultiPageFixture(TestUtil.clear.session, $.store.sessionStorage, "sessionStorage");
+			});
+			
+			it("should access store from other page", function() {
+				fixture.testIFrame();
 			});
 		});
 	}
@@ -483,6 +510,18 @@ describe("jquery.store", function() {
 				}, 110);
 			});
 		});
+		describe("when using multiple pages for global storage ($.store.globalStorage)", function() {
+			var Store, fixture;
+			
+			beforeEach(function() {
+				Store = TestUtil.resetStore();
+				fixture = TestUtil.createMultiPageFixture(TestUtil.clear.global, $.store.globalStorage, "globalStorage");
+			});
+			
+			it("should access store from other page", function() {
+				fixture.testIFrame();
+			});
+		});
 	}
 	
 	if ( "userData" in $.store.types ) {
@@ -543,8 +582,18 @@ describe("jquery.store", function() {
 				}, 110);
 			});
 		});
+		describe("when using multiple pages for user data storage ($.store.userData)", function() {
+			var Store, fixture;
+			
+			beforeEach(function() {
+				Store = TestUtil.resetStore();
+				fixture = TestUtil.createMultiPageFixture(TestUtil.clear.userData, $.store.userData, "userData");
+			});
+			
+			it("should access store from other page", function() {
+				fixture.testIFrame();
+			});
+		});
 	}
-	
-	
 });
 
