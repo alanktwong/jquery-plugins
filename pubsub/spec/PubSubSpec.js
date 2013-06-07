@@ -353,6 +353,68 @@ describe("jquery.pubsub", function() {
 				expect(err.message).toBe("You must provide a valid handle to the callback to add its subscription.");
 			}
 		});
+		it("should throw an error on subscribing 1 callback to multiple topics", function() {
+			var sub = {
+					topic : "/sub",
+					createCallback : function()  {
+						var cb = function(notification) {
+							expect(this).toBeOk(true,"hi");
+						};
+						return cb;
+					},
+					a : {
+						topic : "/sub/a",
+						one : {
+							topic : "/sub/a/1"
+						},
+						two : {
+							topic : "/sub/a/2"
+						},
+						three : {
+							topic : "/sub/a/3"
+						}
+					},
+					b : {
+						topic : "/sub/b",
+						one : {
+							topic : "/sub/b/1"
+						},
+						two : {
+							topic : "/sub/b/2"
+						},
+						three : {
+							topic : "/sub/b/3"
+						}
+					}
+			};
+			try {
+				var x = $.subscribe( sub.a.one.topic + " " + sub.a.two.topic + " "  + sub.a.three.topic, sub.createCallback());
+			} catch (err) {
+				expect(err.message).toBe("You must provide a valid topic name to create a Subscription.");
+			}
+
+			try {
+				$.subscribe( sub.b.one.topic + " " + sub.b.two.topic, sub.createCallback() );
+			} catch (err) {
+				expect(err.message).toBe("You must provide a valid topic name to create a Subscription.");
+			}
+			
+			try {
+				// Test for Ticket #18
+				$.subscribe( sub.b.one.topic + " " + sub.b.three.topic, sub.createCallback);
+			} catch (err) {
+				expect(err.message).toBe("You must provide a valid topic name to create a Subscription.");
+			}
+			
+			var canSubscribeOneCallbackToMultipleTopics = false;
+			if (canSubscribeOneCallbackToMultipleTopics) {
+				$.publishSync( sub.a.one.topic );
+				
+				$.publishSync( sub.b.two.topic );
+				$.publishSync( sub.b.two.topic );
+				$.publishSync( sub.b.three.topic );
+			}
+		});
 		it("should throw an error on unsubscribing with a bad topic name", function() {
 			try {
 				$.unsubscribe( undefined );
@@ -682,7 +744,44 @@ describe("jquery.pubsub", function() {
 			$.publishSync( fixture.topic );
 			expect(order).toBe(2);
 		});
-		
+		it("should permit unsubscribing while publishing not to change notifications of subscribers", function() {
+			var fixture = {
+				topic : "/racy/unsubscribe",
+				one : {
+					notify : function(notification) {
+						var msg = "fixture.one.notify: " + TestUtil.getType(notification);
+						expect(this).toBeOk(true, msg);
+					}
+				},
+				racer : {
+					notify : function(notification) {
+						var self = fixture;
+						var msg = "fixture.racer.notify: " + TestUtil.getType(notification);
+						expect(this).toBeOk(true, msg);
+						$.warn("unsubscribing self while receiving a notification");
+						var subscribers = $.unsubscribe( self.topic, self.racer.subscription.id );
+						expect(subscribers.length).toBe(2);
+					}
+				},
+				three : {
+					notify : function(notification) {
+						var msg = "fixture.three.notify: " + TestUtil.getType(notification);
+						expect(this).toBeOk(true, msg);
+					}
+				}
+			};
+			spyOn(fixture.one,   'notify').andCallThrough();
+			spyOn(fixture.racer, 'notify').andCallThrough();
+			spyOn(fixture.three, 'notify').andCallThrough();
+			fixture.one.subscription   = $.subscribe( fixture.topic, fixture.one.notify );
+			fixture.racer.subscription = $.subscribe( fixture.topic, fixture.racer.notify );
+			fixture.three.subscription = $.subscribe( fixture.topic, fixture.three.notify );
+			$.publishSync( fixture.topic );
+			
+			expect(fixture.one.notify).toHaveBeenCalled();
+			expect(fixture.racer.notify).toHaveBeenCalled();
+			expect(fixture.three.notify).toHaveBeenCalled();
+		});
 	});
 
 	describe("when setting priorities for subscriptions", function() {
