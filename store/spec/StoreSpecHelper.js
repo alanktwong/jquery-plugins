@@ -14,10 +14,13 @@ beforeEach(function() {
 		},
 		toHaveAPI : function(bool) {
 			var self = this.actual;
+			// self should be $.store function/object
 			var result = bool && _.isFunction(self);
 			result = result && _.isObject(self.types);
 			result = result && _.isString(self.key);
+			
 			result = result && _.isString(self.type);
+			$.info("storageType is: " + self.type);
 			
 			result = result && _.isFunction(self.error);
 			result = result && _.isFunction(self.memory);
@@ -40,6 +43,12 @@ beforeEach(function() {
 				$.info("has global storage");
 			} else {
 				$.warn("lacks global storage");
+			}
+			if (self.userData) {
+				result = result && _.isFunction(self.userData);
+				$.info("has user data");
+			} else {
+				$.warn("lacks user data");
 			}
 			return result;
 		},

@@ -36,6 +36,9 @@ describe("jquery.store", function() {
 				if (store.globalStorage) {
 					spyOn(store, 'globalStorage').andCallThrough();
 				}
+				if (store.userData) {
+					spyOn(store, 'userData').andCallThrough();
+				}
 				return store;
 			},
 			keys : {
@@ -44,6 +47,118 @@ describe("jquery.store", function() {
 				baz : "baz",
 				qux : "qux",
 				quux : "quux"
+			},
+			clear : {
+				memory : function() {
+					for( var key in $.store.memory() ) {
+						$.store.memory( key, null );
+					}
+				},
+				local : function() {
+					localStorage.clear();
+				},
+				session : function() {
+					try {
+						sessionStorage.clear();
+					} catch ( error ) {
+						var key;
+						try {
+							while ( key = sessionStorage.key( 0 ) ) {
+								sessionStorage.removeItem( key );
+							}
+						} catch( error ) {}
+					}
+				},
+				global : function() {
+					var key;
+					var store = window.globalStorage[ location.hostname ];
+					try {
+						while ( key = store.key( 0 ) ) {
+							store.removeItem( key );
+						}
+					} catch( error ) {}
+				},
+				userData : function() {
+					var attr;
+					var div = document.createElement( "div" );
+					document.body.appendChild( div );
+					div.addBehavior( "#default#userdata" );
+					div.load( "amplify" );
+					while ( attr = div.XMLDocument.documentElement.attributes[ 0 ] ) {
+						div.removeAttribute( attr.name );
+					}
+					div.save( "amplify" );
+				}
+			},
+			createBasicFixture : function(clear,store) {
+				var fixture = {
+						reset : clear,
+						store : store,
+						data : {
+							foo : "bar",
+							baz : {
+								qux : "quux"
+							}
+						}
+				};
+				fixture = $.extend(fixture, TestUtil.keys);
+				fixture.reset();
+				return fixture;
+			},
+			createMultiPageFixture : function(clear,store) {
+				var fixture = {
+						reset : clear,
+						store : store,
+						data : {
+							foo: "bar",
+							baz: "qux"
+						},
+						getOtherPageStore : function() {
+							var iframe = $( "#other-page" )[0];
+							var contentWindow = iframe.contentWindow;
+							var contentDocument = iframe.contentDocument;
+							
+							var $getOtherPageStore = (contentWindow.$ || contentDocument.defaultView.$);
+							return $getOtherPageStore;
+						}
+				};
+				fixture = $.extend(fixture, TestUtil.keys);
+				fixture.reset();
+				return fixture;
+			},
+			createTTLFixture : function(store) {
+				var fixture = {
+						store : store,
+						ttlData : {
+								forever: "and ever",
+								expiring1: "i disappear",
+								expiring2: "i disappear too"
+						},
+						firstPuts : function() {
+							fixture.store("forever", "not really", { expires : 100});
+							fixture.store("forever", fixture.ttlData.forever);
+							fixture.store("expiring1", fixture.ttlData.expiring1, { expires : 100});
+							fixture.store("expiring2", fixture.ttlData.expiring2, { expires : 200});
+							
+							expect(fixture.store()).toBeDeepEquals(fixture.ttlData);
+						},
+						assertions: {
+							first : function() {
+								delete fixture.ttlData.expiring1;
+								expect(fixture.store()).toBeDeepEquals(fixture.ttlData);
+								expect(fixture.store("expiring1")).toBeCacheMiss();
+								expect(fixture.store("expiring2")).not.toBeCacheMiss();
+							},
+							second : function() {
+								delete fixture.ttlData.expiring1;
+								delete fixture.ttlData.expiring2;
+								expect(fixture.store()).toBeDeepEquals(fixture.ttlData);
+								expect(fixture.store("expiring1")).toBeCacheMiss();
+								expect(fixture.store("expiring2")).toBeCacheMiss();
+							}
+						}
+				};
+				return fixture;
 			}
 	};
 	
@@ -72,7 +187,7 @@ describe("jquery.store", function() {
 				store : function( key, value ) {
 					return testStore.apply( this, arguments );
 				}
-			}
+			};
 			spyOn(custom,'store').andCallThrough();
 			
 			$.store.addType( "custom", custom.store );
@@ -108,59 +223,31 @@ describe("jquery.store", function() {
 		
 		beforeEach(function() {
 			Store = TestUtil.resetStore();
-			fixture = {
-				reset : function() {
-					for( var key in $.store.memory() ) {
-						$.store.memory( key, null );
-					}
-				},
-				data : {
-					foo : "bar",
-					baz : {
-						qux : "quux"
-					}
-				}
-			};
-			fixture = $.extend(fixture, TestUtil.keys);
-			fixture.reset();
+			fixture = TestUtil.createBasicFixture(TestUtil.clear.memory, $.store.memory);
 		});
-		
 		it("should start as empty", function() {
-			var self = Store;
-			expect(self).toHaveAPI(true);
-			self = TestUtil.spyOn(self);
-			expect($.store.memory()).toBeEmptyCache();
-			expect(self.memory).toHaveBeenCalled();
+			expect(Store).toHaveAPI(true);
+			expect(fixture.store()).toBeEmptyCache();
 		});
 		it("should have a cache miss when empty", function() {
-			var self = Store;
-			self = TestUtil.spyOn(self);
-			expect($.store.memory(fixture.foo)).toBeCacheMiss();
+			expect(fixture.store(fixture.foo)).toBeCacheMiss();
 		});
 		it("should have cache put a string to string", function() {
-			var self = Store;
-			self = TestUtil.spyOn(self);
-			expect($.store.memory(fixture.foo, fixture.bar)).toBe(fixture.bar);
+			expect(fixture.store(fixture.foo, fixture.bar)).toBe(fixture.bar);
 		});
 		it("should have cache put a string to object", function() {
-			var self = Store;
-			self = TestUtil.spyOn(self);
-			expect($.store.memory(fixture.foo, fixture.bar)).toBe(fixture.bar);
-			expect($.store.memory(fixture.baz, { qux : fixture.quux })).toBeDeepEquals({ qux: "quux" });
-			expect($.store.memory(fixture.baz)).toBeDeepEquals({ qux: "quux" });
+			expect(fixture.store(fixture.foo, fixture.bar)).toBe(fixture.bar);
+			expect(fixture.store(fixture.baz, { qux : fixture.quux })).toBeDeepEquals({ qux: "quux" });
+			expect(fixture.store(fixture.baz)).toBeDeepEquals({ qux: "quux" });
 		});
 		it("should have retrieve all items in cache", function() {
-			var self = Store;
-			self = TestUtil.spyOn(self);
-			expect($.store.memory(fixture.foo, fixture.bar)).toBe(fixture.bar);
-			expect($.store.memory(fixture.baz, { qux : fixture.quux })).toBeDeepEquals({ qux: "quux" });
-			expect($.store.memory()).toBeDeepEquals(fixture.data);
+			expect(fixture.store(fixture.foo, fixture.bar)).toBe(fixture.bar);
+			expect(fixture.store(fixture.baz, { qux : fixture.quux })).toBeDeepEquals({ qux: "quux" });
+			expect(fixture.store()).toBeDeepEquals(fixture.data);
 		});
-		it("should have evict 1 cache entry", function() {
-			var self = Store;
-			self = TestUtil.spyOn(self);
-			expect($.store.memory(fixture.foo, null)).toBeNull();
-			expect($.store.memory(fixture.foo)).not.toBeDefined();
+		it("should have evicted 1 cache entry", function() {
+			expect(fixture.store(fixture.foo, null)).toBeNull();
+			expect(fixture.store(fixture.foo)).not.toBeDefined();
 		});
 	});
 	describe("when using TTL of in-memory storage ($.store.memory)", function() {
@@ -169,110 +256,291 @@ describe("jquery.store", function() {
 		
 		async.beforeEach(function(done){
 			Store = TestUtil.resetStore();
-			fixture = {
-				ttlData : {
-						forever: "and ever",
-						expiring1: "i disappear",
-						expiring2: "i disappear too"
-				},
-				firstPuts : function() {
-					$.store.memory("forever", "not really", { expires : 100});
-					$.store.memory("forever", fixture.ttlData.forever);
-					$.store.memory("expiring1", fixture.ttlData.expiring1, { expires : 50});
-					$.store.memory("expiring2", fixture.ttlData.expiring2, { expires : 100});
-					
-					expect($.store.memory()).toBeDeepEquals(fixture.ttlData);
-				},
-				assertions: {
-					first : function() {
-						delete fixture.ttlData.expiring1;
-						expect($.store.memory()).toBeDeepEquals(fixture.ttlData);
-						expect($.store.memory("expiring1")).toBeCacheMiss();
-						expect($.store.memory("expiring2")).not.toBeCacheMiss();
-					},
-					second : function() {
-						delete fixture.ttlData.expiring1;
-						delete fixture.ttlData.expiring2;
-						expect($.store.memory()).toBeDeepEquals(fixture.ttlData);
-						expect($.store.memory("expiring1")).toBeCacheMiss();
-						expect($.store.memory("expiring2")).toBeCacheMiss();
-					}
-				}
-			};
+			fixture = TestUtil.createTTLFixture($.store.memory);
 			fixture.firstPuts();
 			_.delay(function(){
 				done();
-			}, 50)
+			}, 100);
 		});
 		
 		async.it("should expire 1 of 3 cache entries", function(done) {
-			var self = Store;
-			self = TestUtil.spyOn(self);
 			_.delay(function() {
 				fixture.assertions.first();
 				done();
-			}, 5)
+			}, 10);
 		})
 		async.it("should expire 2 of 3 cache entries", function(done) {
-			var self = Store;
-			self = TestUtil.spyOn(self);
 			_.delay(function() {
 				fixture.assertions.second();
 				done();
-			}, 55)
+			}, 110);
 		})
 	});
 	
 	if ( "localStorage" in $.store.types ) {
-		describe("when testing localStorage", function() {
-			var Store;
+		describe("when using basics of local storage ($.store.localStorage)", function() {
+			var Store, fixture;
 			
 			beforeEach(function() {
 				Store = TestUtil.resetStore();
+				fixture = TestUtil.createBasicFixture(TestUtil.clear.local, $.store.localStorage);
 			});
-			
-			it("should fail initially", function() {
-				expect(this).toBeOk(false, "TBD");
+			it("should start as empty", function() {
+				expect(Store).toHaveAPI(true);
+				expect(fixture.store()).toBeEmptyCache();
+			});
+			it("should have a cache miss when empty", function() {
+				expect(fixture.store(fixture.foo)).toBeCacheMiss();
+			});
+			it("should have cache put a string to string", function() {
+				expect(fixture.store(fixture.foo, fixture.bar)).toBe(fixture.bar);
+			});
+			it("should have cache put a string to object", function() {
+				expect(fixture.store(fixture.foo, fixture.bar)).toBe(fixture.bar);
+				expect(fixture.store(fixture.baz, { qux : fixture.quux })).toBeDeepEquals({ qux: "quux" });
+				expect(fixture.store(fixture.baz)).toBeDeepEquals({ qux: "quux" });
+			});
+			it("should have retrieve all items in cache", function() {
+				expect(fixture.store(fixture.foo, fixture.bar)).toBe(fixture.bar);
+				expect(fixture.store(fixture.baz, { qux : fixture.quux })).toBeDeepEquals({ qux: "quux" });
+				expect(fixture.store()).toBeDeepEquals(fixture.data);
+			});
+			it("should have evicted 1 cache entry", function() {
+				expect(fixture.store(fixture.foo, null)).toBeNull();
+				expect(fixture.store(fixture.foo)).not.toBeDefined();
 			});
 		});
+		
+		describe("when using TTL of local storage ($.store.localStorage)", function() {
+			var async = new AsyncSpec(this);
+			var Store, fixture;
+			
+			async.beforeEach(function(done){
+				Store = TestUtil.resetStore();
+				fixture = TestUtil.createTTLFixture($.store.localStorage);
+				fixture.firstPuts();
+				_.delay(function(){
+					done();
+				}, 100);
+			});
+			
+			async.it("should expire 1 of 3 cache entries", function(done) {
+				_.delay(function() {
+					fixture.assertions.first();
+					done();
+				}, 10);
+			});
+			async.it("should expire 2 of 3 cache entries", function(done) {
+				_.delay(function() {
+					fixture.assertions.second();
+					done();
+				}, 110);
+			});
+		});
+		describe("when using multiple pages for local storage ($.store.localStorage)", function() {
+			var Store, fixture;
+			
+			beforeEach(function() {
+				Store = TestUtil.resetStore();
+				fixture = TestUtil.createMultiPageFixture(TestUtil.clear.local, $.store.localStorage);
+			});
+			
+			it("should access store from other page", function() {
+				var $otherPageStore = fixture.getOtherPageStore();
+				if (!_.isUndefined($otherPageStore) && !_.isNull($otherPageStore)) {
+					fixture.store(fixture.foo, fixture.bar);
+					$otherPageStore.store.localStorage(fixture.baz, fixture.qux);
+					
+					expect(fixture.store()).toBe(fixture.data);
+				} else {
+					$.error("ifroam cannot be accessed");
+					expect(1).toBe(0);
+				}
+			});
+			
+		});
 	}
+	
 	if ( "sessionStorage" in $.store.types ) {
-		describe("when testing sessionStorage", function() {
-			var Store;
+		describe("when using basics of session storage ($.store.sessionStorage)", function() {
+			var Store, fixture;
 			
 			beforeEach(function() {
 				Store = TestUtil.resetStore();
+				fixture = TestUtil.createBasicFixture(TestUtil.clear.session, $.store.sessionStorage);
+			});
+			it("should start as empty", function() {
+				expect(Store).toHaveAPI(true);
+				expect(fixture.store()).toBeEmptyCache();
+			});
+			it("should have a cache miss when empty", function() {
+				expect(fixture.store(fixture.foo)).toBeCacheMiss();
+			});
+			it("should have cache put a string to string", function() {
+				expect(fixture.store(fixture.foo, fixture.bar)).toBe(fixture.bar);
+			});
+			it("should have cache put a string to object", function() {
+				expect(fixture.store(fixture.foo, fixture.bar)).toBe(fixture.bar);
+				expect(fixture.store(fixture.baz, { qux : fixture.quux })).toBeDeepEquals({ qux: "quux" });
+				expect(fixture.store(fixture.baz)).toBeDeepEquals({ qux: "quux" });
+			});
+			it("should have retrieve all items in cache", function() {
+				expect(fixture.store(fixture.foo, fixture.bar)).toBe(fixture.bar);
+				expect(fixture.store(fixture.baz, { qux : fixture.quux })).toBeDeepEquals({ qux: "quux" });
+				expect(fixture.store()).toBeDeepEquals(fixture.data);
+			});
+			it("should have evicted 1 cache entry", function() {
+				expect(fixture.store(fixture.foo, null)).toBeNull();
+				expect(fixture.store(fixture.foo)).not.toBeDefined();
+			});
+		});
+		
+		describe("when using TTL of session storage ($.store.sessionStorage)", function() {
+			var async = new AsyncSpec(this);
+			var Store, fixture;
+			
+			async.beforeEach(function(done){
+				Store = TestUtil.resetStore();
+				fixture = TestUtil.createTTLFixture($.store.sessionStorage);
+				fixture.firstPuts();
+				_.delay(function(){
+					done();
+				}, 100);
 			});
 			
-			it("should fail initially", function() {
-				expect(this).toBeOk(false, "TBD");
+			async.it("should expire 1 of 3 cache entries", function(done) {
+				_.delay(function() {
+					fixture.assertions.first();
+					done();
+				}, 10);
+			});
+			async.it("should expire 2 of 3 cache entries", function(done) {
+				_.delay(function() {
+					fixture.assertions.second();
+					done();
+				}, 110);
 			});
 		});
 	}
+	
 	if ( "globalStorage" in $.store.types ) {
-		describe("when testing globalStorage", function() {
-			var Store;
+		describe("when using basics of global storage ($.store.globalStorage)", function() {
+			var Store, fixture;
 			
 			beforeEach(function() {
 				Store = TestUtil.resetStore();
+				fixture = TestUtil.createBasicFixture(TestUtil.clear.global, $.store.globalStorage);
+			});
+			it("should start as empty", function() {
+				expect(Store).toHaveAPI(true);
+				expect(fixture.store()).toBeEmptyCache();
+			});
+			it("should have a cache miss when empty", function() {
+				expect(fixture.store(fixture.foo)).toBeCacheMiss();
+			});
+			it("should have cache put a string to string", function() {
+				expect(fixture.store(fixture.foo, fixture.bar)).toBe(fixture.bar);
+			});
+			it("should have cache put a string to object", function() {
+				expect(fixture.store(fixture.foo, fixture.bar)).toBe(fixture.bar);
+				expect(fixture.store(fixture.baz, { qux : fixture.quux })).toBeDeepEquals({ qux: "quux" });
+				expect(fixture.store(fixture.baz)).toBeDeepEquals({ qux: "quux" });
+			});
+			it("should have retrieve all items in cache", function() {
+				expect(fixture.store(fixture.foo, fixture.bar)).toBe(fixture.bar);
+				expect(fixture.store(fixture.baz, { qux : fixture.quux })).toBeDeepEquals({ qux: "quux" });
+				expect(fixture.store()).toBeDeepEquals(fixture.data);
+			});
+			it("should have evicted 1 cache entry", function() {
+				expect(fixture.store(fixture.foo, null)).toBeNull();
+				expect(fixture.store(fixture.foo)).not.toBeDefined();
+			});
+		});
+		
+		describe("when using TTL of global storage ($.store.globalStorage)", function() {
+			var async = new AsyncSpec(this);
+			var Store, fixture;
+			
+			async.beforeEach(function(done){
+				Store = TestUtil.resetStore();
+				fixture = TestUtil.createTTLFixture($.store.globalStorage);
+				fixture.firstPuts();
+				_.delay(function(){
+					done();
+				}, 100);
 			});
 			
-			it("should fail initially", function() {
-				expect(this).toBeOk(false, "TBD");
+			async.it("should expire 1 of 3 cache entries", function(done) {
+				_.delay(function() {
+					fixture.assertions.first();
+					done();
+				}, 10);
+			});
+			async.it("should expire 2 of 3 cache entries", function(done) {
+				_.delay(function() {
+					fixture.assertions.second();
+					done();
+				}, 110);
 			});
 		});
 	}
 	
 	if ( "userData" in $.store.types ) {
-		describe("when testing userData", function() {
-			var Store;
-			
+		describe("when using basics of user data ($.store.userData)", function() {
+			var Store, fixture;
 			beforeEach(function() {
 				Store = TestUtil.resetStore();
+				fixture = TestUtil.createBasicFixture(TestUtil.clear.userData, $.store.userData);
+			});
+			it("should start as empty", function() {
+				expect(Store).toHaveAPI(true);
+				expect(fixture.store()).toBeEmptyCache();
+			});
+			it("should have a cache miss when empty", function() {
+				expect(fixture.store(fixture.foo)).toBeCacheMiss();
+			});
+			it("should have cache put a string to string", function() {
+				expect(fixture.store(fixture.foo, fixture.bar)).toBe(fixture.bar);
+			});
+			it("should have cache put a string to object", function() {
+				expect(fixture.store(fixture.foo, fixture.bar)).toBe(fixture.bar);
+				expect(fixture.store(fixture.baz, { qux : fixture.quux })).toBeDeepEquals({ qux: "quux" });
+				expect(fixture.store(fixture.baz)).toBeDeepEquals({ qux: "quux" });
+			});
+			it("should have retrieve all items in cache", function() {
+				expect(fixture.store(fixture.foo, fixture.bar)).toBe(fixture.bar);
+				expect(fixture.store(fixture.baz, { qux : fixture.quux })).toBeDeepEquals({ qux: "quux" });
+				expect(fixture.store()).toBeDeepEquals(fixture.data);
+			});
+			it("should have evicted 1 cache entry", function() {
+				expect(fixture.store(fixture.foo, null)).toBeNull();
+				expect(fixture.store(fixture.foo)).not.toBeDefined();
+			});
+		});
+		
+		describe("when using TTL of user data ($.store.userData)", function() {
+			var async = new AsyncSpec(this);
+			var Store, fixture;
+			async.beforeEach(function(done){
+				Store = TestUtil.resetStore();
+				fixture = TestUtil.createTTLFixture($.store.userData);
+				fixture.firstPuts();
+				_.delay(function(){
+					done();
+				}, 100);
 			});
 			
-			it("should fail initially", function() {
-				expect(this).toBeOk(false, "TBD");
+			async.it("should expire 1 of 3 cache entries", function(done) {
+				_.delay(function() {
+					fixture.assertions.first();
+					done();
+				}, 10);
+			});
+			async.it("should expire 2 of 3 cache entries", function(done) {
+				_.delay(function() {
+					fixture.assertions.second();
+					done();
+				}, 110);
 			});
 		});
 	}
