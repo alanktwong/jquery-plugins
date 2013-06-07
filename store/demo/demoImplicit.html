@@ -2,7 +2,7 @@
 <html lang="en-US">
 	<head>
 		<meta charset="utf-8">
-		<title>jQuery Cookie: Demo Page for Basic Usage</title>
+		<title>jQuery Store: Implicit Demo Page</title>
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
 		<meta name="description" content="">
 		<meta name="author" content="">
@@ -67,17 +67,18 @@
 			<div class="masthead">
 				<ul class="nav nav-pills pull-right">
 					<li class="active"><a href="#">Home</a></li>
-					<li><a href="#">About</a></li>
-					<li><a href="#">Contact</a></li>
+					<li><a href="demoSession.html">Session</a></li>
+					<li><a href="../spec/StoreRunner.html">Jasmine</a></li>
+					
 				</ul>
-				<h3 class="muted">jQuery Cookie</h3>
+				<h3 class="muted">jQuery Store</h3>
 			</div>
 
 			<hr>
 
 			<div class="jumbotron">
 				<h1>Demo</h1>
-				<p class="lead">Uses jQuery plugins: cookie, Twitter Bootstrap and UnderscoreJS</p>
+				<p class="lead">Uses jQuery plugins: Store, Twitter Bootstrap and UnderscoreJS</p>
 				<a class="btn btn-large btn-success" href="#">Sign up today</a>
 			</div>
 
@@ -85,9 +86,14 @@
 
 			<div class="row-fluid marketing">
 				<div class="span12">
-					<h4>jQuery Cookie: Basic Usage</h4>
+					<h4>jQuery Store: Implicit Usage</h4>
 					<p id="receiver">Results should appear below</p>
 					<div id="console-log" style="font-size: 14px;">
+						<p id="receiver1"></p>
+						<p id="receiver2"></p>
+						<p id="receiver3"></p>
+						<p id="receiver4"></p>
+						<p id="receiver5"></p>
 					</div>
 				</div>
 
@@ -110,40 +116,35 @@
 		</script>
 		
 		<script type="text/javascript" src="../log4jq/jquery.log4jq.js"></script>
-		<script type="text/javascript" src="../jquery.cookie.js"></script>
+		<script type="text/javascript" src="../jquery.store.js"></script>
 		<script src="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/js/bootstrap.min.js"></script>
 		
 		<script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.4.3/underscore-min.js"></script>
 		<script type="text/javascript">
 		$(document).ready(function() {
-			var append = function(key,value) {
-				var text = "{ " + key + ": " + value + " }";
-				$('#console-log').append("<p>" + text + "</p>")
-			};
-			
-			var logCookies = function(msg) {
-				var allCookies = $.cookie();
-				if (JSON && JSON.stringify && console && console.log) {
-					console.log(msg + ": all cookies: \n" + JSON.stringify(allCookies));
-				}
-			};
-			
-			var storedValue = "cookieMonster";
-			$.cookie('the_cookie', storedValue);
-		
-			var retrieved = $.cookie('the_cookie');
-			append("the_cookie", retrieved);
-			
-			var doesNotExist = $.cookie('not_existing');
-			append("not_existing", doesNotExist);
-			
-			$.cookie("cartCount", 4, { expires: 7, path: "/" });
-			append("cartCount", $.cookie("cartCount") );
-			logCookies("adding cartCount under /");
-			$.removeCookie('cartCount');
-			logCookies("removing cartCount without a path");
-			$.removeCookie('cartCount', { path: "/" });
-			logCookies("removing cartCount under path /");
+			// with $.store you pick a resource id. and then
+			// store an object
+			$.store( "store-example-1", { foo: "bar" } );
+
+			// or any type of data you'd like
+			$.store( "store-example-2", "baz" );
+			$.store.memory( "store/example/3", { memory: "def"} );
+
+			// retrieve the data later via the key
+			var storeExample1 = $.store( "store-example-1" );
+			var storeExample2 = $.store( "store-example-2" );
+			var storeExample3 = $.store( "store/example/3" );
+			// you can dump all the stored value into a single hash
+			var storeExample = $.store();
+
+			// $.store will take care of serializing/deserializing
+			// the data, as well as choosing the best persistance
+			// technology available on the client browser.
+			$( "p#receiver1" ).append( "\nRetrieved from store-example-1: " +  storeExample1.foo ) // bar
+			$( "p#receiver2" ).append( "\nRetrieved from store-example-2: " + storeExample2 ) // baz
+			$( "p#receiver3" ).append( "\nRetrieved from all the stores: " + JSON.stringify(storeExample) ) // bar
+			$( "p#receiver4" ).append( "\nRetrieved from all the stores: " + storeExample["store-example-1"].foo ) // bar
+			$( "p#receiver5" ).append( "\nRetrieved from all the stores: " + storeExample["store-example-2"] ); // baz
 		});
 		</script>
 	</body>

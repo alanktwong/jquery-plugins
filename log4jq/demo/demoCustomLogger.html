@@ -1,84 +1,180 @@
-<!DOCTYPE HTML>
+<!DOCTYPE html>
 <html lang="en-US">
-<head>
-<meta charset="UTF-8">
-<title>jQuery Logger: Demo Page for Custom Logger</title>
+	<head>
+		<meta charset="utf-8">
+		<title>jQuery Logger: Demo Page for Custom Logger</title>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<meta name="description" content="">
+		<meta name="author" content="">
 
-<script type="text/javascript"  src="http://www.google.com/jsapi"></script>
-<script type="text/javascript">
-  google.load("jquery", "1.7.1", {uncompressed: true});
-</script>
+		<!-- Le styles -->
+		<link href="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/css/bootstrap-combined.min.css" rel="stylesheet">
+		<style type="text/css">
+			body {
+				padding-top: 20px;
+				padding-bottom: 40px;
+			}
 
-<script type="text/javascript" src="../../common.js"></script>
-<script type="text/javascript" src="../../pubsub/jquery.pubsub.js"></script>
+			/* Custom container */
+			.container-narrow {
+				margin: 0 auto;
+				max-width: 700px;
+			}
+			.container-narrow > hr {
+				margin: 30px 0;
+			}
 
+			/* Main marketing message and sign up button */
+			.jumbotron {
+				margin: 60px 0;
+				text-align: center;
+			}
+			.jumbotron h1 {
+				font-size: 72px;
+				line-height: 1;
+			}
+			.jumbotron .btn {
+				font-size: 21px;
+				padding: 14px 24px;
+			}
 
-<script type="text/javascript" src="../jquery.log4jq.js"></script>
-<script>
-$(document).ready(function() {
-	// set up subscription with context specified
-	// for the callback function
-	var customTarget = {
-		name: "custom",
-		version: "0.0.1",
-		priority: 1,
-		$dom: $("div#console-log"),
-		/*
-		 * Appends an entry as formatted string into DOM
-		 * 
-		 * Parameters:
-		 *		entry -   The entry to log.
-		 */
-		log: function log(entry) {
-			var $rollingLog = $('p:last',customTarget.$dom);
-			var msg = entry.format();
-			$rollingLog.after("<p> CUSTOM: " + msg + "</p>");
-		}
-	};
-	var logger = $.configureLog4jq({
-		enabled: true,
-		level : $.log4jqLevels.debug,
-		isEnableCookies : false,
-		target : {
-			alert : false,
-			console: true,
-			domInsert: false,
-			custom : [ customTarget ]
-		}
-	});
-	if (logger.subscribers.length != 2) {
-		var msg = "2 log targets must be subscribed";
-		throw(msg);
-	}
+			/* Supporting marketing content */
+			.marketing {
+				margin: 60px 0;
+			}
+			.marketing p + h4 {
+				margin-top: 28px;
+			}
+		</style>
 
-	$.debug("debug msg");
-	$.info("info msg")
-	$.warn("warning msg");
-	$.error("error msg");
-	
-	$.debug({foo: "debug"});
-	$.info({foo: "info"})
-	$.warn({foo: "warn"});
-	$.error({foo: "error"});
-	
-	$.debug("Debug", {foo: "debug"});
-	$.info("Info", {foo: "info"})
-	$.warn("Warning", {foo: "warn"});
-	$.error("Error", {foo: "error"});
-	
-	var logOptions = { level: $.loggerLevels.debug };
-	$.debug("Debug", {foo: "debug"}, logOptions);
-	$.info("Info", {foo: "info"}, logOptions)
-	$.warn("Warning", {foo: "warn"}, logOptions);
-	$.error("Error", {foo: "error"}, logOptions);
-});
-</script>
-</head>
-<body>
-	<h3>jQuery Logger: Custom Log Target</h3>
-	<div id="console-log" style="font-size: 14px;">
-		<p id="receiver">Logs should appear here</p>
-	</div>
-</body>
+		<!-- HTML5 shim, for IE6-8 support of HTML5 elements -->
+		<!--[if lt IE 9]>
+			<script src="../assets/js/html5shiv.js"></script>
+		<![endif]-->
 
+		<!-- Fav and touch icons -->
+		<link rel="apple-touch-icon-precomposed" sizes="144x144" href="../assets/ico/apple-touch-icon-144-precomposed.png">
+		<link rel="apple-touch-icon-precomposed" sizes="114x114" href="../assets/ico/apple-touch-icon-114-precomposed.png">
+		<link rel="apple-touch-icon-precomposed" sizes="72x72" href="../assets/ico/apple-touch-icon-72-precomposed.png">
+		<link rel="apple-touch-icon-precomposed" href="../assets/ico/apple-touch-icon-57-precomposed.png">
+		<link rel="shortcut icon" href="../assets/ico/favicon.png">
+	</head>
+
+	<body>
+
+		<div class="container-narrow">
+
+			<div class="masthead">
+				<ul class="nav nav-pills pull-right">
+					<li class="active"><a href="#">Home</a></li>
+					<li><a href="demoLogger.html">Standard</a></li>
+					<li><a href="../spec/Log4jqRunner.html">Jasmine</a></li>
+				</ul>
+				<h3 class="muted">jQuery Custom Logger</h3>
+			</div>
+
+			<hr>
+
+			<div class="jumbotron">
+				<h1>Demo</h1>
+				<p class="lead">Uses jQuery plugins: log4j, Twitter Bootstrap and UnderscoreJS</p>
+				<a class="btn btn-large btn-success" href="#">Sign up today</a>
+			</div>
+
+			<hr>
+
+			<div class="row-fluid marketing">
+				<div class="span12">
+					<h4>jQuery Logger: Custom Log Target</h4>
+					<div id="console-log" style="font-size: 14px;">
+						<p id="receiver">Logs to custom target should appear below</p>
+					</div>
+				</div>
+
+			</div>
+
+			<hr>
+
+			<div class="footer">
+				<p>&copy; Alan Wong 2013</p>
+			</div>
+
+		</div> <!-- /container -->
+
+		<!-- Le javascript
+		================================================== -->
+		<!-- Placed at the end of the document so the pages load faster -->
+		<script type="text/javascript"	src="http://www.google.com/jsapi"></script>
+		<script type="text/javascript">
+			google.load("jquery", "1.7.1", {uncompressed: true});
+		</script>
+		
+		<script type="text/javascript" src="../jquery.log4jq.js"></script>
+		<script src="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/js/bootstrap.min.js"></script>
+		
+		<script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.4.3/underscore-min.js"></script>
+		<script>
+		$(document).ready(function() {
+			// set up subscription with context specified
+			// for the callback function
+			var customTarget = {
+				name: "custom",
+				version: "0.0.1",
+				enabled: true,
+				$dom: $("div#console-log"),
+				/*
+				 * Appends an entry as formatted string into DOM
+				 * 
+				 * Parameters:
+				 *		entry - The entry to log.
+				 */
+				log: function log(entry) {
+					var $rollingLog = $('p:last',customTarget.$dom);
+					var msg = entry.format();
+					$rollingLog.after("<p> CUSTOM: " + msg + "</p>");
+				}
+			};
+			
+			 var logger = $.configureLog4jq({
+				enabled: true,
+				level : "debug",
+				targets : [
+					{
+						name: "alert",
+						enabled: false
+					},
+					{
+						name: "console",
+						enabled: true
+					},
+					{
+						name: "divInsert",
+						enabled: false
+					},
+					customTarget
+				]
+			});
+			
+			if (logger.subscribers().length !== 2) {
+				var msg = "2 log targets must be subscribed";
+				throw(msg);
+			}
+		
+			$.debug("debug msg");
+			$.info("info msg")
+			$.warn("warning msg");
+			$.error("error msg");
+			
+			$.debug({foo: "debug"});
+			$.info({foo: "info"})
+			$.warn({foo: "warn"});
+			$.error({foo: "error"});
+			
+			$.debug("Debug", {foo: "debug"});
+			$.info("Info", {foo: "info"})
+			$.warn("Warning", {foo: "warn"});
+			$.error("Error", {foo: "error"});
+		});
+		</script>
+	</body>
 </html>
