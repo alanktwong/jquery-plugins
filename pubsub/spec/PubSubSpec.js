@@ -1250,11 +1250,11 @@ describe("jquery.pubsub", function() {
 					},
 					fail : function(notification) {
 						var msg = "progress: " + TestUtil.getType(notification);
-						expect(this).toBeOk(msg, msg);
+						expect(this).toBeOk(false, msg);
 					},
 					done : function(notification) {
 						var msg = "done: " + TestUtil.getType(notification);
-						expect(this).toBeOk(false, msg);
+						expect(this).toBeOk(true, msg);
 					},
 					always : function(notification) {
 						var msg = "always: " + TestUtil.getType(notification);
