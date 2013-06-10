@@ -164,23 +164,100 @@ $.publish("/pubsub/hierarchy", {
 
 ### More Examples
 
+Here is an example combining all of the above cases.
 
+```javascript
+var subscribers = {
+    notify : function( notification ){
+        var data = notification.data();
+        // expect this to be notified last with default context
+    },
+    hierarchy : {
+        one: {
+            notify : function( notification ){
+                var data = notification.data();
+                // expect this to be notified first with its own context
+            },
+            context : { id : 1 }
+        },
+        two : {
+            notify : function( notification ){
+                var data = notification.data();
+                // expect this to be notified second with its own context
+            },
+            context : { id : 2 }
+        }
+    }
+};
+
+$.subscribe("/pubsub/combined", subscribers.hierarchy.one.context, subscribers.hierarchy.one.notify, 1);
+$.subscribe("/pubsub/combined", subscribers.hierarchy.two.context, subscribers.hierarchy.two.notify, 20);
+$.subscribe("/pubsub", subscribers.notify);
+
+var json = {
+    id : 4
+}
+
+$.publish("/pubsub/combined", {
+    data : json,
+    progress : function( notification ) {
+        // expect this to be invoked before all subscriptions get notified
+    },
+    done : function( notification ) {
+        // expect this to be invoked after all subscriptions get successfully notified
+    },
+    fail : function( notification ) {
+        // expect this to be invoked if only some of subscriptions get successfully notified
+    },
+    always : function( notification ) {
+        // expect this to always be invoked after an notification attempt is made
+    }
+});
+```
 
 For further elaboration, see the specs or the demo folder
 
 
 ## API
 
+### Subscribe to a topic.
+
+* `topic`: Name of the topic to subscribe to.
+* `[context]`: What `this` will be when the callback is invoked.
+* `callback`: Function to invoke when a message is published to the topic.
+* `[priority]`: Priority relative to other subscriptions for the same topic. Lower values have higher priority. Default is 10.
+* Returns a subscription object which is timestamped and has a unique id.
+
+Example:
+
+    $.subscribe( string topic, function callback )
+    $.subscribe( string topic, object context, function callback )
+    $.subscribe( string topic, function callback, integer priority )
+    $.subscribe( string topic, object context, function callback, integer priority )
+
+When a callback is subscribed to a topic, a subscription object is returned with a unique id.
+
+Returning false (or returning an error) from a subscription's callback will prevent any additional subscriptions
+from being invoked and will cause `$.publish` to invoke the `fail` callback.
+
 ### Publish a message.
 
-* `topic`: Name of the message to subscribe to.
-* Any additional parameters will be passed to the subscriptions.
+* `topic`: Name of the message to subscribe to. It should be in Unix directory form.
+* `options` : Any additional parameters.
+    * `data` : data that will be based in the `notification` of the subscribers.
+    * `context` : context that can be passed to the subscribers
+    * `progress` : a callback invoked before all subscriptions get notified
+    * `done` : a callback invoked after all subscriptions get successfully notified
+    * `fail` : a callback invoked when only some subscriptions get successfully notified
+    * `always` : a callback invoked after an attempt is made to notify all the subscriptions
+* Returns a timestamped object with a unique id noting the initial state of publication.
 
 Example:
 
     $.publish( string topic )
-    $.publish( string topic, object data )
-    $.publish( string topic, array *data )
+    $.publish( string topic, object options )
+    $.publishSync( string topic )
+    $.publishSync( string topic, object options )
 
 `$.publish` notifies subscriptions to a `topic`. The subscribers can receive
 no data, an object or an array.
@@ -191,30 +268,20 @@ Note that only one subscription can return false because doing so will prevent a
 subscriptions from being invoked.
 
 
-### Subscribe to a topic.
-
-* `topic`: Name of the topic to subscribe to.
-* `[context]`: What `this` will be when the callback is invoked.
-* `callback`: Function to invoke when a message is published to the topic.
-* `[priority]`: Priority relative to other subscriptions for the same topic. Lower values have higher priority. Default is 10.
-
-Example:
-
-    $.subscribe( string topic, function callback )
-    $.subscribe( string topic, object context, function callback )
-    $.subscribe( string topic, function callback, integer priority )
-    $.subscribe( string topic, object context, function callback, integer priority )
- 
-Returning false from a subscription's callback will prevent any additional subscriptions
-from being invoked and will cause `$.publish` to return false.
-
 
 ### Unsubscribe from a topic
 
 * `topic`: The topic being unsubscribed from.
-* `callback`: The callback that was originally subscribed.
+* `[subscriptionId]`: The id of the subscription for the callback
+* `[subscription]`: The subscription for the callback
 
+Example:
 
+    $.unsubscribe( string topic )
+    $.unsubscribe( string topic, string subscriptionId )
+    $.unsubscribe( string topic, object subscription )
+
+### Notification Object API
 
 
 ## Future of jquery.pubsub.js
