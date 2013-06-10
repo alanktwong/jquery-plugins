@@ -69,7 +69,7 @@
 	store = $.extend(store, {
 		types : {},
 		type : null,
-		version : "1.0.0.SNAPSHOT",
+		version : "1.0.0.M1",
 		key : "Store",
 		addType : function( type, storage ) {
 			if ( !store.type ) {

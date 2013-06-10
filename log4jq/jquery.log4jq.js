@@ -13,7 +13,7 @@
 	var log4jq = {
 		// Private enabled flag.
 		_enabled: false,
-		version : "1.0.0.SNAPSHOT",
+		version : "1.0.0.M1",
 		key: "log4jq",
 		/*
 		 * Use the following topic to publish log entries to 

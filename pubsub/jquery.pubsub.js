@@ -13,7 +13,7 @@
 ;(function( $, undefined ) {
 	var PubSub = {
 		slice : Array.slice,
-		version : "1.0.0.SNAPSHOT",
+		version : "1.0.0.M1",
 		key : "PubSub",
 		subscriptions : {},
 		TOPIC_SEPARATOR : "/",
