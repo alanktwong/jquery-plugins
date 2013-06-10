@@ -921,10 +921,14 @@ describe("jquery.pubsub", function() {
 				topic : "/context/notify",
 				contexts : {
 					publisher : {
-						name : "from publisher"
+						id: 1,
+						name : "from publisher",
+						pub : "publisher"
 					},
 					subscriber : {
-						name : "from subscriber"
+						id: 2,
+						name : "from subscriber",
+						sub : "subscriber"
 					}
 				},
 				callback : function() {},
@@ -938,6 +942,7 @@ describe("jquery.pubsub", function() {
 				contextualSubscriber : {
 					notify : function(notification) {
 						var msg = "fixture.contextualSubscriber receives context from subscription: " + TestUtil.getType(notification);
+						expect(this).not.toBeNull();
 						expect(this).toBeOk(true,msg);
 						expect( _.isEqual(this, fixture.contexts.subscriber) ).toBe(true);
 					}
@@ -945,14 +950,25 @@ describe("jquery.pubsub", function() {
 				pubSubscriber : {
 					notify : function(notification) {
 						var msg = "fixture.contextualSubscriber receives context from publisher: " + TestUtil.getType(notification);
-						expect(this).toBeOk(true,msg);
 						expect(this).not.toBeNull();
+						expect(this).toBeOk(true,msg);
 						expect( _.isEqual(this, fixture.contexts.publisher) ).toBe(true);
+					}
+				},
+				bothSubscriber : {
+					notify : function(notification) {
+						var msg = "fixture.bothSubscriber receives context from subscription & publisher: " + TestUtil.getType(notification);
+						expect(this).not.toBeNull();
+						expect(this).toBeOk(true,msg);
+						var expectedContext = $.extend({}, fixture.contexts.publisher, fixture.contexts.subscriber);
+						expect( _.isEqual(this, expectedContext) ).toBe(true);
 					}
 				}
 			};
 			spyOn(fixture.defaultSubscriber,    'notify').andCallThrough();
 			spyOn(fixture.contextualSubscriber, 'notify').andCallThrough();
+			spyOn(fixture.pubSubscriber, 'notify').andCallThrough();
+			spyOn(fixture.bothSubscriber, 'notify').andCallThrough();
 		});
 		
 		it("should have context from subscriber", function() {
@@ -970,11 +986,16 @@ describe("jquery.pubsub", function() {
 			expect(fixture.contextualSubscriber.notify).toHaveBeenCalled();
 		});
 		it("should have context from publisher", function() {
-			spyOn(fixture.pubSubscriber, 'notify').andCallThrough();
 			fixture.pubSubscriber.subscription = $.subscribe(fixture.topic, fixture.pubSubscriber.notify);
 			$.publishSync(fixture.topic, { context : fixture.contexts.publisher });
 			
 			expect(fixture.pubSubscriber.notify).toHaveBeenCalled();
+		});
+		it("should have context from both", function() {
+			fixture.bothSubscriber.subscription = $.subscribe(fixture.topic, fixture.contexts.subscriber, fixture.bothSubscriber.notify);
+			$.publishSync(fixture.topic, { context : fixture.contexts.publisher });
+			
+			expect(fixture.bothSubscriber.notify).toHaveBeenCalled();
 		});
 	});
 	
