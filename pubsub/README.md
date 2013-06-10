@@ -1,20 +1,45 @@
-This is a fork of the publish/subscribe library by AmplifyJS.
-It has virtually the same signature and implementation EXCEPT,
-that the methods (publish,subscribe and unsubscribe) are directly
-bound to the jQuery object.
+This jquery plugin combines the ideas of various publish/subscribe libraries.
 
-This plugin provides methods to facilitate the Publish and Subscribe messaging pattern in your front-end application. The idea is that someone is broadcasting one or more messages (publishing) and someone else is listening to one or more messages (subscribing). By separating your logic out like this it allows for loose coupling of your components, which results in less brittle and more reusable code.
+## Basic Example
 
-It is possible to implement the publish and subscribe model by using jQuery custom events, however, this pub/sub plugin provides a slightly cleaner interface, prevents collisions between custom events and method names, and allows a priority to your messages.
+First, create a function to subscribe to messages.
 
-This addresses the following use cases:
+```javascript
+var mySubscriber = function( notification ){
+    var data = notification.data;
+    console.log( data );
+};
+```
+
+Second, add the function to the list of subscribers for a particular topic.
+You can keep a subscription object in order to unsubscribe from the topic later on.
+
+```javascript
+var subscription = $.subscribe("/my/topic", mySubscriber);
+```
+
+Then, you can publish to the topic asynchronously:
+
+```javascript
+$.publish("/my/topic", {data : "hello world"});
+```
+
+or synchronously.
+
+```javascript
+$.publishSync("/my/topic", {data : "hello world"});
+```
+
+## Features
+
+This plugin has the following features:
 
 * Subscribe and publish without data
 * Subscribe and publish with data [majority case]
 * Subscribe with a context and publish with data
 * Subscribe to a topic with differing priorities, and publish with data
 
-For examples of each of the following use cases, see the demo folder
+For examples of all of the above use cases, see the specs or the demo folder
 
 
 ## API
@@ -61,4 +86,41 @@ from being invoked and will cause `$.publish` to return false.
 
 * `topic`: The topic being unsubscribed from.
 * `callback`: The callback that was originally subscribed.
+
+
+
+
+## Future of jquery.pubsub.js
+
+
+
+## More About Publish/Subscribe
+
+* [The Many Faces of Publish/Subscribe](http://www.cs.ru.nl/~pieter/oss/manyfaces.pdf) (PDF)
+* [Addy Osmani's mini book on Patterns](http://addyosmani.com/resources/essentialjsdesignpatterns/book/#observerpatternjavascript)
+* [Publish / Subscribe Systems, A summary of 'The Many Faces of Publish / Subscribe'](http://downloads.ohohlfeld.com/talks/hohlfeld_schroeder-publish_subscribe_systems-dsmware_eurecom2007.pdf)
+
+## Versioning
+
+jquery.pubsub.js uses [Semantic Versioning](http://semver.org/) for predictable versioning.
+
+## Change Log
+
+* v1.0.0
+    * Upgraded to new design
+
+* v0.0.2
+    * Blah
+
+
+## Alternatives
+
+These are alternative projects that implement topic=-based pub/sub in Javascript.
+
+* [PubSub JS](https://github.com/mroderick/PubSubJS)
+* [Amplify](https://github.com/appendto/amplify/tree/master/core)
+* [JZ Publish/Subscribe](https://github.com/joezimjs/JZ-Publish-Subscribe-jQuery-Plugin)
+* [Radio JS](http://radio.uxder.com/)
+* [Subtopic](https://github.com/pmelander/Subtopic)
+
 
