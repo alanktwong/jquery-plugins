@@ -152,7 +152,7 @@
 		 *
 		 * Returns subsciptions that still subscribe to the topic.
 		 */
-		unsubscribe : function unsubscribe( topic /* string */, subscriptionId /* string */ ) {
+		unsubscribe : function unsubscribe( topic /* string */, subscription /* string or subscription */ ) {
 			//var _self = PubSub;
 			
 			if (!_self.validateTopicName(topic)) {
@@ -164,11 +164,22 @@
 			if ( !registrations ) {
 				return;
 			}
-			// unsubscribing all
-			if ( !subscriptionId ) {
+
+			if ( !subscription ) {
+				// unsubscribing all
 				_self.subscriptions[topic] = registrations = [];
 				return registrations;
-			} else if (Util.isString(subscriptionId)) {
+			}
+			
+
+			if (Util.isString(subscription)) {
+				var subscriptionId = subscription;
+			} else if (subscription instanceof Subscription) {
+				var subscriptionId = subscription.id;
+			} else {
+				throw new Error( "You must provide the subscription id generated for the callback to remove it." );
+			}
+			var removeSubscription = function(subscriptionId, registrations) {
 				for (var i = 0 ; i < registrations.length; i++ ) {
 					var each = registrations[i];
 					if ( each.id === subscriptionId ) {
@@ -176,9 +187,8 @@
 						return registrations;
 					}
 				}
-			} else {
-				throw new Error( "You must provide the subscription id generated for the callback to remove it." );
-			}
+			};
+			removeSubscription(subscriptionId, registrations);
 		},
 		reset : function() {
 			//var _self = PubSub;

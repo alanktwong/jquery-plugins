@@ -645,7 +645,7 @@ describe("jquery.pubsub", function() {
 		beforeEach(function() {
 			PubSub = TestUtil.resetPubSub();
 		});
-		it("should unsubscribe each subscription correctly", function() {
+		it("should unsubscribe each subscription correctly by subscription id or by subscription", function() {
 			var order = 0;
 			var fixture = {
 					topic : "/unsubscribe",
@@ -696,7 +696,7 @@ describe("jquery.pubsub", function() {
 			var subscribers = [];
 			// remove even numbered subscriptions
 			subscribers = $.unsubscribe( fixture.topic, fixture.second.subscription.id );
-			subscribers = $.unsubscribe( fixture.topic, fixture.fourth.subscription.id );
+			subscribers = $.unsubscribe( fixture.topic, fixture.fourth.subscription );
 			expect(PubSub.getSubscriptions(fixture.topic).length).toBe(2);
 			
 			try {
@@ -744,7 +744,7 @@ describe("jquery.pubsub", function() {
 			$.publishSync( fixture.topic );
 			expect(order).toBe(2);
 		});
-		it("should permit unsubscribing while publishing not to change notifications of subscribers", function() {
+		it("should not permit unsubscribing while publishing not to change notifications of subscribers", function() {
 			var fixture = {
 				topic : "/racy/unsubscribe",
 				one : {
@@ -759,8 +759,12 @@ describe("jquery.pubsub", function() {
 						var msg = "fixture.racer.notify: " + TestUtil.getType(notification);
 						expect(this).toBeOk(true, msg);
 						$.warn("unsubscribing self while receiving a notification");
-						var subscribers = $.unsubscribe( self.topic, self.racer.subscription.id );
-						expect(subscribers.length).toBe(2);
+						try {
+							var subscribers = $.unsubscribe( self.topic, self.racer.subscription.id );
+							expect(subscribers.length).toBe(3);
+						} catch (err) {
+							expect(err.message).toBe("blech");
+						}
 					}
 				},
 				three : {
