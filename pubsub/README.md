@@ -283,6 +283,18 @@ Example:
 
 ### Notification Object API
 
+* `id()`: The unique id of the notification.
+* `timestamp()`: The timestamp of the notification.
+* `publishTopic()`: The topic on which publication occured.
+* `currentTopic()`: The topic which is currently getting notified.
+* `data()`: The data which is being pushed to the current subscriber.
+* `context()`: The publisher's context.
+* `isSynchronous()`: Whether the current publication is synchronous.
+* `reject()`: Whether to reject the current notification. This has the same effect as returning false or throwing an error. It will cause the `fail` callback to be invoked.
+* `state()`: The current state of the publication which could be `pending`, `rejected` or `resolved`.
+* `isPropagation()`: Whether the current notification will continue to propagate to other subscribers downstream.
+* `message` : a mutable field to attach a message.
+
 
 ## Future of jquery.pubsub.js
 
