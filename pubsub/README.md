@@ -37,9 +37,9 @@ And you can unsubscribe from the topic, using a unique id.
 $.unsubscribe("/my/topic", subscription.id);
 ```
 
-## Features
+## Use Cases
 
-This plugin has the following features:
+This plugin supports several use cases.
 
 ### Pub/Sub without data
 
@@ -136,6 +136,8 @@ $.subscribe("/pubsub", subscribers.notify);
 $.publish("/pubsub/hierarchy");
 ```
 
+Hierarchical publish/subscribe bubbles up from the leaf of the topic tree up to the root.
+
 ### Pub/Sub Callbacks
 
 ```javascript
@@ -161,6 +163,8 @@ $.publish("/pubsub/hierarchy", {
     }
 });
 ```
+
+These callbacks are intended to resemble the callbacks in jQuery's [Deferred object](http://api.jquery.com/deferred.promise/). 
 
 ### More Examples
 
@@ -244,12 +248,12 @@ from being invoked and will cause `$.publish` to invoke the `fail` callback.
 
 * `topic`: Name of the message to subscribe to. It should be in Unix directory form.
 * `options` : Any additional parameters.
-    * `data` : data that will be based in the `notification` of the subscribers.
+    * `data` : data that will be pushed in the `notification` of the subscribers.
     * `context` : context that can be passed to the subscribers
-    * `progress` : a callback invoked before all subscriptions get notified
-    * `done` : a callback invoked after all subscriptions get successfully notified
-    * `fail` : a callback invoked when only some subscriptions get successfully notified
-    * `always` : a callback invoked after an attempt is made to notify all the subscriptions
+    * `progress` : a callback invoked before all subscriptions get notified, when the notification is in the `pending` state.
+    * `done` : a callback invoked after all subscriptions get successfully notified, when the notification is in the `resolved` state.
+    * `fail` : a callback invoked when only some subscriptions get successfully notified, when the notification is in the `rejected` state.
+    * `always` : a callback invoked after an attempt is made to notify all the subscriptions, when the notification is no longer in the `pending` state.
 * Returns a timestamped object with a unique id noting the initial state of publication.
 
 Example:
@@ -285,12 +289,13 @@ Example:
 
 * `id()`: The unique id of the notification.
 * `timestamp()`: The timestamp of the notification.
-* `publishTopic()`: The topic on which publication occured.
+* `publishTopic()`: The topic on which publication occurred.
 * `currentTopic()`: The topic which is currently getting notified.
-* `data()`: The data which is being pushed to the current subscriber.
+* `data()`: The data which is pushed to the current subscriber.
 * `context()`: The publisher's context.
 * `isSynchronous()`: Whether the current publication is synchronous.
-* `reject()`: Whether to reject the current notification. This has the same effect as returning false or throwing an error. It will cause the `fail` callback to be invoked.
+* `reject()`: Whether to reject the current notification. This has the same effect as returning false or throwing an error.
+It will cause the `fail` callback to be invoked. Otherwise the `done` callback will be invoked.
 * `state()`: The current state of the publication which could be `pending`, `rejected` or `resolved`.
 * `isPropagation()`: Whether the current notification will continue to propagate to other subscribers downstream.
 * `message` : a mutable field to attach a message.
@@ -298,6 +303,7 @@ Example:
 
 ## Future of jquery.pubsub.js
 
+* Support [Promises/A+](http://domenic.me/2012/10/14/youre-missing-the-point-of-promises/)
 
 
 ## More About Publish/Subscribe
@@ -305,6 +311,7 @@ Example:
 * [The Many Faces of Publish/Subscribe](http://www.cs.ru.nl/~pieter/oss/manyfaces.pdf) (PDF)
 * [Addy Osmani's mini book on Patterns](http://addyosmani.com/resources/essentialjsdesignpatterns/book/#observerpatternjavascript)
 * [Publish / Subscribe Systems, A summary of 'The Many Faces of Publish / Subscribe'](http://downloads.ohohlfeld.com/talks/hohlfeld_schroeder-publish_subscribe_systems-dsmware_eurecom2007.pdf)
+* [Promises](http://martinfowler.com/bliki/JavascriptPromise.html)
 
 ## Versioning
 
@@ -315,8 +322,8 @@ jquery.pubsub.js uses [Semantic Versioning](http://semver.org/) for predictable 
 * v1.0.0
     * Upgraded to new design
 
-* v0.0.2
-    * Blah
+* v0.0.1
+    * An early naive implementation without the hierarchical topics, or asychronous notification
 
 
 ## Alternatives
