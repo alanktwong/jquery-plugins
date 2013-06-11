@@ -156,24 +156,16 @@
 		================================================== -->
 		<!-- Placed at the end of the document so the pages load faster -->
 		<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.js"></script>
+		<script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.4.3/underscore-min.js"></script>
 
+		<script type="text/javascript" src="../../common.js"></script>
 		<script type="text/javascript" src="../../log4jq/jquery.log4jq.js"></script>
 		<script type="text/javascript" src="../jquery.pubsub.js"></script>
 		<script src="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/js/bootstrap.min.js"></script>
 		
-		<script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.4.3/underscore-min.js"></script>
 		<script type="text/javascript">
 		$(document).ready(function() {
-			var logger = $.configureLog4jq({
-				enabled: true,
-				level : "debug",
-				targets : [
-					{
-						name: "console",
-						enabled: true
-					}
-				]
-			});
+			var logger = CommonUtil.configureLogger();
 			
 			var callbacks = {
 				topic : "/dataexample",

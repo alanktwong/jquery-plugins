@@ -67,6 +67,7 @@
 			<div class="masthead">
 				<ul class="nav nav-pills pull-right">
 					<li class="active"><a href="#">Home</a></li>
+					<li><a href="./demoImplicit.html">Implicit</a></li>
 					<li><a href="../spec/StoreRunner.html">Jasmine</a></li>
 				</ul>
 				<h3 class="muted">jQuery Store</h3>
@@ -113,13 +114,16 @@
 			google.load("jquery", "1.7.1", {uncompressed: true});
 		</script>
 		
-		<script type="text/javascript" src="../log4jq/jquery.log4jq.js"></script>
+		<script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.4.3/underscore-min.js"></script>
+		
+		<script type="text/javascript" src="../../common.js"></script>
+		<script type="text/javascript" src="../../log4jq/jquery.log4jq.js"></script>
 		<script type="text/javascript" src="../jquery.store.js"></script>
 		<script src="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/js/bootstrap.min.js"></script>
 		
-		<script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.4.3/underscore-min.js"></script>
 		<script type="text/javascript">
 		$(document).ready(function() {
+			CommonUtil.configureLogger();
 			// since we are using a specific tech
 			// we are responsible for checking.
 			if ( !$.store.types.sessionStorage ) {
