@@ -15,7 +15,9 @@
 		slice : Array.slice,
 		version : "1.0.0.M1",
 		key : "PubSub",
-		subscriptions : {},
+		subscriptions : {
+			lock : false
+		},
 		TOPIC_SEPARATOR : "/",
 		/**
 		 * 
@@ -108,7 +110,6 @@
 				throw new Error( "You must provide a valid topic name to publish." );
 			}
 			options = options || {};
-			
 			publication = _self.createPublication( topic, options, sync );
 			
 			var hasSubscribers = _self.hasSubscriptions(topic);
@@ -119,6 +120,7 @@
 				publication.fail(_notification);
 				publication.always(_notification);
 			} else {
+				_self.subscriptions.lock = true;
 				var deliver = createDeliveryFunction(publication);
 				if (Util.isFunction(deliver)) {
 					if ( sync === true ){
@@ -129,6 +131,7 @@
 				} else {
 					throw new Error("should have created delivery function");
 				}
+				_self.subscriptions.lock = false;
 			}
 			
 			return {
@@ -159,6 +162,9 @@
 				throw new Error( "You must provide a valid topic to remove a subscription." );
 			}
 			
+			if (_self.subscriptions.lock === true) {
+				throw new Error( "You cannot unsubscribe from the topic while subscriptions are locked." );
+			}
 			var registrations = _self.subscriptions[ topic ];
 
 			if ( !registrations ) {
@@ -192,7 +198,9 @@
 		},
 		reset : function() {
 			//var _self = PubSub;
-			_self.subscriptions = {};
+			_self.subscriptions = {
+				lock : false
+			};
 		},
 		/**
 		 * A valid topic name is like a Unix filename (e.g. "/app/module/class")

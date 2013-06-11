@@ -744,7 +744,8 @@ describe("jquery.pubsub", function() {
 			$.publishSync( fixture.topic );
 			expect(order).toBe(2);
 		});
-		it("should not permit unsubscribing while publishing not to change notifications of subscribers", function() {
+		it("should not permit unsubscribing while publishing asynchronously (i.e. subscriptions are locked)", function() {
+			var done = false;
 			var fixture = {
 				topic : "/racy/unsubscribe",
 				one : {
@@ -761,10 +762,10 @@ describe("jquery.pubsub", function() {
 						$.warn("unsubscribing self while receiving a notification");
 						try {
 							var subscribers = $.unsubscribe( self.topic, self.racer.subscription.id );
-							expect(subscribers.length).toBe(3);
 						} catch (err) {
-							expect(err.message).toBe("blech");
+							expect(err.message).toBe("You cannot unsubscribe from the topic while subscriptions are locked.");
 						}
+						expect(subscribers.length).toBe(3);
 					}
 				},
 				three : {
@@ -772,19 +773,62 @@ describe("jquery.pubsub", function() {
 						var msg = "fixture.three.notify: " + TestUtil.getType(notification);
 						expect(this).toBeOk(true, msg);
 					}
+				},
+				publishOptions : {
+					progress : function(notification) {
+						var msg = "progress: " +TestUtil.getType(notification);
+						expect(this).toBeOk(msg,msg);
+					},
+					done: function(notification) {
+						var msg = "done: " +TestUtil.getType(notification);
+						expect(this).toBeOk(false,msg);
+					},
+					fail: function(notification) {
+						var msg = "fail: " +TestUtil.getType(notification);
+						expect(this).toBeOk(msg,msg);
+					},
+					always : function(notification) {
+						var msg = "always: " +TestUtil.getType(notification);
+						expect(this).toBeOk(msg,msg);
+						done = true;
+					}
+				},
+				setUp : function() {
+					spyOn(fixture.one,   'notify').andCallThrough();
+					spyOn(fixture.racer, 'notify').andCallThrough();
+					spyOn(fixture.three, 'notify').andCallThrough();
+					
+					spyOn(fixture.publishOptions, 'progress').andCallThrough();
+					spyOn(fixture.publishOptions, 'done').andCallThrough();
+					spyOn(fixture.publishOptions, 'fail').andCallThrough();
+					spyOn(fixture.publishOptions, 'always').andCallThrough();
+					
+					fixture.one.subscription   = $.subscribe( fixture.topic, fixture.one.notify );
+					fixture.racer.subscription = $.subscribe( fixture.topic, fixture.racer.notify );
+					fixture.three.subscription = $.subscribe( fixture.topic, fixture.three.notify );
 				}
 			};
-			spyOn(fixture.one,   'notify').andCallThrough();
-			spyOn(fixture.racer, 'notify').andCallThrough();
-			spyOn(fixture.three, 'notify').andCallThrough();
-			fixture.one.subscription   = $.subscribe( fixture.topic, fixture.one.notify );
-			fixture.racer.subscription = $.subscribe( fixture.topic, fixture.racer.notify );
-			fixture.three.subscription = $.subscribe( fixture.topic, fixture.three.notify );
-			$.publishSync( fixture.topic );
 			
-			expect(fixture.one.notify).toHaveBeenCalled();
-			expect(fixture.racer.notify).toHaveBeenCalled();
-			expect(fixture.three.notify).toHaveBeenCalled();
+			runs(function() {
+				fixture.setUp();
+				$.publish( fixture.topic, fixture.publishOptions);
+			});
+			
+			waitsFor(function() {
+				return done !== false;
+			}, "publication should be sent asynchronously", 10);
+			
+			runs(function() {
+				expect(fixture.one.notify).toHaveBeenCalled();
+				expect(fixture.racer.notify).toHaveBeenCalled();
+				expect(fixture.three.notify).not.toHaveBeenCalled();
+				
+				expect(fixture.publishOptions.progress).toHaveBeenCalled();
+				expect(fixture.publishOptions.done).not.toHaveBeenCalled();
+				expect(fixture.publishOptions.fail).toHaveBeenCalled();
+				expect(fixture.publishOptions.always).toHaveBeenCalled();
+				
+			});
 		});
 	});
 
@@ -2005,7 +2049,7 @@ describe("jquery.pubsub", function() {
 					expect(PubSub.getSubscriptions(_self.anakin.topic).length).toBe(1);
 					expect(PubSub.getSubscriptions(_self.padma.luke.topic).length).toBe(1);
 					
-					expect(_.keys(PubSub.subscriptions).length).toBe(5);
+					expect(_.keys(PubSub.subscriptions).length).toBe(6);
 				},
 				expectSuccess : function(publication) {
 					var _self = this;
