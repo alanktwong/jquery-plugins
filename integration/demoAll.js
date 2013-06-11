@@ -1,5 +1,6 @@
-
-
+/**
+ * @author awong
+ */
 var App = (function ($,_) {
 	
 	var _self = {};
@@ -37,6 +38,9 @@ var App = (function ($,_) {
 					topic : "/StarWars/JangoFett",
 					bobaFett : {
 						topic : "/StarWars/DarthVader/BobaFett"
+					},
+					captainRex : {
+						topic : "/StarWars/DarthVader/CaptainRex"
 					}
 				}
 			}

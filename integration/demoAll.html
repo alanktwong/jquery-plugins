@@ -41,30 +41,50 @@
 						<span class="icon-bar"></span>
 						<span class="icon-bar"></span>
 					</button>
-					<a class="brand" href="#">Project name</a>
+					<a class="brand" href="#">jQuery Plugins Integration</a>
 					<div class="nav-collapse collapse">
 						<ul class="nav">
 							<li class="active"><a href="#">Home</a></li>
-							<li><a href="#about">About</a></li>
-							<li><a href="#contact">Contact</a></li>
 							<li class="dropdown">
-								<a href="#" class="dropdown-toggle" data-toggle="dropdown">Dropdown <b class="caret"></b></a>
+								<a href="#" class="dropdown-toggle" data-toggle="dropdown">Cookie <b class="caret"></b></a>
 								<ul class="dropdown-menu">
-									<li><a href="#">Action</a></li>
-									<li><a href="#">Another action</a></li>
-									<li><a href="#">Something else here</a></li>
+									<li><a href="../cookie/demo/demoBasic.html">Basic</a></li>
+									<li><a href="../cookie/demo/demoJSON.html">JSON</a></li>
+								</ul>
+							</li>
+							<li class="dropdown">
+								<a href="#" class="dropdown-toggle" data-toggle="dropdown">Store <b class="caret"></b></a>
+								<ul class="dropdown-menu">
+									<li><a href="../store/demo/demoImplicit.html">Implicit</a></li>
+									<li><a href="../store/demo/demoSession.html">Session</a></li>
 									<li class="divider"></li>
-									<li class="nav-header">Nav header</li>
-									<li><a href="#">Separated link</a></li>
-									<li><a href="#">One more separated link</a></li>
+									<li class="nav-header">BDD</li>
+									<li><a href="../store/spec/StoreRunner.html">Jasmine</a></li>
+								</ul>
+							</li>
+							<li class="dropdown">
+								<a href="#" class="dropdown-toggle" data-toggle="dropdown">PubSub <b class="caret"></b></a>
+								<ul class="dropdown-menu">
+									<li><a href="../pubsub/demo/demoNoData.html">No Data</a></li>
+									<li><a href="../pubsub/demo/demoData.html">Data</a></li>
+									<li><a href="../pubsub/demo/demoPriority.html">Priority</a></li>
+									<li><a href="../pubsub/demo/demoContext.html">Context</a></li>
+									<li class="divider"></li>
+									<li class="nav-header">BDD</li>
+									<li><a href="../pubsub/spec/PubSubRunner.html">Jasmine</a></li>
+								</ul>
+							</li>
+							<li class="dropdown">
+								<a href="#" class="dropdown-toggle" data-toggle="dropdown">Log4jq <b class="caret"></b></a>
+								<ul class="dropdown-menu">
+									<li><a href="../log4jq/demo/demoCustomLogger.html">Custom</a></li>
+									<li><a href="../log4jq/demo/demoLogger.html">Standard</a></li>
+									<li class="divider"></li>
+									<li class="nav-header">BDD</li>
+									<li><a href="../log4jq/spec/Log4jqRunner.html">Jasmine</a></li>
 								</ul>
 							</li>
 						</ul>
-						<form class="navbar-form pull-right">
-							<input class="span2" type="text" placeholder="Email">
-							<input class="span2" type="password" placeholder="Password">
-							<button type="submit" class="btn">Sign in</button>
-						</form>
 					</div><!--/.nav-collapse -->
 				</div>
 			</div>
@@ -74,7 +94,7 @@
 			<!-- Main hero unit for a primary marketing message or call to action -->
 			<div id="hero-unit" class="hero-unit">
 				<h1>jQuery Plugins Integration Demo</h1>
-				<p>This is integrates the jQuery plugins : Cookie, Log4jq, Store, PubSub using Twitter Bootstrap and Underscore.js</p>
+				<p>This integrates the jQuery plugins : Cookie, Log4jq, Store, PubSub using Twitter Bootstrap and Underscore.js</p>
 				<p><a href="#" class="btn btn-primary btn-large">Learn more &raquo;</a></p>
 			</div>
 
@@ -83,36 +103,41 @@
 				<div id="starWars" class="span12">
 					<h2>/StarWars</h2>
 					<p>Donec id elit non mi porta gravida at eget metus. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus. Etiam porta sem malesuada magna mollis euismod. Donec sed odio dui. </p>
-					<p><a class="btn" href="#">View details &raquo;</a></p>
+					<p><a class="btn btn-danger fight" href="#">Display fight</a></p>
 				</div>
 			</div>
 			<div class="row">
 				<div id="darthVader" class="span6">
 					<h3>/StarWars/DarthVader</h3>
 					<p>Donec id elit non mi porta gravida at eget metus. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus. Etiam porta sem malesuada magna mollis euismod. Donec sed odio dui. </p>
-					<p><a class="btn" href="#">View details &raquo;</a></p>
+					<p><a class="btn btn-success lightsaber" href="#">Unsheaf lightsaber</a></p>
 				</div>
 				<div id="jangoFett" class="span6">
 					<h3>/StarWars/JangoFett</h3>
 					<p>Donec id elit non mi porta gravida at eget metus. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus. Etiam porta sem malesuada magna mollis euismod. Donec sed odio dui. </p>
-					<p><a class="btn" href="#">View details &raquo;</a></p>
+					<p><a class="btn btn-primary blast" href="#">Fire blaster</a></p>
 				</div>
 			</div>
 			<div class="row">
 				<div id="luke" class="span3">
 					<h4>/StarWars/DarthVader/Luke</h4>
 					<p>Donec id elit non mi porta gravida at eget metus. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus. Etiam porta sem malesuada magna mollis euismod. Donec sed odio dui. </p>
-					<p><a class="btn" href="#">View details &raquo;</a></p>
+					<p><a class="btn btn-success lightsaber" href="#">Unsheaf lightsaber</a></p>
 				</div>
 				<div id="leia" class="span3">
 					<h4>/StarWars/DarthVader/Leia</h4>
 					<p>Donec id elit non mi porta gravida at eget metus. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus. Etiam porta sem malesuada magna mollis euismod. Donec sed odio dui. </p>
-					<p><a class="btn" href="#">View details &raquo;</a></p>
+					<p><a class="btn btn-primary blast" href="#">Fire blaster</a></p>
 				</div>
-				<div id="bobaFett" class="span6">
-					<h4>/StarWars/DarthVader/BobaFett</h4>
+				<div id="bobaFett" class="span3">
+					<h4>/StarWars/JangoFett/BobaFett</h4>
 					<p>Donec id elit non mi porta gravida at eget metus. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus. Etiam porta sem malesuada magna mollis euismod. Donec sed odio dui. </p>
-					<p><a class="btn" href="#">View details &raquo;</a></p>
+					<p><a class="btn btn-primary blast" href="#">Fire blaster</a></p>
+				</div>
+				<div id="captainRex" class="span3">
+					<h4>/StarWars/JangoFett/CaptainRex</h4>
+					<p>Donec id elit non mi porta gravida at eget metus. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus. Etiam porta sem malesuada magna mollis euismod. Donec sed odio dui. </p>
+					<p><a class="btn btn-primary blast" href="#">Fire blaster</a></p>
 				</div>
 			</div>
 
@@ -128,11 +153,12 @@
 		================================================== -->
 		<!-- Placed at the end of the document so the pages load faster -->
 		<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.0/jquery.js"></script>
+		<script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.4.3/underscore-min.js"></script>
 	
 		<script src="http://cdnjs.cloudflare.com/ajax/libs/jquery-mockjax/1.5.1/jquery.mockjax.js"></script>
 		<script src="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/js/bootstrap.min.js"></script>
 		
-		<script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.4.3/underscore-min.js"></script>
+		<script type="text/javascript" src="../cookie/jquery.cookie.js"></script>
 		<script type="text/javascript" src="../log4jq/jquery.log4jq.js"></script>
 		<script type="text/javascript" src="../pubsub/jquery.pubsub.js"></script>
 		<script type="text/javascript" src="../log4jq/jquery.store.js"></script>
