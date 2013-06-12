@@ -2,11 +2,11 @@ describe("jquery.pubsub", function() {
 
 	var TestUtil = {
 		getPubSub : function() {
-			if ($.store) {
-				return $.store("PubSub");
-			} else if (window && window.document) {
+			if (window && window.document) {
 				var $document = $(document);
 				return $document.data('PubSub');
+			} else {
+				throw new Error("cannot get PubSub object");
 			}
 		},
 		resetPubSub : function() {

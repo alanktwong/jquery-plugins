@@ -26,8 +26,8 @@ describe("jquery.log4jq", function() {
 	};
 
 	var configure = function(level, enabled) {
-		var isEnabled = enabled !== false;
-		return $.configureLog4jq({
+		var isEnabled = (enabled !== false);
+		var log4jq = $.configureLog4jq({
 			enabled: isEnabled,
 			level : level,
 			targets : [
@@ -47,6 +47,7 @@ describe("jquery.log4jq", function() {
 				testTarget
 			]
 		});
+		return log4jq;
 	};
 	
 	var logger;

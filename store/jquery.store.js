@@ -352,9 +352,7 @@
 	}() );
 
 	$.store = store;
-	if ($.store) {
-		$.store(store.key, store);
-	} else if (window && window.document) {
+	if (window && window.document) {
 		var $document = $(document);
 		$document.data(store.key, store);
 	}

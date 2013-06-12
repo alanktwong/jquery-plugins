@@ -652,9 +652,7 @@
 		return self;
 	}
 	// store log4jq object for unit testing
-	if ($.store) {
-		$.store(log4jq.key, log4jq);
-	} else if (window && window.document) {
+	if (window && window.document) {
 		var $document = $(document);
 		$document.data(log4jq.key, log4jq);
 	}

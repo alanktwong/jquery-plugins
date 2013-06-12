@@ -770,9 +770,7 @@
 	
 	PubSub.Util = Util;
 	// store PubSub object for unit testing
-	if ($.store) {
-		$.store(PubSub.key, PubSub);
-	} else if (window && window.document) {
+	if (window && window.document) {
 		var $document = $(document);
 		$document.data(PubSub.key, PubSub);
 	}
