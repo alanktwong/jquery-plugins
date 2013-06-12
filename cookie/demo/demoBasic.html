@@ -77,7 +77,10 @@
 			<div class="jumbotron">
 				<h1>Demo</h1>
 				<p class="lead">Uses jQuery plugins: cookie, Twitter Bootstrap and UnderscoreJS</p>
-				<a class="btn btn-large btn-success" href="#">Sign up today</a>
+				<div class="btn-group">
+					<a id="test"  class="btn btn-success" href="#">Test</a>
+					<a id="clear" class="btn btn-success" href="#">Clear</a>
+				</div>
 			</div>
 
 			<hr>
@@ -86,7 +89,7 @@
 				<div class="span12">
 					<h4>jQuery Cookie: Basic Usage</h4>
 					<p id="receiver">Results should appear below</p>
-					<div id="console-log" style="font-size: 14px;">
+					<div id="console-log">
 					</div>
 				</div>
 
@@ -115,37 +118,54 @@
 		<script src="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/js/bootstrap.min.js"></script>
 		
 		<script type="text/javascript">
-		$(document).ready(function() {
-			var logger = CommonUtil.configureLogger();
-			var append = function(key,value) {
+		var Test = {
+			append : function(key,value) {
 				var text = "{ " + key + ": " + value + " }";
 				$.debug(text);
-				$('#console-log').append("<p>" + text + "</p>")
-			};
-			
-			var logCookies = function(msg) {
+				$('#console-log').append("<p>" + text + "</p>");
+			},
+			logCookies : function(msg) {
 				var allCookies = $.cookie();
-				if (JSON && JSON.stringify && console && console.log) {
-					console.log(msg + ": all cookies: \n" + JSON.stringify(allCookies));
+				if (JSON && JSON.stringify) {
+					var all = JSON.stringify(allCookies);
+					var text = msg + ": all cookies: \n" + all;
+					$.debug(text);
+					$('#console-log').append("<p>" + text + "</p>");
 				}
-			};
+			},
+			test : function() {
+				var storedValue = "cookieMonster";
+				$.cookie('the_cookie', storedValue);
 			
-			var storedValue = "cookieMonster";
-			$.cookie('the_cookie', storedValue);
-		
-			var retrieved = $.cookie('the_cookie');
-			append("the_cookie", retrieved);
-			
-			var doesNotExist = $.cookie('not_existing');
-			append("not_existing", doesNotExist);
-			
-			$.cookie("cartCount", 4, { expires: 7, path: "/" });
-			append("cartCount", $.cookie("cartCount") );
-			logCookies("adding cartCount under /");
-			$.removeCookie('cartCount');
-			logCookies("removing cartCount without a path");
-			$.removeCookie('cartCount', { path: "/" });
-			logCookies("removing cartCount under path /");
+				var retrieved = $.cookie('the_cookie');
+				Test.append("the_cookie", retrieved);
+				
+				var doesNotExist = $.cookie('not_existing');
+				Test.append("not_existing", doesNotExist);
+				
+				$.cookie("cartCount", 4, { expires: 7, path: "/" });
+				Test.append("cartCount", $.cookie("cartCount") );
+				Test.logCookies("adding cartCount under /");
+				$.removeCookie('cartCount');
+				Test.logCookies("removing cartCount without a path");
+				$.removeCookie('cartCount', { path: "/" });
+				Test.logCookies("removing cartCount under path /");
+			},
+			reset : function() {
+				$('#console-log').empty();
+			}
+		};
+		</script>
+		<script type="text/javascript">
+		$(document).ready(function() {
+			var logger = CommonUtil.configureLogger();
+			Test.test();
+			$("#test").click(function(evt) {
+				Test.test();
+			});
+			$("#clear").click(function(evt) {
+				Test.reset();
+			});
 		});
 		</script>
 	</body>

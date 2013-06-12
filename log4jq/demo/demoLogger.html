@@ -78,7 +78,10 @@
 			<div class="jumbotron">
 				<h1>Demo</h1>
 				<p class="lead">Uses jQuery plugins: log4j, Twitter Bootstrap and UnderscoreJS</p>
-				<a class="btn btn-large btn-success" href="#">Sign up today</a>
+				<div class="btn-group">
+					<a id="test"  class="btn btn-success" href="#">Test</a>
+					<a id="clear" class="btn btn-success" href="#">Clear</a>
+				</div>
 			</div>
 
 			<hr>
@@ -86,8 +89,8 @@
 			<div class="row-fluid marketing">
 				<div class="span12">
 					<h4>jQuery Logger: Standard Log Target</h4>
-					<div id="console-log" style="font-size: 14px;">
-						<p id="receiver">Logs to console target should NOT appear below. Open a browser console to see log statements.</p>
+					<p id="receiver">Logs to console target should NOT appear below. Open a browser console to see log statements.</p>
+					<div id="console-log">
 					</div>
 				</div>
 
@@ -115,45 +118,62 @@
 		<script src="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/js/bootstrap.min.js"></script>
 		
 		<script type="text/javascript">
-		$(document).ready(function() {
-			var logger = $.configureLog4jq({
-				enabled: true,
-				level : "debug",
-				targets : [
-					{
-						name: "alert",
-						enabled: false
-					},
-					{
-						name: "console",
-						enabled: true
-					},
-					{
-						name: "divInsert",
-						enabled: false,
-						$dom : $("div#console-log")
+		var Test = {
+				test : function() {
+					var logger = $.configureLog4jq({
+						enabled: true,
+						level : "debug",
+						targets : [
+							{
+								name: "alert",
+								enabled: false
+							},
+							{
+								name: "console",
+								enabled: true
+							},
+							{
+								name: "divInsert",
+								enabled: false,
+								$dom : $("div#console-log")
+							}
+						]
+					});
+					
+					if (logger.subscribers().length !== 1) {
+						var msg = "2 log targets must be subscribed";
+						throw(msg);
 					}
-				]
+					$.debug("debug msg");
+					$.info("info msg")
+					$.warn("warning msg");
+					$.error("error msg");
+					
+					$.debug({foo: "debug"});
+					$.info({foo: "info"})
+					$.warn({foo: "warn"});
+					$.error({foo: "error"});
+					
+					$.debug("Debug", {foo: "debug", bar: function() {},baz:1 });
+					$.info("Info", {foo: "info", bar: function() {},baz:1 })
+					$.warn("Warning", {foo: "warn", bar: function() {},baz:1 });
+					$.error("Error", {foo: "error", bar: function() {}, baz:1 });
+				},
+				reset : function() {
+					console.clear();
+					$('#console-log').empty();
+				}
+		};
+		</script>
+		<script type="text/javascript">
+		$(document).ready(function() {
+			Test.test();
+			$('#test').click(function(evt) {
+				Test.test();
 			});
-			
-			if (logger.subscribers().length !== 1) {
-				var msg = "2 log targets must be subscribed";
-				throw(msg);
-			}
-			$.debug("debug msg");
-			$.info("info msg")
-			$.warn("warning msg");
-			$.error("error msg");
-			
-			$.debug({foo: "debug"});
-			$.info({foo: "info"})
-			$.warn({foo: "warn"});
-			$.error({foo: "error"});
-			
-			$.debug("Debug", {foo: "debug", bar: function() {},baz:1 });
-			$.info("Info", {foo: "info", bar: function() {},baz:1 })
-			$.warn("Warning", {foo: "warn", bar: function() {},baz:1 });
-			$.error("Error", {foo: "error", bar: function() {}, baz:1 });
+			$('#clear').click(function(evt) {
+				Test.reset();
+			});
 		});
 		</script>
 	</body>

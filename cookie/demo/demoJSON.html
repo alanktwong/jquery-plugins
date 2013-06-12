@@ -77,7 +77,10 @@
 			<div class="jumbotron">
 				<h1>Demo</h1>
 				<p class="lead">Uses jQuery plugins: cookie, Twitter Bootstrap and UnderscoreJS</p>
-				<a class="btn btn-large btn-success" href="#">Sign up today</a>
+				<div class="btn-group">
+					<a id="test"  class="btn btn-success" href="#">Test</a>
+					<a id="clear" class="btn btn-success" href="#">Clear</a>
+				</div>
 			</div>
 
 			<hr>
@@ -86,7 +89,7 @@
 				<div class="span12">
 					<h4>jQuery Cookie: JSON Usage</h4>
 					<p id="receiver">Results should appear below</p>
-					<div id="console-log" style="font-size: 14px;">
+					<div id="console-log">
 					</div>
 				</div>
 
@@ -115,38 +118,55 @@
 		<script src="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/js/bootstrap.min.js"></script>
 		
 		<script type="text/javascript">
-		$(document).ready(function() {
-			var append = function(key,value) {
-				if (JSON && JSON.stringify) {
-					var text = "{ " + key + ": " + JSON.stringify(value) + " }";
-					$.debug(text);
-					$('#console-log').append("<p>" + text + "</p>")
-				}
-			};
-			
-			var logCookies = function(msg) {
+		var Test = {
+			append : function(key,value) {
+				var text = "{ " + key + ": " + value + " }";
+				$.debug(text);
+				$('#console-log').append("<p>" + text + "</p>");
+			},
+			logCookies : function(msg) {
 				var allCookies = $.cookie();
-				if (JSON && JSON.stringify && console && console.log) {
-					console.log(msg + ": all cookies: \n" + JSON.stringify(allCookies));
+				if (JSON && JSON.stringify) {
+					var all = JSON.stringify(allCookies);
+					var text = msg + ": all cookies: \n" + all;
+					$.debug(text);
+					$('#console-log').append("<p>" + text + "</p>");
 				}
-			};
-			$.cookie.json = true;
+			},
+			test : function() {
+				$.cookie.json = true;
+				var storedValue = {
+						"id" : 1,
+						"name" : "cookieMonster",
+						"created": new Date(),
+						"enabled": true
+				};
+				
+				$.cookie("the_cookie", storedValue, { expires: 7, path: "/" });
+				Test.append("the_cookie", $.cookie("the_cookie"));
+				
+				$.removeCookie('the_cookie');
+				Test.logCookies("removing the_cookie without a path");
+				
+				$.removeCookie('the_cookie', { path: "/" });
+				Test.logCookies("removing the_cookie under path /");
+			},
+			reset : function() {
+				$('#console-log').empty();
+			}
+		};
+		</script>
+		<script type="text/javascript">
+		$(document).ready(function() {
+			var logger = CommonUtil.configureLogger();
+			Test.test();
+			$("#test").click(function(evt) {
+				Test.test();
+			});
+			$("#clear").click(function(evt) {
+				Test.reset();
+			});
 			
-			var storedValue = {
-				"id" : 1,
-				"name" : "cookieMonster",
-				"created": new Date(),
-				"enabled": true
-			};
-			
-			$.cookie("the_cookie", storedValue, { expires: 7, path: "/" });
-			append("the_cookie", $.cookie("the_cookie"));
-			
-			$.removeCookie('the_cookie');
-			logCookies("removing the_cookie without a path");
-			
-			$.removeCookie('the_cookie', { path: "/" });
-			logCookies("removing the_cookie under path /");
 		});
 		</script>
 	</body>

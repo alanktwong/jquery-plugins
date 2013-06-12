@@ -79,7 +79,10 @@
 			<div class="jumbotron">
 				<h1>Demo</h1>
 				<p class="lead">Uses jQuery plugins: Store, Twitter Bootstrap and UnderscoreJS</p>
-				<a class="btn btn-large btn-success" href="#">Sign up today</a>
+				<div class="btn-group">
+					<a id="test"  class="btn btn-success" href="#">Test</a>
+					<a id="clear" class="btn btn-success" href="#">Clear</a>
+				</div>
 			</div>
 
 			<hr>
@@ -88,12 +91,7 @@
 				<div class="span12">
 					<h4>jQuery Store: Implicit Usage</h4>
 					<p id="receiver">Results should appear below</p>
-					<div id="console-log" style="font-size: 14px;">
-						<p id="receiver1"></p>
-						<p id="receiver2"></p>
-						<p id="receiver3"></p>
-						<p id="receiver4"></p>
-						<p id="receiver5"></p>
+					<div id="console-log">
 					</div>
 				</div>
 
@@ -122,31 +120,55 @@
 		<script src="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/js/bootstrap.min.js"></script>
 		
 		<script type="text/javascript">
+		var Test = {
+			test : function() {
+				// with $.store you pick a resource id. and then
+				// store an object
+				var key1 = "store-example-1";
+				$.store( key1, { foo: "bar" } );
+
+				// or any type of data you'd like
+				var key2 = "store-example-2";
+				$.store( key2, "baz" );
+				var key3 = "store/example/3";
+				$.store.memory( key3, { memory: "def"} );
+
+				// retrieve the data later via the key
+				var storeExample1 = $.store( key1 );
+				var storeExample2 = $.store( key2 );
+				var storeExample3 = $.store( key3 );
+				// you can dump all the stored value into a single hash
+				var storeExample = $.store();
+
+				// $.store will take care of serializing/deserializing
+				// the data, as well as choosing the best persistance
+				// technology available on the client browser.
+				Test.append( "Retrieved from [" + key1 + "]: " + storeExample1.foo )
+				Test.append( "Retrieved from [" + key2 + "]: " + storeExample2 )
+				Test.append( "Retrieved from [" + key3 + "]: " + JSON.stringify(storeExample3) )
+				Test.append( "Retrieved from all the stores: " + JSON.stringify(storeExample) )
+				Test.append( "Retrieved [" + key1 + "] from all the stores: " + storeExample[key1].foo ) // bar
+				Test.append( "Retrieved [" + key2 + "] from all the stores: " + storeExample[key2] ); // baz
+			},
+			append : function(text) {
+				$.debug(text);
+				$('#console-log').append("<p>" + text + "</p>");
+			},
+			reset : function() {
+				$('#console-log').empty();
+			}
+		};
+		</script>
+		<script type="text/javascript">
 		$(document).ready(function() {
 			CommonUtil.configureLogger();
-			// with $.store you pick a resource id. and then
-			// store an object
-			$.store( "store-example-1", { foo: "bar" } );
-
-			// or any type of data you'd like
-			$.store( "store-example-2", "baz" );
-			$.store.memory( "store/example/3", { memory: "def"} );
-
-			// retrieve the data later via the key
-			var storeExample1 = $.store( "store-example-1" );
-			var storeExample2 = $.store( "store-example-2" );
-			var storeExample3 = $.store( "store/example/3" );
-			// you can dump all the stored value into a single hash
-			var storeExample = $.store();
-
-			// $.store will take care of serializing/deserializing
-			// the data, as well as choosing the best persistance
-			// technology available on the client browser.
-			$( "p#receiver1" ).append( "\nRetrieved from store-example-1: " +  storeExample1.foo ) // bar
-			$( "p#receiver2" ).append( "\nRetrieved from store-example-2: " + storeExample2 ) // baz
-			$( "p#receiver3" ).append( "\nRetrieved from all the stores: " + JSON.stringify(storeExample) ) // bar
-			$( "p#receiver4" ).append( "\nRetrieved from all the stores: " + storeExample["store-example-1"].foo ) // bar
-			$( "p#receiver5" ).append( "\nRetrieved from all the stores: " + storeExample["store-example-2"] ); // baz
+			Test.test();
+			$('#test').click(function(evt) {
+				Test.test();
+			});
+			$('#clear').click(function(evt) {
+				Test.reset();
+			});
 		});
 		</script>
 	</body>
