@@ -81,17 +81,6 @@
 							<li><a href="demoData.html">Data</a></li>
 							<li><a href="demoPriority.html">Priority</a></li>
 							<li class="active"><a href="demoContext.html">Context</a></li>
-							<li class="nav-header">Sidebar</li>
-							<li><a href="#">Link</a></li>
-							<li><a href="#">Link</a></li>
-							<li><a href="#">Link</a></li>
-							<li><a href="#">Link</a></li>
-							<li><a href="#">Link</a></li>
-							<li><a href="#">Link</a></li>
-							<li class="nav-header">Sidebar</li>
-							<li><a href="#">Link</a></li>
-							<li><a href="#">Link</a></li>
-							<li><a href="#">Link</a></li>
 						</ul>
 					</div><!--/.well -->
 				</div><!--/span-->
@@ -99,11 +88,12 @@
 					<div class="hero-unit">
 						<h1>jQuery PubSub: Context Usage</h1>
 						<p>Uses jQuery plugins: PubSub, Log4jq, Twitter Bootstrap and UnderscoreJS</p>
-						<ul id="note">
-							<li><button id="syncClick" class="btn btn-link" type="button">Synchronous publish</button> to same topic</li>
-							<li><button id="asyncClick" class="btn btn-link" type="button">Asynchronous publish</button> to same topic</li>
-						</ul>
-						<p><a href="#" class="btn btn-primary btn-large">Learn more &raquo;</a></p>
+						<p>Click buttons to publish to same topic</p>
+						<div id="note" class="btn-group">
+							<a id="syncClick"  class="btn btn-success" href="#">Synchronous</a>
+							<a id="asyncClick" class="btn btn-success" href="#">Asynchronous</a>
+							<a id="clear" class="btn btn-success" href="#">Clear</a>
+						</div>
 					</div>
 					<div id="notify" class="row-fluid">
 						<div id="sync" class="span6">
@@ -213,7 +203,18 @@
 			var publishAsync = function(evt) {
 				$.publish( callbacks.topic, callbacks.options);
 			};
+			var clearNotes = function(evt) {
+				console.clear();
+				var clearReceivers = function($div) {
+					$( "#receiver2", $div).empty();
+					$( "#receiver1", $div).empty();
+					$( "#parent", $div).empty();
+				};
+				clearReceivers($('#sync'));
+				clearReceivers($('#async'));
+			};
 			
+			var $clear = $('#clear', '#note').click(clearNotes);
 			var $noteSync = $('#syncClick','#note').click(publishSync);
 			var $noteAsync = $('#asyncClick','#note').click(publishAsync);
 			
