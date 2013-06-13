@@ -30,7 +30,7 @@ describe("jquery.pubsub", function() {
 		},
 		getType : function(notification) {
 			var msg = (notification.isSynchronous() ? "synchronous" : "asynchronous");
-			msg = msg + " notification @ " + notification.currentTopic() + " from " + notification.publishTopic();
+			msg = msg + " notification @ " + notification.currentTopic() + " <- " + notification.publishTopic();
 			return msg;
 		}
 	};
@@ -76,7 +76,8 @@ describe("jquery.pubsub", function() {
 		it("should infer ancestor chain of topic names", function() {
 			expect(PubSub.validateTopicName(topic)).toBe(true);
 			var topics = PubSub.createTopics(topic);
-			expect(_.isEqual(topics,["/app/module/class", "/app/module", "/app"])).toBe(true);
+			var expected = ["/app/module/class", "/app/module", "/app"];
+			expect(topics).toBeDeepEquals(expected);
 		});
 	});
 	
@@ -145,7 +146,7 @@ describe("jquery.pubsub", function() {
 			var aList = [1, 2, 3, 4, 5, 6];
 			if (u.filter) {
 				var evens = u.filter(aList, function(num){ return num % 2 == 0; });
-				expect(_.isEqual(evens,[2,4,6])).toBe(true);
+				expect(evens).toBeDeepEquals([2,4,6]);
 			}
 		});
 		it("should reduce lists & objects", function() {
@@ -166,7 +167,7 @@ describe("jquery.pubsub", function() {
 					return ret;
 				});
 				// transformed array with truthy and untruthy values
-				expect(_.isEqual(mapped,["null",0,"yes", false])).toBe(true);
+				expect(mapped).toBeDeepEquals( ["null",0,"yes", false] );
 				// aList has 1 truthy value
 				expect(_.some(aList)).toBe(true);
 			}
@@ -288,7 +289,7 @@ describe("jquery.pubsub", function() {
 			var subscription = PubSub.createSubscription(topic, callback, priority, context);
 			expect(subscription).not.toBeNull();
 			expect(subscription.timestamp ).not.toBeNull();
-			expect(_.isEqual(subscription.topics,topics)).toBe(true);
+			expect(subscription.topics).toBeDeepEquals( topics );
 			expect(subscription.callback).toBe(callback);
 			expect(subscription.priority).toBe(priority);
 			expect(subscription.context).toBe(context);
@@ -992,7 +993,7 @@ describe("jquery.pubsub", function() {
 						var msg = "fixture.contextualSubscriber receives context from subscription: " + TestUtil.getType(notification);
 						expect(this).not.toBeNull();
 						expect(this).toBeOk(true,msg);
-						expect( _.isEqual(this, fixture.contexts.subscriber) ).toBe(true);
+						expect(this).toBeDeepEquals( fixture.contexts.subscriber );
 					}
 				},
 				pubSubscriber : {
@@ -1000,7 +1001,7 @@ describe("jquery.pubsub", function() {
 						var msg = "fixture.contextualSubscriber receives context from publisher: " + TestUtil.getType(notification);
 						expect(this).not.toBeNull();
 						expect(this).toBeOk(true,msg);
-						expect( _.isEqual(this, fixture.contexts.publisher) ).toBe(true);
+						expect(this).toBeDeepEquals( fixture.contexts.publisher );
 					}
 				},
 				bothSubscriber : {
@@ -1009,7 +1010,7 @@ describe("jquery.pubsub", function() {
 						expect(this).not.toBeNull();
 						expect(this).toBeOk(true,msg);
 						var expectedContext = $.extend({}, fixture.contexts.publisher, fixture.contexts.subscriber);
-						expect( _.isEqual(this, expectedContext) ).toBe(true);
+						expect(this).toBeDeepEquals( expectedContext );
 					}
 				}
 			};
@@ -1069,7 +1070,7 @@ describe("jquery.pubsub", function() {
 								foo: "bar",
 								baz: "qux"
 						};
-						expect(_.isEqual(data.object, expected)).toBe(true);
+						expect(data.object).toBeDeepEquals(expected);
 						$.debug("object passed to first.notify on: " + notification.publishTopic() );
 						$.debug("first.notify mutating data on: " + notification.publishTopic())
 						data.string = "goodbye";
@@ -1089,7 +1090,7 @@ describe("jquery.pubsub", function() {
 								foo: "bar",
 								baz: "quux"
 						};
-						expect(_.isEqual(data.object, expected)).toBe(true);
+						expect(data.object).toBeDeepEquals(expected);
 						$.debug("object changed on reception of data by second.notify on: " + notification.publishTopic() );
 					}
 				},
@@ -1123,7 +1124,7 @@ describe("jquery.pubsub", function() {
 								baz: "quux"
 						};
 						var obj = fixture.publishOptions.data.object;
-						expect(_.isEqual(obj, expected)).toBe(true);
+						expect(obj).toBeDeepEquals(expected);
 						$.info("object updated after notifications w/data on: " + notification.publishTopic());
 						done = true;
 					}
@@ -1225,7 +1226,7 @@ describe("jquery.pubsub", function() {
 						$.debug("string passed during notification of " + notification.currentTopic() );
 						expect(data.number).toBe(options.data.number);
 						$.debug("number passed during notification of " + notification.currentTopic() );
-						expect(_.isEqual(data.object, options.data.object)).toBe(true);
+						expect(data.object).toBeDeepEquals(options.data.object);
 						$.debug("object passed during notification of " + notification.currentTopic() );
 						data.string = "goodbye";
 						data.object.baz = "quux";
@@ -1272,7 +1273,7 @@ describe("jquery.pubsub", function() {
 						$.debug("string changed during notification of " + notification.currentTopic() );
 						expect(data.number).toBe(options.data.number);
 						$.debug("number unchanged during notification of " + notification.currentTopic() );
-						expect(_.isEqual(data.object,options.data.object)).toBe(true);
+						expect(data.object).toBeDeepEquals(options.data.object);
 						$.debug("object passed during notification of  " + notification.currentTopic() );
 						data.string = "guten tag";
 						data.object.baz = "wasser";
@@ -1950,10 +1951,13 @@ describe("jquery.pubsub", function() {
 				notify : function(notification) {
 					var _self = this;
 					var data   = notification.data();
+					expect(notification.currentTopic()).toBeDeepEquals(fixture.topic);
+					expect(notification.publishTopic()).toBeDeepEquals(fixture.padma.leia.topic);
 					var msg = "fixture.notify received same data by reference: " + TestUtil.getType(notification);
+					msg = msg + " where count = " + count;
 					expect(this).toBeOk(true,msg);
 					expect(count).toBe(3);
-					expect(_.isEqual(data, _self.data)).toBe(true);
+					expect(data).toBeDeepEquals(_self.data);
 					count++;
 				},
 				padma : {
@@ -1961,7 +1965,10 @@ describe("jquery.pubsub", function() {
 					notify : function(notification) {
 						var _self = this;
 						var data   = notification.data();
+						expect(notification.currentTopic()).toBeDeepEquals(fixture.padma.topic);
+						expect(notification.publishTopic()).toBeDeepEquals(fixture.padma.leia.topic);
 						var msg = "fixture.padma.notify receives mutated data.name: " + TestUtil.getType(notification);
+						msg = msg + " where count = " + count;
 						expect(this).toBeOk(true,msg);
 						expect(count).toBe(2);
 						expect(data.name).toBe("empire strikes back");
@@ -1976,10 +1983,12 @@ describe("jquery.pubsub", function() {
 						notify : function(notification) {
 							var _self = this;
 							var data   = notification.data();
+							expect(notification.currentTopic()).toBeDeepEquals(fixture.padma.leia.topic);
+							expect(notification.publishTopic()).toBeDeepEquals(fixture.padma.leia.topic);
 							var msg = "fixture.padma.leia.notify receiving data and mutated data.name: " + TestUtil.getType(notification);
-							msg = msg + "where count = " + count;
+							msg = msg + " where count = " + count;
 							expect(this).toBeOk(true,msg);
-							expect( _.isEqual(data, _self.data) ).toBe(true);
+							expect(data).toBeDeepEquals(_self.data);
 							data.name = "empire strikes back";
 							expect(count).toBe(1);
 							count++;

@@ -368,7 +368,10 @@
 			return _publishTopic;
 		}
 		var _currentTopic = publication.topic;
-		this.currentTopic = function() {
+		this.currentTopic = function(topic) {
+			if (topic !== undefined) {
+				_currentTopic = topic;
+			}
 			return _currentTopic;
 		}
 		var _data    = Util.isObject(publication.data)    ? publication.data : null;
@@ -485,6 +488,13 @@
 		return Util.bind(_callSubscriberWithImmediateExceptions, self);
 	}
 	
+	function _debugLog(msg) {
+		var enabled = false;
+		if (enabled && console && console.log) {
+			$.debug(msg);
+		}
+	}
+	
 	function createDeliveryFunction(publication){
 		var deliver = function(_publication) {
 			var _self = PubSub;
@@ -500,7 +510,10 @@
 				var callSubscriber = _createCallSubscriber();
 				for (var i = 0; i < _subscribers.length; i++) {
 					var _subscription = _subscribers[i];
+					_notification.currentTopic(_subscription.topic);
 					_publication.currentTopic = _subscription.topic;
+					_debugLog("_publication:" + _publication.currentTopic + "<-" + _publication.publishTopic);
+					_debugLog("_notification" + _notification.currentTopic() + "<-" + _notification.publishTopic() );
 					_publication.context = _createContext(_subscription,_notification);
 					var continuePropagating  = callSubscriber(_subscription.callback, _publication);
 					if (continuePropagating === false || !_notification.isPropagation()) {

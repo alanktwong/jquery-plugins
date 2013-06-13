@@ -38,6 +38,10 @@ beforeEach(function() {
 				$.info(message);
 				return true;
 			}
+		},
+		toBeDeepEquals : function(expected) {
+			var thiz = this.actual;
+			return _.isEqual(thiz,expected);
 		}
 	});
 });
