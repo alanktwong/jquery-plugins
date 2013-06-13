@@ -24,6 +24,8 @@ var App = (function ($,_) {
 			$.publish(_self.topics.starWars.darthVader.leia.topic + "/init", _self.publishOptions);
 			$.publish(_self.topics.starWars.jangoFett.bobaFett.topic + "/init", _self.publishOptions);
 			$.publish(_self.topics.starWars.jangoFett.captainRex.topic + "/init", _self.publishOptions);
+			
+			$.publish(_self.topics.hero.topic + "/init", _self.publishOptions);
 		},
 		publishOptions : {
 			progress : function(notification) {
@@ -66,6 +68,12 @@ var App = (function ($,_) {
 						topic : "/StarWars/JangoFett/CaptainRex"
 					}
 				}
+			},
+			hero : {
+				topic : "/hero"
+			},
+			clear : {
+				topic : "/app/clear"
 			}
 		},
 		endsWith : function(test, match) {
@@ -75,15 +83,31 @@ var App = (function ($,_) {
 		combine : function(notification, data) {
 			var message = "";
 			var notifyData = notification.data();
-			if (notification.publishTopic() !== notification.currentTopic()) {
+			if (notification.publishTopic() === notification.currentTopic()) {
 				message = data.id + ": " + data.msg
 			} else {
-				message = notifyData.id + ": " + data.msg;
+				message = notifyData.id + "->" + data.id + ": " + data.msg;
 			}
 			return message;
 		}
 	});
 	
+	function _RollingLog($log) {
+		this.$log = $log;
+		
+		this.append = function(msg) {
+			var $rollingLog = $('p:last',this.$log);
+			if ($rollingLog.length > 0) {
+				$rollingLog.after("<p>" + msg + "</p>");
+			} else {
+				this.$log.append("<p>" + msg + "</p>");
+			}
+		}
+		
+		this.clear = function() {
+			this.$log.empty()
+		}
+	}
 	
 	return {
 		publishOptions : _self.publishOptions,
@@ -91,7 +115,8 @@ var App = (function ($,_) {
 		init : _self.init,
 		topics : _self.topics,
 		getType : _self.getType,
-		endsWith : _self.endsWith
+		endsWith : _self.endsWith,
+		RollingLog : _RollingLog
 	};
 }(jQuery,_));
 
@@ -111,11 +136,29 @@ var TopNavbarSvc = (function ($,_,App) {
 var HeroUnitSvc = (function ($,_,App) {
 	var _self = {};
 	_self = $.extend(_self, {
-		
+		topic : App.topics.hero.topic,
+		init : function(notification) {
+			if (App.endsWith(notification.publishTopic(),"init")) {
+				$.debug("HeroUnitSvc.init: " + App.getType(notification));
+				var $heroUnit = $('#hero-unit');
+				$('#test', $heroUnit).unbind('click').bind('click', function(evt) {
+					
+				});
+				$('#clear', $heroUnit).unbind('click').bind('click', function(evt) {
+					console.clear();
+					_self.clear();
+				});
+			}
+		},
+		clear : function() {
+			$.publish(App.topics.clear.topic, App.publishOptions);
+		}
 	});
 	
+	$.subscribe(_self.topic, _self.init);
+	
 	return {
-		
+		topic : _self.topic
 	};
 }(jQuery,_,App));
 
@@ -124,9 +167,11 @@ var StarWarsSvc = (function ($,_,App) {
 	var _self = {};
 	_self = $.extend(_self, {
 		topic : App.topics.starWars.topic,
+		log : null,
 		init : function(notification) {
 			if (App.endsWith(notification.publishTopic(),"init")) {
 				$.debug("StarWarsSvc.init: " + App.getType(notification));
+				_self.log = new App.RollingLog( $('.console-log', '#starWars') );
 				$('.fight', '#starWars').unbind('click').bind('click', function(evt) {
 					var options = $.extend({}, App.publishOptions, { data : _self.data });
 					$.publish(_self.topic, options);
@@ -139,17 +184,23 @@ var StarWarsSvc = (function ($,_,App) {
 		},
 		displayFight : function(notification) {
 			if (!App.endsWith(notification.publishTopic(),"init")) {
-				$.debug("StarWarsSvc displayed fight");
+				$.debug("StarWarsSvc displayed fight: " + App.getType(notification));
 				var msg = App.combine(notification, _self.data);
-				var $log = $('.console-log', '#starWars');
-				var $rollingLog = $('p:last',$log);
-				$rollingLog.after("<p>" + msg + "</p>");
+				_self.log.append(msg);
+			}
+		},
+		clear : function(notification) {
+			if (App.endsWith(notification.publishTopic(),"clear")) {
+				$.debug("StarWarsSvc.clear: " + App.getType(notification));
+				_self.log.clear();
 			}
 		}
 	});
 	
 	$.subscribe(_self.topic, _self.init);
 	$.subscribe(_self.topic, _self.displayFight);
+
+	$.subscribe(App.topics.clear.topic, _self.clear);
 	
 	return {
 		topic : _self.topic
@@ -161,9 +212,11 @@ var DarthVaderSvc = (function ($,_,App) {
 	var _self = {};
 	_self = $.extend(_self, {
 		topic : App.topics.starWars.darthVader.topic,
+		log : null,
 		init : function(notification) {
 			if (App.endsWith(notification.publishTopic(),"init")) {
 				$.debug("DarthVaderSvc.init: " + App.getType(notification));
+				_self.log = new App.RollingLog( $('.console-log', '#darthVader') );
 				$('.lightsaber', '#darthVader').unbind('click').bind('click', function(evt) {
 					var options = $.extend({}, App.publishOptions, { data : _self.data });
 					$.publish(_self.topic, options);
@@ -176,17 +229,23 @@ var DarthVaderSvc = (function ($,_,App) {
 		},
 		ignite : function(notification) {
 			if (!App.endsWith(notification.publishTopic(),"init")) {
-				$.debug("DarthVaderSvc ignited lightsaber");
+				$.debug("DarthVaderSvc ignited lightsaber: " + App.getType(notification));
 				var msg = App.combine(notification, _self.data);
-				var $log = $('.console-log', '#darthVader');
-				var $rollingLog = $('p:last',$log);
-				$rollingLog.after("<p>" + msg + "</p>");
+				_self.log.append(msg);
+			}
+		},
+		clear : function(notification) {
+			if (App.endsWith(notification.publishTopic(),"clear")) {
+				$.debug("DarthVaderSvc.clear: " + App.getType(notification));
+				_self.log.clear();
 			}
 		}
 	});
 	
 	$.subscribe(_self.topic, _self.init);
 	$.subscribe(_self.topic, _self.ignite);
+
+	$.subscribe(App.topics.clear.topic, _self.clear);
 	
 	return {
 		topic : _self.topic
@@ -198,9 +257,11 @@ var JangoFettSvc = (function ($,_,App) {
 	var _self = {};
 	_self = $.extend(_self, {
 		topic : App.topics.starWars.jangoFett.topic,
+		log : null,
 		init : function(notification) {
 			if (App.endsWith(notification.publishTopic(),"init")) {
 				$.debug("JangoFett.init: " + App.getType(notification));
+				_self.log = new App.RollingLog( $('.console-log', '#jangoFett') );
 				$('.blast', '#jangoFett').unbind('click').bind('click', function(evt) {
 					var options = $.extend({}, App.publishOptions, { data : _self.data });
 					$.publish(_self.topic, options);
@@ -213,17 +274,23 @@ var JangoFettSvc = (function ($,_,App) {
 		},
 		blast : function(notification) {
 			if (!App.endsWith(notification.publishTopic(),"init")) {
-				$.debug("JangoFettSvc fired blaster");
+				$.debug("JangoFettSvc fired blaster: " + App.getType(notification));
 				var msg = App.combine(notification, _self.data);
-				var $log = $('.console-log', '#jangoFett');
-				var $rollingLog = $('p:last',$log);
-				$rollingLog.after("<p>" + msg + "</p>");
+				_self.log.append(msg);
+			}
+		},
+		clear : function(notification) {
+			if (App.endsWith(notification.publishTopic(),"clear")) {
+				$.debug("JangoFettSvc.clear: " + App.getType(notification));
+				_self.log.clear();
 			}
 		}
 	});
 	
 	$.subscribe(_self.topic, _self.init);
 	$.subscribe(_self.topic, _self.blast);
+	
+	$.subscribe(App.topics.clear.topic, _self.clear);
 	
 	return {
 		topic : _self.topic
@@ -235,9 +302,11 @@ var LukeSvc = (function ($,_,App) {
 	var _self = {};
 	_self = $.extend(_self, {
 		topic : App.topics.starWars.darthVader.luke.topic,
+		log : null,
 		init : function(notification) {
 			if (App.endsWith(notification.publishTopic(),"init")) {
 				$.debug("LukeSvc.init: " + App.getType(notification));
+				_self.log = new App.RollingLog( $('.console-log', '#luke') );
 				$('.lightsaber', '#luke').unbind('click').bind('click', function(evt) {
 					var options = $.extend({}, App.publishOptions, { data : _self.data });
 					$.publish(_self.topic, options);
@@ -250,16 +319,22 @@ var LukeSvc = (function ($,_,App) {
 		},
 		ignite : function(notification) {
 			if (!App.endsWith(notification.publishTopic(),"init")) {
-				$.debug("LukeSvc ignited lightsaber");
+				$.debug("LukeSvc ignited lightsaber: " + App.getType(notification));
 				var msg = App.combine(notification, _self.data);
-				var $log = $('.console-log', '#luke');
-				var $rollingLog = $('p:last',$log);
-				$rollingLog.after("<p>" + msg + "</p>");
+				_self.log.append(msg);
+			}
+		},
+		clear : function(notification) {
+			if (App.endsWith(notification.publishTopic(),"clear")) {
+				$.debug("LukeSvc.clear: " + App.getType(notification));
+				_self.log.clear();
 			}
 		}
 	});
 	$.subscribe(_self.topic, _self.init);
 	$.subscribe(_self.topic, _self.ignite);
+
+	$.subscribe(App.topics.clear.topic, _self.clear);
 	
 	return {
 		topic : _self.topic
@@ -271,9 +346,11 @@ var LeiaSvc = (function ($,_,App) {
 	var _self = {};
 	_self = $.extend(_self, {
 		topic : App.topics.starWars.darthVader.leia.topic,
+		log : null,
 		init : function(notification) {
 			if (App.endsWith(notification.publishTopic(),"init")) {
 				$.debug("LeiaSvc.init: " + App.getType(notification));
+				_self.log = new App.RollingLog( $('.console-log', '#leia') );
 				$('.blast', '#leia').unbind('click').bind('click', function(evt) {
 					var options = $.extend({}, App.publishOptions, { data : _self.data });
 					$.publish(_self.topic, options);
@@ -286,16 +363,23 @@ var LeiaSvc = (function ($,_,App) {
 		},
 		blast : function(notification) {
 			if (!App.endsWith(notification.publishTopic(),"init")) {
-				$.debug("LeiaSvc fired blaster");
+				$.debug("LeiaSvc fired blaster: " + App.getType(notification));
 				var msg = App.combine(notification, _self.data);
+				_self.log.append(msg);
 				var $log = $('.console-log', '#leia');
-				var $rollingLog = $('p:last',$log);
-				$rollingLog.after("<p>" + msg + "</p>");
+			}
+		},
+		clear : function(notification) {
+			if (App.endsWith(notification.publishTopic(),"clear")) {
+				$.debug("LeiaSvc.clear: " + App.getType(notification));
+				_self.log.clear();
 			}
 		}
 	});
 	$.subscribe(_self.topic, _self.init);
 	$.subscribe(_self.topic, _self.blast);
+
+	$.subscribe(App.topics.clear.topic, _self.clear);
 	
 	return {
 		topic : _self.topic
@@ -307,9 +391,11 @@ var BobaFettSvc = (function ($,_,App) {
 	var _self = {};
 	_self = $.extend(_self, {
 		topic : App.topics.starWars.jangoFett.bobaFett.topic,
+		log : null,
 		init : function(notification) {
 			if (App.endsWith(notification.publishTopic(),"init")) {
 				$.debug("BobaFettSvc.init: " + App.getType(notification));
+				_self.log = new App.RollingLog( $('.console-log', '#bobaFett') );
 				$('.blast', '#bobaFett').unbind('click').bind('click', function(evt) {
 					var options = $.extend({}, App.publishOptions, { data : _self.data });
 					$.publish(_self.topic, options);
@@ -322,16 +408,22 @@ var BobaFettSvc = (function ($,_,App) {
 		},
 		blast : function(notification) {
 			if (!App.endsWith(notification.publishTopic(),"init")) {
-				$.debug("BobaFettSvc fired blaster");
+				$.debug("BobaFettSvc fired blaster: " + App.getType(notification));
 				var msg = App.combine(notification, _self.data);
-				var $log = $('.console-log', '#bobaFett');
-				var $rollingLog = $('p:last',$log);
-				$rollingLog.after("<p>" + msg + "</p>");
+				_self.log.append(msg);
+			}
+		},
+		clear : function(notification) {
+			if (App.endsWith(notification.publishTopic(),"clear")) {
+				$.debug("BobaFettSvc.clear: " + App.getType(notification));
+				_self.log.clear();
 			}
 		}
 	});
 	$.subscribe(_self.topic, _self.init);
 	$.subscribe(_self.topic, _self.blast);
+
+	$.subscribe(App.topics.clear.topic, _self.clear);
 	
 	return {
 		topic : _self.topic
@@ -343,9 +435,11 @@ var CaptainRexSvc = (function ($,_,App) {
 	var _self = {};
 	_self = $.extend(_self, {
 		topic : App.topics.starWars.jangoFett.captainRex.topic,
+		log : null,
 		init : function(notification) {
 			if (App.endsWith(notification.publishTopic(),"init")) {
 				$.debug("CaptainRexSvc.init: " + App.getType(notification));
+				_self.log = new App.RollingLog( $('.console-log', '#captainRex') );
 				$('.blast', '#captainRex').unbind('click').bind('click', function(evt) {
 					var options = $.extend({}, App.publishOptions, { data : _self.data });
 					$.publish(_self.topic, options);
@@ -358,16 +452,22 @@ var CaptainRexSvc = (function ($,_,App) {
 		},
 		blast : function(notification) {
 			if (!App.endsWith(notification.publishTopic(),"init")) {
-				$.debug("CaptainRexSvc fired blaster");
+				$.debug("CaptainRexSvc fired blaster: " + App.getType(notification));
 				var msg = App.combine(notification, _self.data);
-				var $log = $('.console-log', '#captainRex');
-				var $rollingLog = $('p:last',$log);
-				$rollingLog.after("<p>" + msg + "</p>");
+				_self.log.append(msg);
+			}
+		},
+		clear : function(notification) {
+			if (App.endsWith(notification.publishTopic(),"clear")) {
+				$.debug("CaptainRexSvc.clear: " + App.getType(notification));
+				_self.log.clear();
 			}
 		}
 	});
 	$.subscribe(_self.topic, _self.init);
 	$.subscribe(_self.topic, _self.blast);
+
+	$.subscribe(App.topics.clear.topic, _self.clear);
 	
 	return {
 		topic : _self.topic
@@ -385,3 +485,6 @@ var FooterSvc = (function ($,_,App) {
 		
 	};
 }(jQuery,_,App));
+
+/* ================================================================== */
+
