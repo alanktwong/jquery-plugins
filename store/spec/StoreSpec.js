@@ -42,10 +42,12 @@ describe("jquery.store", function() {
 				return store;
 			},
 			keys : {
-				foo : "foo",
-				bar : "bar",
-				baz : "baz",
-				qux : "qux",
+				foo :  "foo",
+				bar :  "bar",
+				baar : "baar",
+				baz :  "baz",
+				baaz : "baaz",
+				qux :  "qux",
 				quux : "quux"
 			},
 			clear : {
@@ -98,6 +100,11 @@ describe("jquery.store", function() {
 							foo : "bar",
 							baz : {
 								qux : "quux"
+							}
+						},
+						fn : {
+							baar : function() {
+								$.noop();
 							}
 						}
 				};
@@ -265,7 +272,13 @@ describe("jquery.store", function() {
 			expect(fixture.store(fixture.baz, { qux : fixture.quux })).toBeDeepEquals({ qux: "quux" });
 			expect(fixture.store(fixture.baz)).toBeDeepEquals({ qux: "quux" });
 		});
-		it("should have retrieve all items in cache", function() {
+		it("should have not cache put a string to function", function() {
+			expect(fixture.store(fixture.baar, fixture.fn.baar)).not.toBe(fixture.fn.baar);
+			expect(fixture.store(fixture.baar, null)).toBeNull();
+			expect(fixture.store(fixture.baaz, fixture.fn)).not.toBe(fixture.fn);
+			expect(fixture.store(fixture.baaz, null)).toBeNull();
+		});
+		it("should have retrieved all items in cache", function() {
 			expect(fixture.store(fixture.foo, fixture.bar)).toBe(fixture.bar);
 			expect(fixture.store(fixture.baz, { qux : fixture.quux })).toBeDeepEquals({ qux: "quux" });
 			expect(fixture.store()).toBeDeepEquals(fixture.data);
@@ -324,6 +337,12 @@ describe("jquery.store", function() {
 				expect(fixture.store(fixture.foo, fixture.bar)).toBe(fixture.bar);
 				expect(fixture.store(fixture.baz, { qux : fixture.quux })).toBeDeepEquals({ qux: "quux" });
 				expect(fixture.store(fixture.baz)).toBeDeepEquals({ qux: "quux" });
+			});
+			it("should not have cache put a string to function", function() {
+				expect(fixture.store(fixture.baar, fixture.fn.baar)).not.toBe(fixture.fn.baar);
+				expect(fixture.store(fixture.baar, null)).toBeNull();
+				expect(fixture.store(fixture.baaz, fixture.fn)).not.toBe(fixture.fn);
+				expect(fixture.store(fixture.baaz, null)).toBeNull();
 			});
 			it("should have retrieve all items in cache", function() {
 				expect(fixture.store(fixture.foo, fixture.bar)).toBe(fixture.bar);
@@ -399,6 +418,12 @@ describe("jquery.store", function() {
 				expect(fixture.store(fixture.baz, { qux : fixture.quux })).toBeDeepEquals({ qux: "quux" });
 				expect(fixture.store(fixture.baz)).toBeDeepEquals({ qux: "quux" });
 			});
+			it("should not have cache put a string to function", function() {
+				expect(fixture.store(fixture.baar, fixture.fn.baar)).not.toBe(fixture.fn.baar);
+				expect(fixture.store(fixture.baar, null)).toBeNull();
+				expect(fixture.store(fixture.baaz, fixture.fn)).not.toBe(fixture.fn);
+				expect(fixture.store(fixture.baaz, null)).toBeNull();
+			});
 			it("should have retrieve all items in cache", function() {
 				expect(fixture.store(fixture.foo, fixture.bar)).toBe(fixture.bar);
 				expect(fixture.store(fixture.baz, { qux : fixture.quux })).toBeDeepEquals({ qux: "quux" });
@@ -473,6 +498,12 @@ describe("jquery.store", function() {
 				expect(fixture.store(fixture.baz, { qux : fixture.quux })).toBeDeepEquals({ qux: "quux" });
 				expect(fixture.store(fixture.baz)).toBeDeepEquals({ qux: "quux" });
 			});
+			it("should not have cache put a string to function", function() {
+				expect(fixture.store(fixture.baar, fixture.fn.baar)).not.toBe(fixture.fn.baar);
+				expect(fixture.store(fixture.baar, null)).toBeNull();
+				expect(fixture.store(fixture.baaz, fixture.fn)).not.toBe(fixture.fn);
+				expect(fixture.store(fixture.baaz, null)).toBeNull();
+			});
 			it("should have retrieve all items in cache", function() {
 				expect(fixture.store(fixture.foo, fixture.bar)).toBe(fixture.bar);
 				expect(fixture.store(fixture.baz, { qux : fixture.quux })).toBeDeepEquals({ qux: "quux" });
@@ -545,6 +576,12 @@ describe("jquery.store", function() {
 				expect(fixture.store(fixture.foo, fixture.bar)).toBe(fixture.bar);
 				expect(fixture.store(fixture.baz, { qux : fixture.quux })).toBeDeepEquals({ qux: "quux" });
 				expect(fixture.store(fixture.baz)).toBeDeepEquals({ qux: "quux" });
+			});
+			it("should not have cache put a string to function", function() {
+				expect(fixture.store(fixture.baar, fixture.fn.baar)).not.toBe(fixture.fn.baar);
+				expect(fixture.store(fixture.baar, null)).toBeNull();
+				expect(fixture.store(fixture.baaz, fixture.fn)).not.toBe(fixture.fn);
+				expect(fixture.store(fixture.baaz, null)).toBeNull();
 			});
 			it("should have retrieve all items in cache", function() {
 				expect(fixture.store(fixture.foo, fixture.bar)).toBe(fixture.bar);
