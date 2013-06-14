@@ -28,12 +28,16 @@ define('app/luke',['app/app'],function(App) {
 					$.debug("LukeSvc.clear: " + App.getType(notification));
 					_self.log.clear();
 				}
+			},
+			test : function(notification) {
+				$('.lightsaber', '#luke').click();
 			}
 	};
 	$.subscribe(_self.topic, _self.init);
 	$.subscribe(_self.topic, _self.ignite);
 
 	$.subscribe(App.topics.clear.topic, _self.clear);
+	$.subscribe(App.topics.test.topic, _self.test);
 	
 	return {
 		topic : _self.topic

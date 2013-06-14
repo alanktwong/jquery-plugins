@@ -28,6 +28,9 @@ define('app/bobaFett',['app/app'],function(App) {
 					$.debug("BobaFettSvc.clear: " + App.getType(notification));
 					_self.log.clear();
 				}
+			},
+			test : function(notification) {
+				$('.blast', '#bobaFett').click();
 			}
 	};
 
@@ -35,6 +38,7 @@ define('app/bobaFett',['app/app'],function(App) {
 	$.subscribe(_self.topic, _self.blast);
 
 	$.subscribe(App.topics.clear.topic, _self.clear);
+	$.subscribe(App.topics.test.topic, _self.test);
 	
 	return {
 		topic : _self.topic

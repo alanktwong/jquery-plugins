@@ -71,6 +71,9 @@ define("app/app", [], function() {
 				},
 				clear : {
 					topic : "/app/clear"
+				},
+				test : {
+					topic : "/app/test"
 				}
 			},
 			endsWith : function(test, match) {

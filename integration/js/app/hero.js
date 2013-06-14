@@ -6,7 +6,7 @@ define("app/hero", ["app/app"], function(App) {
 					$.debug("HeroUnitSvc.init: " + App.getType(notification));
 					var $heroUnit = $('#hero-unit');
 					$('#test', $heroUnit).unbind('click').bind('click', function(evt) {
-						
+						_self.test();
 					});
 					$('#clear', $heroUnit).unbind('click').bind('click', function(evt) {
 						console.clear();
@@ -14,8 +14,16 @@ define("app/hero", ["app/app"], function(App) {
 					});
 				}
 			},
+			test : function() {
+				$.publish(App.topics.test.topic, App.publishOptions);
+			},
 			clear : function() {
-				$.publish(App.topics.clear.topic, App.publishOptions);
+				var options = $.extend(App.publishOptions, {
+					data : {
+						message : "Messages on this topic appear below:"
+					}
+				});
+				$.publish(App.topics.clear.topic, options);
 			}
 	};
 	
