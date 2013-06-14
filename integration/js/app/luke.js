@@ -27,6 +27,7 @@ define('app/luke',['app/app'],function(App) {
 				if (App.endsWith(notification.publishTopic(),"clear")) {
 					$.debug("LukeSvc.clear: " + App.getType(notification));
 					_self.log.clear();
+					_self.log.append(notification.data().msg);
 				}
 			},
 			test : function(notification) {

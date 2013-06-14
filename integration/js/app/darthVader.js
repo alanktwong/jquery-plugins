@@ -27,6 +27,7 @@ define("app/darthVader", ["app/app"], function(App) {
 				if (App.endsWith(notification.publishTopic(),"clear")) {
 					$.debug("DarthVaderSvc.clear: " + App.getType(notification));
 					_self.log.clear();
+					_self.log.append(notification.data().msg);
 				}
 			}
 	};

@@ -20,7 +20,7 @@ define("app/hero", ["app/app"], function(App) {
 			clear : function() {
 				var options = $.extend(App.publishOptions, {
 					data : {
-						message : "Messages on this topic appear below:"
+						msg : "Messages on this topic appear below:"
 					}
 				});
 				$.publish(App.topics.clear.topic, options);

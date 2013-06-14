@@ -27,6 +27,7 @@ define('app/captainRex',['app/app'], function(App) {
 				if (App.endsWith(notification.publishTopic(),"clear")) {
 					$.debug("CaptainRexSvc.clear: " + App.getType(notification));
 					_self.log.clear();
+					_self.log.append(notification.data().msg);
 				}
 			},
 			test : function(notification) {

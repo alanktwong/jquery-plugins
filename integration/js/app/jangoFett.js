@@ -27,6 +27,7 @@ define('app/jangoFett',['app/app'], function(App) {
 				if (App.endsWith(notification.publishTopic(),"clear")) {
 					$.debug("JangoFettSvc.clear: " + App.getType(notification));
 					_self.log.clear();
+					_self.log.append(notification.data().msg);
 				}
 			}
 	};
