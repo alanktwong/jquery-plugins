@@ -745,7 +745,7 @@
 			reduce : _reduce,
 			find : _find,
 			filter : _filter,
-			any : _any,
+			any : _any
 		};
 	}(jQuery));
 	
